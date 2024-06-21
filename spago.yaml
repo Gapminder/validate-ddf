@@ -1,0 +1,46 @@
+package:
+  dependencies:
+    - aff
+    - aff-promise
+    - argonaut
+    - argonaut-core
+    - arrays
+    - console
+    - control
+    - debug
+    - effect
+    - either
+    - foldable-traversable
+    - functions
+    - identity
+    - integers
+    - lists
+    - maybe
+    - newtype
+    - node-buffer
+    - node-fs
+    - node-path
+    - node-process
+    - nonempty
+    - numbers
+    - ordered-collections
+    - partial
+    - pipes
+    - prelude
+    - psci-support
+    - quickcheck
+    - safe-coerce
+    - spec
+    - string-parsers
+    - strings
+    - stringutils
+    - tailrec
+    - transformers
+    - tuples
+    - typelevel
+    - unordered-collections
+    - validation
+  name: my-project
+workspace:
+  packageSet:
+    registry: 51.2.0
