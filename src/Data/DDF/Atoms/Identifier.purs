@@ -36,16 +36,16 @@ value :: Identifier -> String
 value (Id x) = toString $ x
 
 -- | parse lower case alphanum strings
-alphaNumLower :: Parser Char
-alphaNumLower =
-  lowerCaseChar <|> anyDigit
-    <?> "expect lowercase alphanumeric value"
+alphaNum :: Parser Char
+alphaNum =
+  anyLetter <|> anyDigit
+    <?> "expect alphanumeric value"
 
 -- | parse lower case alphanum strings also allow underscores inside
 alphaNumAnd_ :: Parser Char
 alphaNumAnd_ =
-  alphaNumLower <|> char '_'
-    <?> "expect lowercase alphanumeric and underscore _"
+  alphaNum <|> char '_'
+    <?> "expect alphanumeric and underscore _"
 
 -- | parse identifier strings.
 identifier :: Parser NonEmptyString
