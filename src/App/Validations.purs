@@ -218,6 +218,7 @@ validateDataPoints dataset csvfiles = do
     fileInfo = csvfile.fileInfo
     fp = FI.filepath fileInfo
     -- Assume that all csv have same headers. If the input is not like that this function will not work.
+    -- FIXME: detect above issue and create issue?
     headers = csvContent.headers
 
   case FI.collection fileInfo of
@@ -248,14 +249,14 @@ validateDataPoints dataset csvfiles = do
             case toEither ptsRes of
               Right pts -> pure pts
               Left errs -> do
-                case errs Arr.!! 101 of
+                case errs Arr.!! 21 of
                   Just _ ->
                     let
                       msgs = map (setError <<< messageFromIssue) $
-                        Arr.take 100 errs
+                        Arr.take 20 errs
                       msgEnd =
                         [ (setFile fp <<< setError <<< messageFromIssue) $
-                            Issue "too many issues detected, please fix and check again."
+                            Issue "more than 20 issues detected, please fix and check again."
                         ]
                     in
                       do
