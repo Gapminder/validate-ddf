@@ -24,6 +24,7 @@ import Data.Validation.Semigroup (V(..), invalid)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Aff (Aff)
+import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Node.Encoding (Encoding(..))
 import Node.Path (FilePath)
 import Safe.Coerce (coerce)
@@ -49,12 +50,12 @@ type RawCsvContent =
   , rows :: Maybe (Array CsvRow)
   }
 
-foreign import readCsvImpl :: Fn1 String (Array (Array String))
+foreign import parseCsvImpl :: String -> EffectFnAff (Array (Array String))
 
 readCsv :: FilePath -> Aff (Array (Array String)) -- NOTE: this will not handle exceptions from the js side.
 readCsv x = do
   csvContent <- readTextFile UTF8 x
-  pure $ runFn1 readCsvImpl csvContent
+  fromEffectFnAff $ parseCsvImpl csvContent
 
 getRow :: CsvRow -> (Array String)
 getRow (CsvRow tpl) = snd tpl

@@ -1,4 +1,4 @@
-import { parse } from 'csv-parse/sync';
+import { parse } from 'csv-parse';
 
 
 // fs.createReadStream(path.resolve(__dirname, 'assets', 'parse.csv'))
@@ -8,9 +8,9 @@ import { parse } from 'csv-parse/sync';
 //     .on('end', rowCount => console.log(`Parsed ${rowCount} rows`));
 
 
-export function readCsvImpl(csvLine) {
-
-    return parse(csvLine, {
+export function parseCsvImpl(csvLine) {
+  return function (onError, onSuccess) {
+    parse(csvLine, {
         bom: true,
         quote: '"',
         columns: false,
@@ -24,7 +24,17 @@ export function readCsvImpl(csvLine) {
         //         return { "line": lines, "record": record }
         //     }
         // }
-    });
+    }, function(err, records) {
+      if (err) {
+        onError(err);
+      }
+      onSuccess(records);
+    })
+
+    return function (cancelError, onCancelerError, onCancelerSuccess) {
+      onCancelerSuccess();
+    };
+  }
 }
 
 // console.log(readCsvImpl("../../test/datasets/test1/ddf--concepts.csv"))
