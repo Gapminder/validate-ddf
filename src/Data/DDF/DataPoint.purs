@@ -36,7 +36,7 @@ newtype DataPointList =
   DataPointList
     { indicatorId :: Identifier
     , primaryKeys :: NonEmptyList Identifier -- TODO: NonEmptyList means 1 or more. Find a type to repersent 2 or more dims
-    , datapoints :: Array Point
+    -- , datapoints :: Array Point
     }
 
 -- | Point is a key value pair
@@ -66,10 +66,10 @@ type PointInput =
 datapointList
   :: Identifier
   -> NonEmptyList Identifier
-  -> Array Point
+  -- -> Array Point
   -> DataPointList
-datapointList indicatorId primaryKeys datapoints =
-  DataPointList { indicatorId, primaryKeys, datapoints }
+datapointList indicatorId primaryKeys =
+  DataPointList { indicatorId, primaryKeys }
 
 datapoint
   :: NonEmptyList Value
@@ -91,7 +91,7 @@ parseDataPointWithValueParser keyParsers valParser input =
     in
       datapoint keys value input._info
 
-checkDuplicatedPoints :: Array Point -> V Issues (Array Point)
+checkDuplicatedPoints :: Array Point -> V Issues Unit
 checkDuplicatedPoints pts =
   let
     dups = dupsBy (compare `on` _.key) pts
@@ -102,7 +102,7 @@ checkDuplicatedPoints pts =
         Nothing -> Issue $ "duplicated datapoints: " <> show p
   in
     case Arr.head dups of
-      Nothing -> pure pts
+      Nothing -> pure unit
       Just _ -> invalid $ map createIssue dups
 
 parseDataPointsWithValueParser
@@ -124,7 +124,9 @@ parseDataPointsWithValueParser keyParsers valParser input =
 
 parseDataPointList :: DataPointListInput -> V Issues DataPointList
 parseDataPointList { indicatorId, primaryKeys, datapoints } =
-  datapointList
-  <$> pure indicatorId
-  <*> pure primaryKeys
-  <*> checkDuplicatedPoints datapoints
+  let
+    _ = checkDuplicatedPoints datapoints
+  in
+    datapointList
+     <$> pure indicatorId
+     <*> pure primaryKeys
