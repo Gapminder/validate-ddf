@@ -13,9 +13,8 @@
     "clean": "rm -rf node_modules output .spago dist/*.js *.lock .cache",
     "build": "spago build",
     "test": "spago test",
-    "build-prod": "spago -x prod.dhall build",
-    "bundle-app": "spago -x prod.dhall build && purs-backend-es bundle-app --no-build --platform=node --to dist/app.js",
-    "bundle-module": "spago -x prod.dhall build && purs-backend-es bundle-module --no-build --platform=node --to dist/lib.js"
+    "bundle-app": "spago build && purs-backend-es bundle-app --no-build --platform=node --to dist/app.js",
+    "bundle-module": "spago build && purs-backend-es bundle-module --no-build --platform=node --to dist/lib.js"
   },
   "files": [
     "dist",

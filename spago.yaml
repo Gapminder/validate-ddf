@@ -40,7 +40,7 @@ package:
     - typelevel
     - unordered-collections
     - validation
-  name: my-project
+  name: ddf-validation-ng
 workspace:
   packageSet:
     registry: 51.2.0
