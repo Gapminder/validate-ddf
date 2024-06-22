@@ -1,29 +1,26 @@
 module Main where
 
+import App.Validations
+import Debug
 import Prelude
 
 import Control.Monad.Trans.Class (lift)
 import Data.Array as Arr
 import Data.Array.NonEmpty as NEA
-import Data.DDF.Csv.FileInfo
-  ( CollectionInfo(..)
-  , FileInfo(..)
-  , getCollectionFiles
-  , isConceptFile
-  , isEntitiesFile
-  , isDataPointsFile
-  )
-import Data.DDF.Csv.FileInfo as FI
 import Data.DDF.BaseDataSet (BaseDataSet(..), parseBaseDataSet)
-import Data.Validation.Issue (Issue(..))
-import Data.Validation.Result (Messages, hasError, messageFromIssue, showMessage)
-import Data.Validation.ValidationT (Validation, ValidationT, runValidationT, vError, vWarning)
+import Data.DDF.Csv.FileInfo (CollectionInfo(..), FileInfo(..), getCollectionFiles, isConceptFile, isDataPointsFile, isEntitiesFile)
+import Data.DDF.Csv.FileInfo as FI
 import Data.Either (Either(..), hush)
+import Data.Function (on)
 import Data.JSON.DataPackage (datapackageExists)
 import Data.Maybe (Maybe(..), fromJust, fromMaybe, isNothing)
 import Data.String (joinWith)
+import Data.Traversable (sequence, for)
 import Data.Tuple (Tuple(..), fst, snd)
+import Data.Validation.Issue (Issue(..))
+import Data.Validation.Result (Messages, hasError, messageFromIssue, showMessage)
 import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither)
+import Data.Validation.ValidationT (Validation, ValidationT, runValidationT, vError, vWarning)
 import Effect (Effect)
 import Effect.Aff (launchAff_, Aff)
 import Effect.Class (liftEffect)
@@ -31,9 +28,6 @@ import Effect.Console (log, logShow)
 import Node.Path (FilePath)
 import Node.Process (argv)
 import Utils (getFiles)
-import App.Validations
-import Debug
-import Data.Traversable (sequence, for)
 
 -- testrun :: FilePath -> Effect Unit
 -- testrun path = launchAff_ do
@@ -46,22 +40,19 @@ import Data.Traversable (sequence, for)
 validate :: FilePath -> ValidationT Messages Aff BaseDataSet
 validate path = do
   _ <- lift $ liftEffect $ log "reading file list..."
-  fs <- lift $ getFiles path [ ".git", "etl", "lang", "assets" ]
-
+  
   let
-    -- parse filenames
-    -- just yield the right ones, ignore lefts
-    ddfFiles = Arr.catMaybes $ map (\f -> hush $ FI.fromFilePath f) fs
+    ignored = [ ".git", "etl", "lang", "assets" ]
+  fs <- lift $ getFiles path ignored
 
-  when (isNothing $ Arr.head ddfFiles)
-    $ vError [ messageFromIssue $ Issue "No csv files in this folder. Please begin with a ddf--concepts.csv file." ]
+  ddfFiles <- readAllFileInfoForValidation fs
 
   _ <- lift $ liftEffect $ log "loading concepts and entities..."
 
   let
-    -- FIXME: not sure why I can't use compare `on` here.
     -- group files by their collection. e.g concept files / entity files
-    fileGroups = Arr.groupAllBy (\a b -> compare (FI.collection a) (FI.collection b)) ddfFiles
+    groupfunc = compare `on` FI.collection
+    fileGroups = Arr.groupAllBy groupfunc ddfFiles
 
   -- filter concept files
   -- we must have concept files in a dataset.
@@ -70,22 +61,22 @@ validate path = do
 
   let
     conceptFiles = NEA.toArray $ NEA.head conceptFiles_
-  -- create concepts
+  -- validate csv files, create valid concepts
   conceptInputs <- lift $ sequence $ createCsvFileInput <$> conceptFiles
   conceptCsvFiles <- validateCsvFiles conceptInputs
   concepts <- for conceptCsvFiles (\x -> validateConcepts x)
 
+  -- filter entity files
   let
     entityFiles = Arr.concatMap NEA.toArray $
       Arr.filter (isEntitiesFile <<< NEA.head) fileGroups
 
-  -- create entities
+  -- validate csv files, create valid entities
   entityInputs <- lift $ sequence $ createCsvFileInput <$> entityFiles
   entityCsvFiles <- validateCsvFiles entityInputs
   entities <- for entityCsvFiles (\x -> validateEntities x)
 
-  -- _ <- lift $ liftEffect $ logShow $ map Ent.getIdAndFile entities
-  -- create base dataset
+  -- parse a base dataset. We will stop if there are errors in concepts and entities.
   let
     baseDataSet = parseBaseDataSet { concepts: Arr.concat concepts, entities: Arr.concat entities }
 
@@ -98,7 +89,7 @@ validate path = do
       _ <- for conceptCsvFiles (\x -> validateCsvHeaders ds x)
       _ <- for entityCsvFiles (\x -> validateCsvHeaders ds x)
       validateConceptLength ds
-      -- TODO: 2. check concept and entity props values are good in their domain
+      -- TODO: 2. check concept and entity props values are good in their domain, check drill_ups etc.
 
       -- check datapoints, we will first group datapoint files by indicator and keys
       _ <- lift $ liftEffect $ log "validating datapoints..."
@@ -119,12 +110,24 @@ validate path = do
               Nothing -> pure unit
               Just csvfiles_ -> do
                 dpl <- validateDataPoints ds csvfiles_
+                -- TODO: improve performance on large datasets, check duplicates.
                 -- _ <- lift $ liftEffect $ logShow dpl
                 pure unit
         )
       pure ds
 
--- pure baseDataSet
+-- separated steps
+readAllFileInfoForValidation :: Array FilePath -> Validation Messages (Array FileInfo)
+readAllFileInfoForValidation fs = do
+  let
+    -- parse filenames
+    -- just yield the right ones, ignore lefts
+    ddfFiles = Arr.catMaybes $ map (\f -> hush $ FI.fromFilePath f) fs
+
+  when (isNothing $ Arr.head ddfFiles)
+    $ vError [ messageFromIssue $ Issue "No csv files in this folder. Please begin with a ddf--concepts.csv file." ]
+
+  pure ddfFiles
 
 -- TODO: I will need an other one to build the dataset from datapackage.json.
 
