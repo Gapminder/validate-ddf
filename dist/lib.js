@@ -50,10 +50,6 @@ var arrayBind = function(arr) {
 var showIntImpl = function(n) {
   return n.toString();
 };
-var showNumberImpl = function(n) {
-  var str = n.toString();
-  return isNaN(str + ".0") ? str : str + ".0";
-};
 var showCharImpl = function(c) {
   var code = c.charCodeAt(0);
   if (code < 32 || code === 127) {
@@ -117,6 +113,9 @@ var showArrayImpl = function(f) {
   };
 };
 
+// output-es/Data.Show/index.js
+var showString = { show: showStringImpl };
+
 // output-es/Data.Ordering/index.js
 var $Ordering = (tag) => tag;
 var LT = /* @__PURE__ */ $Ordering("LT");
@@ -135,6 +134,35 @@ var isNothing = (v2) => {
     return false;
   }
   fail();
+};
+var ordMaybe = (dictOrd) => {
+  const $0 = dictOrd.Eq0();
+  const eqMaybe1 = {
+    eq: (x) => (y) => {
+      if (x.tag === "Nothing") {
+        return y.tag === "Nothing";
+      }
+      return x.tag === "Just" && y.tag === "Just" && $0.eq(x._1)(y._1);
+    }
+  };
+  return {
+    compare: (x) => (y) => {
+      if (x.tag === "Nothing") {
+        if (y.tag === "Nothing") {
+          return EQ;
+        }
+        return LT;
+      }
+      if (y.tag === "Nothing") {
+        return GT;
+      }
+      if (x.tag === "Just" && y.tag === "Just") {
+        return dictOrd.compare(x._1)(y._1);
+      }
+      fail();
+    },
+    Eq0: () => eqMaybe1
+  };
 };
 
 // output-es/Data.Either/index.js
@@ -159,9 +187,29 @@ var Loop = (value0) => $Step("Loop", value0);
 
 // output-es/Data.Tuple/index.js
 var $Tuple = (_1, _2) => ({ tag: "Tuple", _1, _2 });
-var Tuple = (value0) => (value1) => $Tuple(value0, value1);
+var Tuple = (value0) => (value12) => $Tuple(value0, value12);
 var snd = (v) => v._2;
 var fst = (v) => v._1;
+var ordTuple = (dictOrd) => {
+  const $0 = dictOrd.Eq0();
+  return (dictOrd1) => {
+    const $1 = dictOrd1.Eq0();
+    const eqTuple2 = { eq: (x) => (y) => $0.eq(x._1)(y._1) && $1.eq(x._2)(y._2) };
+    return {
+      compare: (x) => (y) => {
+        const v = dictOrd.compare(x._1)(y._1);
+        if (v === "LT") {
+          return LT;
+        }
+        if (v === "GT") {
+          return GT;
+        }
+        return dictOrd1.compare(x._2)(y._2);
+      },
+      Eq0: () => eqTuple2
+    };
+  };
+};
 
 // output-es/Control.Monad.Except.Trans/index.js
 var bindExceptT = (dictMonad) => ({
@@ -227,6 +275,17 @@ var monadStateStateT = (dictMonad) => {
   return { state: (f) => (x) => dictMonad.Applicative0().pure(f(x)), Monad0: () => monadStateT1 };
 };
 
+// output-es/Control.Monad.ST.Uncurried/foreign.js
+var runSTFn2 = function runSTFn22(fn) {
+  return function(a) {
+    return function(b) {
+      return function() {
+        return fn(a, b);
+      };
+    };
+  };
+};
+
 // output-es/Data.Array.ST/foreign.js
 var sortByImpl = function() {
   function mergeFromTo(compare2, fromOrdering, xs1, xs2, from, to) {
@@ -271,6 +330,12 @@ var sortByImpl = function() {
     return xs;
   };
 }();
+var pushImpl = function(a, xs) {
+  return xs.push(a);
+};
+
+// output-es/Data.Array.ST/index.js
+var push = /* @__PURE__ */ runSTFn2(pushImpl);
 
 // output-es/Data.Array.ST.Iterator/index.js
 var $Iterator = (_1, _2) => ({ tag: "Iterator", _1, _2 });
@@ -343,15 +408,20 @@ var foldlArray = function(f) {
 };
 
 // output-es/Data.Foldable/index.js
-var monoidEndo = /* @__PURE__ */ (() => {
-  const semigroupEndo1 = { append: (v) => (v1) => (x) => v(v1(x)) };
-  return { mempty: (x) => x, Semigroup0: () => semigroupEndo1 };
-})();
-var monoidDual = /* @__PURE__ */ (() => {
-  const $0 = monoidEndo.Semigroup0();
-  const semigroupDual1 = { append: (v) => (v1) => $0.append(v1)(v) };
-  return { mempty: monoidEndo.mempty, Semigroup0: () => semigroupDual1 };
-})();
+var traverse_ = (dictApplicative) => {
+  const $0 = dictApplicative.Apply0();
+  return (dictFoldable) => (f) => dictFoldable.foldr((x) => {
+    const $1 = f(x);
+    return (b) => $0.apply($0.Functor0().map((v) => identity)($1))(b);
+  })(dictApplicative.pure());
+};
+var for_ = (dictApplicative) => {
+  const traverse_1 = traverse_(dictApplicative);
+  return (dictFoldable) => {
+    const $0 = traverse_1(dictFoldable);
+    return (b) => (a) => $0(a)(b);
+  };
+};
 var foldableArray = {
   foldr: foldrArray,
   foldl: foldlArray,
@@ -359,14 +429,6 @@ var foldableArray = {
     const mempty = dictMonoid.mempty;
     return (f) => foldableArray.foldr((x) => (acc) => dictMonoid.Semigroup0().append(f(x))(acc))(mempty);
   }
-};
-var foldlDefault = (dictFoldable) => {
-  const foldMap2 = dictFoldable.foldMap(monoidDual);
-  return (c) => (u) => (xs) => foldMap2((x) => (a) => c(a)(x))(xs)(u);
-};
-var foldrDefault = (dictFoldable) => {
-  const foldMap2 = dictFoldable.foldMap(monoidEndo);
-  return (c) => (u) => (xs) => foldMap2((x) => c(x))(xs)(u);
 };
 
 // output-es/Data.FunctorWithIndex/foreign.js
@@ -387,9 +449,7 @@ var refEq = function(r1) {
     return r1 === r2;
   };
 };
-var eqBooleanImpl = refEq;
 var eqIntImpl = refEq;
-var eqNumberImpl = refEq;
 var eqStringImpl = refEq;
 var eqArrayImpl = function(f) {
   return function(xs) {
@@ -406,33 +466,28 @@ var eqArrayImpl = function(f) {
 };
 
 // output-es/Data.Eq/index.js
+var eqUnit = { eq: (v) => (v1) => true };
 var eqString = { eq: eqStringImpl };
-var eqNumber = { eq: eqNumberImpl };
 var eqInt = { eq: eqIntImpl };
-var eqBoolean = { eq: eqBooleanImpl };
 
 // output-es/Data.Ord/foreign.js
 var unsafeCompareImpl = function(lt) {
-  return function(eq2) {
+  return function(eq) {
     return function(gt) {
       return function(x) {
         return function(y) {
-          return x < y ? lt : x === y ? eq2 : gt;
+          return x < y ? lt : x === y ? eq : gt;
         };
       };
     };
   };
 };
-var ordBooleanImpl = unsafeCompareImpl;
 var ordIntImpl = unsafeCompareImpl;
-var ordNumberImpl = unsafeCompareImpl;
 var ordStringImpl = unsafeCompareImpl;
 
 // output-es/Data.Ord/index.js
 var ordString = { compare: /* @__PURE__ */ ordStringImpl(LT)(EQ)(GT), Eq0: () => eqString };
-var ordNumber = { compare: /* @__PURE__ */ ordNumberImpl(LT)(EQ)(GT), Eq0: () => eqNumber };
 var ordInt = { compare: /* @__PURE__ */ ordIntImpl(LT)(EQ)(GT), Eq0: () => eqInt };
-var ordBoolean = { compare: /* @__PURE__ */ ordBooleanImpl(LT)(EQ)(GT), Eq0: () => eqBoolean };
 
 // output-es/Unsafe.Coerce/foreign.js
 var unsafeCoerce = function(x) {
@@ -462,7 +517,7 @@ var traverseArrayImpl = function() {
     };
   }
   return function(apply4) {
-    return function(map3) {
+    return function(map2) {
       return function(pure) {
         return function(f) {
           return function(array) {
@@ -471,14 +526,14 @@ var traverseArrayImpl = function() {
                 case 0:
                   return pure([]);
                 case 1:
-                  return map3(array1)(f(array[bot]));
+                  return map2(array1)(f(array[bot]));
                 case 2:
-                  return apply4(map3(array2)(f(array[bot])))(f(array[bot + 1]));
+                  return apply4(map2(array2)(f(array[bot])))(f(array[bot + 1]));
                 case 3:
-                  return apply4(apply4(map3(array3)(f(array[bot])))(f(array[bot + 1])))(f(array[bot + 2]));
+                  return apply4(apply4(map2(array3)(f(array[bot])))(f(array[bot + 1])))(f(array[bot + 2]));
                 default:
                   var pivot = bot + Math.floor((top - bot) / 4) * 2;
-                  return apply4(map3(concat22)(go(bot, pivot)))(go(pivot, top));
+                  return apply4(map2(concat22)(go(bot, pivot)))(go(pivot, top));
               }
             }
             return go(0, array.length);
@@ -564,6 +619,13 @@ var findIndexImpl = function(just, nothing, f, xs) {
   }
   return nothing;
 };
+var _deleteAt = function(just, nothing, i, l) {
+  if (i < 0 || i >= l.length)
+    return nothing;
+  var l1 = l.slice();
+  l1.splice(i, 1);
+  return just(l1);
+};
 var concat = function(xss) {
   if (xss.length <= 1e4) {
     return Array.prototype.concat.apply([], xss);
@@ -579,6 +641,18 @@ var concat = function(xss) {
 };
 var filterImpl = function(f, xs) {
   return xs.filter(f);
+};
+var partitionImpl = function(f, xs) {
+  var yes = [];
+  var no = [];
+  for (var i = 0; i < xs.length; i++) {
+    var x = xs[i];
+    if (f(x))
+      yes.push(x);
+    else
+      no.push(x);
+  }
+  return { yes, no };
 };
 var sortByImpl2 = function() {
   function mergeFromTo(compare2, fromOrdering, xs1, xs2, from, to) {
@@ -638,6 +712,7 @@ var zipWithImpl = function(f, xs, ys) {
 };
 
 // output-es/Data.Array/index.js
+var zipWith = ($0) => ($1) => ($2) => zipWithImpl($0, $1, $2);
 var sortBy = (comp) => ($0) => sortByImpl2(
   comp,
   (v) => {
@@ -655,6 +730,14 @@ var sortBy = (comp) => ($0) => sortByImpl2(
   $0
 );
 var sortWith = (dictOrd) => (f) => sortBy((x) => (y) => dictOrd.compare(f(x))(f(y)));
+var snoc = (xs) => (x) => (() => {
+  const $0 = push(x);
+  return () => {
+    const result = [...xs];
+    $0(result)();
+    return result;
+  };
+})()();
 var last = (xs) => {
   const $0 = xs.length - 1 | 0;
   if ($0 >= 0 && $0 < xs.length) {
@@ -708,6 +791,45 @@ var groupAllBy = (cmp) => {
   const $0 = groupBy((x) => (y) => cmp(x)(y) === "EQ");
   return (x) => $0(sortBy(cmp)(x));
 };
+var transpose = (xs) => {
+  const go = (go$a0$copy) => (go$a1$copy) => {
+    let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
+    while (go$c) {
+      const idx = go$a0, allArrays = go$a1;
+      const v = foldlArray((acc) => (nextArr) => {
+        if (idx >= 0 && idx < nextArr.length) {
+          const $0 = nextArr[idx];
+          return $Maybe(
+            "Just",
+            (() => {
+              if (acc.tag === "Nothing") {
+                return [$0];
+              }
+              if (acc.tag === "Just") {
+                return snoc(acc._1)($0);
+              }
+              fail();
+            })()
+          );
+        }
+        return acc;
+      })(Nothing)(xs);
+      if (v.tag === "Nothing") {
+        go$c = false;
+        go$r = allArrays;
+        continue;
+      }
+      if (v.tag === "Just") {
+        go$a0 = idx + 1 | 0;
+        go$a1 = snoc(allArrays)(v._1);
+        continue;
+      }
+      fail();
+    }
+    return go$r;
+  };
+  return go(0)([]);
+};
 var foldM = (dictMonad) => (f) => (b) => ($0) => unconsImpl((v) => dictMonad.Applicative0().pure(b), (a) => (as) => dictMonad.Bind1().bind(f(b)(a))((b$p) => foldM(dictMonad)(f)(b$p)(as)), $0);
 var find = (f) => (xs) => {
   const $0 = findIndexImpl(Just, Nothing, f, xs);
@@ -716,6 +838,19 @@ var find = (f) => (xs) => {
   }
   return Nothing;
 };
+var intersectBy = (eq2) => (xs) => (ys) => filterImpl(
+  (x) => {
+    const $0 = findIndexImpl(Just, Nothing, eq2(x), ys);
+    if ($0.tag === "Nothing") {
+      return false;
+    }
+    if ($0.tag === "Just") {
+      return true;
+    }
+    fail();
+  },
+  xs
+);
 var elem = (dictEq) => (a) => (arr) => {
   const $0 = findIndexImpl(Just, Nothing, (v) => dictEq.eq(v)(a), arr);
   if ($0.tag === "Nothing") {
@@ -808,15 +943,15 @@ var Aff = function() {
   }
   var Scheduler = function() {
     var limit = 1024;
-    var size4 = 0;
+    var size5 = 0;
     var ix = 0;
     var queue = new Array(limit);
     var draining = false;
     function drain() {
       var thunk;
       draining = true;
-      while (size4 !== 0) {
-        size4--;
+      while (size5 !== 0) {
+        size5--;
         thunk = queue[ix];
         queue[ix] = void 0;
         ix = (ix + 1) % limit;
@@ -830,13 +965,13 @@ var Aff = function() {
       },
       enqueue: function(cb) {
         var i, tmp;
-        if (size4 === limit) {
+        if (size5 === limit) {
           tmp = draining;
           drain();
           draining = tmp;
         }
-        queue[(ix + size4) % limit] = cb;
-        size4++;
+        queue[(ix + size5) % limit] = cb;
+        size5++;
         if (!draining) {
           drain();
         }
@@ -1662,6 +1797,15 @@ var nonCanceler = /* @__PURE__ */ (() => {
   return (v) => $0;
 })();
 
+// output-es/Effect.Aff.Compat/index.js
+var fromEffectFnAff = (v) => makeAff((k) => () => {
+  const v1 = v((x) => k($Either("Left", x))(), (x) => k($Either("Right", x))());
+  return (e) => makeAff((k2) => () => {
+    v1(e, (x) => k2($Either("Left", x))(), (x) => k2($Either("Right", x))());
+    return nonCanceler;
+  });
+});
+
 // output-es/Node.Encoding/index.js
 var $Encoding = (tag) => tag;
 var UTF8 = /* @__PURE__ */ $Encoding("UTF8");
@@ -2088,6 +2232,14 @@ var toAff2 = (f) => (a) => (b) => {
   });
 };
 
+// node_modules/csv-parse/lib/index.js
+import { Transform } from "stream";
+
+// node_modules/csv-parse/lib/utils/is_object.js
+var is_object = function(obj) {
+  return typeof obj === "object" && obj !== null && !Array.isArray(obj);
+};
+
 // node_modules/csv-parse/lib/api/CsvError.js
 var CsvError = class extends Error {
   constructor(code, message2, options, ...contexts) {
@@ -2105,11 +2257,6 @@ var CsvError = class extends Error {
       }
     }
   }
-};
-
-// node_modules/csv-parse/lib/utils/is_object.js
-var is_object = function(obj) {
-  return typeof obj === "object" && obj !== null && !Array.isArray(obj);
 };
 
 // node_modules/csv-parse/lib/api/normalize_columns_array.js
@@ -2143,10 +2290,10 @@ var normalize_columns_array = function(columns) {
 
 // node_modules/csv-parse/lib/utils/ResizeableBuffer.js
 var ResizeableBuffer = class {
-  constructor(size4 = 100) {
-    this.size = size4;
+  constructor(size5 = 100) {
+    this.size = size5;
     this.length = 0;
-    this.buf = Buffer.allocUnsafe(size4);
+    this.buf = Buffer.allocUnsafe(size5);
   }
   prepend(val) {
     if (Buffer.isBuffer(val)) {
@@ -2500,6 +2647,9 @@ var normalize_options = function(opts) {
       "expect a function,",
       `got ${JSON.stringify(options.on_record)}`
     ], options);
+  }
+  if (options.on_skip !== void 0 && options.on_skip !== null && typeof options.on_skip !== "function") {
+    throw new Error(`Invalid Option: on_skip must be a function, got ${JSON.stringify(options.on_skip)}`);
   }
   if (options.quote === null || options.quote === false || options.quote === "") {
     options.quote = null;
@@ -2873,10 +3023,12 @@ var transform = function(original_options = {}) {
             if (this.state.commenting) {
               continue;
             }
-            const commentCount = comment === null ? 0 : this.__compareBytes(comment, buf, pos, chr);
-            if (commentCount !== 0 && (comment_no_infix === false || this.state.field.length === 0)) {
-              this.state.commenting = true;
-              continue;
+            if (comment !== null && (comment_no_infix === false || this.state.record.length === 0 && this.state.field.length === 0)) {
+              const commentCount = this.__compareBytes(comment, buf, pos, chr);
+              if (commentCount !== 0) {
+                this.state.commenting = true;
+                continue;
+              }
             }
             const delimiterLength = this.__isDelimiter(buf, pos, chr);
             if (delimiterLength !== 0) {
@@ -3322,39 +3474,133 @@ var transform = function(original_options = {}) {
   };
 };
 
-// node_modules/csv-parse/lib/sync.js
-var parse = function(data, opts = {}) {
-  if (typeof data === "string") {
-    data = Buffer.from(data);
+// node_modules/csv-parse/lib/index.js
+var Parser = class extends Transform {
+  constructor(opts = {}) {
+    super({ ...{ readableObjectMode: true }, ...opts, encoding: null });
+    this.api = transform({ on_skip: (err, chunk) => {
+      this.emit("skip", err, chunk);
+    }, ...opts });
+    this.state = this.api.state;
+    this.options = this.api.options;
+    this.info = this.api.info;
   }
-  const records = opts && opts.objname ? {} : [];
-  const parser = transform(opts);
-  const push2 = (record) => {
-    if (parser.options.objname === void 0)
-      records.push(record);
-    else {
-      records[record[0]] = record[1];
+  _transform(buf, _, callback) {
+    if (this.state.stop === true) {
+      return;
     }
-  };
-  const close2 = () => {
-  };
-  const err1 = parser.parse(data, false, push2, close2);
-  if (err1 !== void 0)
-    throw err1;
-  const err2 = parser.parse(void 0, true, push2, close2);
-  if (err2 !== void 0)
-    throw err2;
-  return records;
+    const err = this.api.parse(buf, false, (record) => {
+      this.push(record);
+    }, () => {
+      this.push(null);
+      this.end();
+      this.on("end", this.destroy);
+    });
+    if (err !== void 0) {
+      this.state.stop = true;
+    }
+    callback(err);
+  }
+  _flush(callback) {
+    if (this.state.stop === true) {
+      return;
+    }
+    const err = this.api.parse(void 0, true, (record) => {
+      this.push(record);
+    }, () => {
+      this.push(null);
+      this.on("end", this.destroy);
+    });
+    callback(err);
+  }
+};
+var parse = function() {
+  let data, options, callback;
+  for (const i in arguments) {
+    const argument = arguments[i];
+    const type = typeof argument;
+    if (data === void 0 && (typeof argument === "string" || Buffer.isBuffer(argument))) {
+      data = argument;
+    } else if (options === void 0 && is_object(argument)) {
+      options = argument;
+    } else if (callback === void 0 && type === "function") {
+      callback = argument;
+    } else {
+      throw new CsvError("CSV_INVALID_ARGUMENT", [
+        "Invalid argument:",
+        `got ${JSON.stringify(argument)} at index ${i}`
+      ], options || {});
+    }
+  }
+  const parser = new Parser(options);
+  if (callback) {
+    const records = options === void 0 || options.objname === void 0 ? [] : {};
+    parser.on("readable", function() {
+      let record;
+      while ((record = this.read()) !== null) {
+        if (options === void 0 || options.objname === void 0) {
+          records.push(record);
+        } else {
+          records[record[0]] = record[1];
+        }
+      }
+    });
+    parser.on("error", function(err) {
+      callback(err, void 0, parser.api.__infoDataSet());
+    });
+    parser.on("end", function() {
+      callback(void 0, records, parser.api.__infoDataSet());
+    });
+  }
+  if (data !== void 0) {
+    const writer = function() {
+      parser.write(data);
+      parser.end();
+    };
+    if (typeof setImmediate === "function") {
+      setImmediate(writer);
+    } else {
+      setTimeout(writer, 0);
+    }
+  }
+  return parser;
 };
 
 // output-es/Data.Csv/foreign.js
-function readCsvImpl(csvLine) {
-  return parse(csvLine, {
-    bom: true,
-    quote: '"',
-    columns: false,
-    relax_column_count: true
-  });
+function parseCsvImpl(csvLine) {
+  return function(onError, onSuccess) {
+    parse(csvLine, {
+      bom: true,
+      quote: '"',
+      columns: false,
+      relax_column_count: true
+    }, function(err, records) {
+      if (err) {
+        onError(err);
+      }
+      onSuccess(records);
+    });
+    return function(cancelError, onCancelerError, onCancelerSuccess) {
+      onCancelerSuccess();
+    };
+  };
+}
+function rowsToColumnsImpl(rows) {
+  if (rows.length === 0)
+    return [];
+  const numColumns = rows[0].length;
+  const columns = Array(numColumns).fill().map(() => []);
+  for (let i = 0; i < rows.length; i++) {
+    for (let j = 0; j < numColumns; j++) {
+      var value2 = rows[i][j];
+      if (typeof value2 === "undefined") {
+        columns[j].push("");
+      } else {
+        columns[j].push(rows[i][j]);
+      }
+    }
+  }
+  return columns;
 }
 
 // output-es/Data.Csv/index.js
@@ -3364,8 +3610,41 @@ var toCsvRow = (v) => {
   }
   return arrayMap((tpls) => tpls)(zipWithImpl(Tuple, rangeImpl(2, v.length + 1 | 0), v));
 };
-var readCsv = (x) => _bind(toAff2(readTextFile)(UTF8)(x))((csvContent) => _pure(readCsvImpl(csvContent)));
-var create = (recs) => ({
+var readCsv = (x) => _bind(toAff2(readTextFile)(UTF8)(x))((csvContent) => fromEffectFnAff(parseCsvImpl(csvContent)));
+var readCsv$p = (x) => readCsv(x._1);
+var getRow = (v) => v._2;
+var getLineNo = (v) => v._1;
+var parseCsvContent = (v) => {
+  if (v.headers.tag === "Nothing") {
+    return { headers: [], index: [], columns: [] };
+  }
+  if (v.headers.tag === "Just") {
+    if (v.rows.tag === "Nothing") {
+      return { headers: v.headers._1, index: [], columns: replicateImpl(v.headers._1.length, []) };
+    }
+    if (v.rows.tag === "Just") {
+      return { headers: v.headers._1, index: arrayMap(getLineNo)(v.rows._1), columns: rowsToColumnsImpl(arrayMap(getRow)(v.rows._1)) };
+    }
+  }
+  fail();
+};
+var filterBadRows = (v) => {
+  if (v.headers.tag === "Nothing") {
+    return $Tuple([], v);
+  }
+  if (v.headers.tag === "Just") {
+    if (v.rows.tag === "Nothing") {
+      return $Tuple([], v);
+    }
+    if (v.rows.tag === "Just") {
+      const headerLength = v.headers._1.length;
+      const v1 = partitionImpl((row) => row._2.length === headerLength, v.rows._1);
+      return $Tuple(arrayMap(getLineNo)(v1.no), { headers: v.headers, rows: $Maybe("Just", v1.yes) });
+    }
+  }
+  fail();
+};
+var createRawContent = (recs) => ({
   headers: 0 < recs.length ? $Maybe("Just", recs[0]) : Nothing,
   rows: (() => {
     const $0 = unconsImpl((v) => Nothing, (v) => (xs) => $Maybe("Just", xs), recs);
@@ -3390,34 +3669,6 @@ var hashableString = { hash: hashString, Eq0: () => eqString };
 
 // output-es/Data.NonEmpty/index.js
 var $NonEmpty = (_1, _2) => ({ tag: "NonEmpty", _1, _2 });
-var NonEmpty = (value0) => (value1) => $NonEmpty(value0, value1);
-var traversableNonEmpty = (dictTraversable) => {
-  const $0 = dictTraversable.Functor0();
-  const functorNonEmpty1 = { map: (f) => (m) => $NonEmpty(f(m._1), $0.map(f)(m._2)) };
-  const $1 = dictTraversable.Foldable1();
-  const foldableNonEmpty1 = {
-    foldMap: (dictMonoid) => {
-      const foldMap1 = $1.foldMap(dictMonoid);
-      return (f) => (v) => dictMonoid.Semigroup0().append(f(v._1))(foldMap1(f)(v._2));
-    },
-    foldl: (f) => (b) => (v) => $1.foldl(f)(f(b)(v._1))(v._2),
-    foldr: (f) => (b) => (v) => f(v._1)($1.foldr(f)(b)(v._2))
-  };
-  return {
-    sequence: (dictApplicative) => {
-      const Apply0 = dictApplicative.Apply0();
-      const sequence15 = dictTraversable.sequence(dictApplicative);
-      return (v) => Apply0.apply(Apply0.Functor0().map(NonEmpty)(v._1))(sequence15(v._2));
-    },
-    traverse: (dictApplicative) => {
-      const Apply0 = dictApplicative.Apply0();
-      const traverse1 = dictTraversable.traverse(dictApplicative);
-      return (f) => (v) => Apply0.apply(Apply0.Functor0().map(NonEmpty)(f(v._1)))(traverse1(f)(v._2));
-    },
-    Functor0: () => functorNonEmpty1,
-    Foldable1: () => foldableNonEmpty1
-  };
-};
 var foldable1NonEmpty = (dictFoldable) => {
   const foldableNonEmpty1 = {
     foldMap: (dictMonoid) => {
@@ -3483,9 +3734,8 @@ var ordNonEmpty = (dictOrd1) => {
 
 // output-es/Data.List.Types/index.js
 var $List = (tag, _1, _2) => ({ tag, _1, _2 });
-var identity5 = (x) => x;
 var Nil = /* @__PURE__ */ $List("Nil");
-var Cons = (value0) => (value1) => $List("Cons", value0, value1);
+var Cons = (value0) => (value12) => $List("Cons", value0, value12);
 var listMap = (f) => {
   const chunkedRevMap = (chunkedRevMap$a0$copy) => (chunkedRevMap$a1$copy) => {
     let chunkedRevMap$a0 = chunkedRevMap$a0$copy, chunkedRevMap$a1 = chunkedRevMap$a1$copy, chunkedRevMap$c = true, chunkedRevMap$r;
@@ -3530,8 +3780,6 @@ var listMap = (f) => {
   };
   return chunkedRevMap(Nil);
 };
-var functorList = { map: listMap };
-var functorNonEmptyList = { map: (f) => (m) => $NonEmpty(f(m._1), listMap(f)(m._2)) };
 var foldableList = {
   foldr: (f) => (b) => {
     const $0 = foldableList.foldl((b$1) => (a) => f(a)(b$1))(b);
@@ -3613,91 +3861,6 @@ var foldableNonEmptyList = {
   },
   foldr: (f) => (b) => (v) => f(v._1)(foldableList.foldr(f)(b)(v._2))
 };
-var showList = (dictShow) => {
-  const show3 = dictShow.show;
-  return {
-    show: (v) => {
-      if (v.tag === "Nil") {
-        return "Nil";
-      }
-      const go = (go$a0$copy) => (go$a1$copy) => {
-        let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
-        while (go$c) {
-          const b = go$a0, v$1 = go$a1;
-          if (v$1.tag === "Nil") {
-            go$c = false;
-            go$r = b;
-            continue;
-          }
-          if (v$1.tag === "Cons") {
-            go$a0 = b.init ? { init: false, acc: v$1._1 } : { init: false, acc: b.acc + " : " + v$1._1 };
-            go$a1 = v$1._2;
-            continue;
-          }
-          fail();
-        }
-        return go$r;
-      };
-      return "(" + go({ init: true, acc: "" })(listMap(show3)(v)).acc + " : Nil)";
-    }
-  };
-};
-var showNonEmptyList = (dictShow) => {
-  const $0 = showList(dictShow);
-  return { show: (v) => "(NonEmptyList (NonEmpty " + dictShow.show(v._1) + " " + $0.show(v._2) + "))" };
-};
-var traversableList = {
-  traverse: (dictApplicative) => {
-    const Apply0 = dictApplicative.Apply0();
-    return (f) => {
-      const $0 = Apply0.Functor0().map((() => {
-        const go2 = (go$a0$copy) => (go$a1$copy) => {
-          let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
-          while (go$c) {
-            const b = go$a0, v = go$a1;
-            if (v.tag === "Nil") {
-              go$c = false;
-              go$r = b;
-              continue;
-            }
-            if (v.tag === "Cons") {
-              go$a0 = $List("Cons", v._1, b);
-              go$a1 = v._2;
-              continue;
-            }
-            fail();
-          }
-          return go$r;
-        };
-        return go2(Nil);
-      })());
-      const go = (go$a0$copy) => (go$a1$copy) => {
-        let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
-        while (go$c) {
-          const b = go$a0, v = go$a1;
-          if (v.tag === "Nil") {
-            go$c = false;
-            go$r = b;
-            continue;
-          }
-          if (v.tag === "Cons") {
-            go$a0 = Apply0.apply(Apply0.Functor0().map((b$1) => (a) => $List("Cons", a, b$1))(b))(f(v._1));
-            go$a1 = v._2;
-            continue;
-          }
-          fail();
-        }
-        return go$r;
-      };
-      const $1 = go(dictApplicative.pure(Nil));
-      return (x) => $0($1(x));
-    };
-  },
-  sequence: (dictApplicative) => traversableList.traverse(dictApplicative)(identity5),
-  Functor0: () => functorList,
-  Foldable1: () => foldableList
-};
-var traversableNonEmptyList = /* @__PURE__ */ traversableNonEmpty(traversableList);
 var unfoldable1List = {
   unfoldr1: (f) => (b) => {
     const go = (go$a0$copy) => (go$a1$copy) => {
@@ -3839,75 +4002,6 @@ var ord1List = {
   Eq10: () => eq1List
 };
 var ordNonEmpty2 = /* @__PURE__ */ ordNonEmpty(ord1List);
-var applyList = {
-  apply: (v) => (v1) => {
-    if (v.tag === "Nil") {
-      return Nil;
-    }
-    if (v.tag === "Cons") {
-      return foldableList.foldr(Cons)(applyList.apply(v._2)(v1))(listMap(v._1)(v1));
-    }
-    fail();
-  },
-  Functor0: () => functorList
-};
-var applyNonEmptyList = {
-  apply: (v) => (v1) => $NonEmpty(
-    v._1(v1._1),
-    foldableList.foldr(Cons)(applyList.apply($List("Cons", v._1, v._2))(v1._2))(applyList.apply(v._2)($List("Cons", v1._1, Nil)))
-  ),
-  Functor0: () => functorNonEmptyList
-};
-var applicativeNonEmptyList = { pure: (x) => $NonEmpty(x, Nil), Apply0: () => applyNonEmptyList };
-var traversable1NonEmptyList = {
-  traverse1: (dictApply) => {
-    const Functor0 = dictApply.Functor0();
-    return (f) => (v) => Functor0.map((v1) => {
-      const go = (go$a0$copy) => (go$a1$copy) => {
-        let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
-        while (go$c) {
-          const b = go$a0, v$1 = go$a1;
-          if (v$1.tag === "Nil") {
-            go$c = false;
-            go$r = b;
-            continue;
-          }
-          if (v$1.tag === "Cons") {
-            go$a0 = $NonEmpty(v$1._1, $List("Cons", b._1, b._2));
-            go$a1 = v$1._2;
-            continue;
-          }
-          fail();
-        }
-        return go$r;
-      };
-      return go($NonEmpty(v1._1, Nil))(v1._2);
-    })((() => {
-      const go = (go$a0$copy) => (go$a1$copy) => {
-        let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
-        while (go$c) {
-          const b = go$a0, v$1 = go$a1;
-          if (v$1.tag === "Nil") {
-            go$c = false;
-            go$r = b;
-            continue;
-          }
-          if (v$1.tag === "Cons") {
-            go$a0 = dictApply.apply(dictApply.Functor0().map((b$1) => (a) => $NonEmpty(a, $List("Cons", b$1._1, b$1._2)))(b))(f(v$1._1));
-            go$a1 = v$1._2;
-            continue;
-          }
-          fail();
-        }
-        return go$r;
-      };
-      return go(Functor0.map(applicativeNonEmptyList.pure)(f(v._1)))(v._2);
-    })());
-  },
-  sequence1: (dictApply) => traversable1NonEmptyList.traverse1(dictApply)(identity5),
-  Foldable10: () => foldable1NonEmptyList,
-  Traversable1: () => traversableNonEmptyList
-};
 
 // output-es/Data.Validation.Issue/index.js
 var $Issue = (tag, _1, _2, _3) => ({ tag, _1, _2, _3 });
@@ -3987,7 +4081,7 @@ var reverse2 = /* @__PURE__ */ (() => {
   };
   return go(Nil);
 })();
-var zipWith = (f) => (xs) => (ys) => {
+var zipWith2 = (f) => (xs) => (ys) => {
   const go = (go$a0$copy) => (go$a1$copy) => (go$a2$copy) => {
     let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$a2 = go$a2$copy, go$c = true, go$r;
     while (go$c) {
@@ -4014,12 +4108,6 @@ var zipWith = (f) => (xs) => (ys) => {
   };
   return reverse2(go(xs)(ys)(Nil));
 };
-var partition = (p) => (xs) => foldableList.foldr((x) => (v) => {
-  if (p(x)) {
-    return { no: v.no, yes: $List("Cons", x, v.yes) };
-  }
-  return { no: $List("Cons", x, v.no), yes: v.yes };
-})({ no: Nil, yes: Nil })(xs);
 var manyRec = (dictMonadRec) => (dictAlternative) => {
   const Alt0 = dictAlternative.Plus1().Alt0();
   const $0 = dictAlternative.Applicative0();
@@ -4038,7 +4126,7 @@ var manyRec = (dictMonadRec) => (dictAlternative) => {
 };
 
 // output-es/Data.List.NonEmpty/index.js
-var zipWith2 = (f) => (v) => (v1) => $NonEmpty(f(v._1)(v1._1), zipWith(f)(v._2)(v1._2));
+var zipWith3 = (f) => (v) => (v1) => $NonEmpty(f(v._1)(v1._1), zipWith2(f)(v._2)(v1._2));
 
 // output-es/StringParser.Parser/index.js
 var functorParser = {
@@ -4267,6 +4355,29 @@ var elem2 = /* @__PURE__ */ (() => {
   })());
   return (x) => any1(($0) => x === $0);
 })();
+var upperCaseChar = (s) => {
+  const $0 = anyChar(s);
+  const v1 = (() => {
+    if ($0.tag === "Left") {
+      const $1 = $0._1;
+      return (v) => $Either("Left", $1);
+    }
+    if ($0.tag === "Right") {
+      const $1 = $0._1;
+      return (f) => f($1);
+    }
+    fail();
+  })()((v12) => {
+    if (elem2(toCharCode(v12.result))(rangeImpl(65, 90))) {
+      return $Either("Right", { result: v12.result, suffix: v12.suffix });
+    }
+    return $Either("Left", { pos: v12.suffix.position, error: "Expected an upper case character but found " + showCharImpl(v12.result) });
+  });
+  if (v1.tag === "Left") {
+    return $Either("Left", { pos: s.position, error: v1._1.error });
+  }
+  return v1;
+};
 var string = (pattern) => (v) => {
   const length3 = toCodePointArray(pattern).length;
   const v1 = splitAt2(length3)(v.substring);
@@ -4303,6 +4414,23 @@ var eof = (s) => {
     return $Either("Left", { pos: s.position, error: "Expected EOF" });
   }
   return $Either("Right", { result: void 0, suffix: s });
+};
+var anyLetter = (s) => {
+  const v2 = lowerCaseChar(s);
+  if (v2.tag === "Left") {
+    if (s.position === v2._1.pos) {
+      const v2$1 = upperCaseChar(s);
+      if (v2$1.tag === "Left") {
+        if (s.position === v2$1._1.pos) {
+          return $Either("Left", { pos: s.position, error: "Expected a letter" });
+        }
+        return $Either("Left", { error: v2$1._1.error, pos: v2$1._1.pos });
+      }
+      return v2$1;
+    }
+    return $Either("Left", { error: v2._1.error, pos: v2._1.pos });
+  }
+  return v2;
 };
 var anyDigit = (s) => {
   const $0 = anyChar(s);
@@ -4400,27 +4528,16 @@ var unsafeCreate = (x) => {
   return x;
 };
 var showId2 = { show: (v) => "(Id " + showStringImpl(v) + ")" };
-var isLongerThan64Chars = (a) => {
-  const v = charAt2(64)(a);
-  if (v.tag === "Nothing") {
-    return $Either("Right", a);
-  }
-  if (v.tag === "Just") {
-    return $Either("Left", [$Issue("InvalidValue", take2(15)(a) + "...", "longer than 64 chars")]);
-  }
-  fail();
-};
 var eqId = { eq: (x) => (y) => x === y };
-var hashableId = { hash: (v) => hashString(v), Eq0: () => eqId };
 var ordId = { compare: (x) => (y) => ordString.compare(x)(y), Eq0: () => eqId };
-var alphaNumLower = (s) => {
-  const v2 = lowerCaseChar(s);
+var alphaNum = (s) => {
+  const v2 = anyLetter(s);
   if (v2.tag === "Left") {
     if (s.position === v2._1.pos) {
       const v2$1 = anyDigit(s);
       if (v2$1.tag === "Left") {
         if (s.position === v2$1._1.pos) {
-          return $Either("Left", { pos: s.position, error: "expect lowercase alphanumeric value" });
+          return $Either("Left", { pos: s.position, error: "expect alphanumeric value" });
         }
         return $Either("Left", { error: v2$1._1.error, pos: v2$1._1.pos });
       }
@@ -4433,13 +4550,13 @@ var alphaNumLower = (s) => {
 var alphaNumAnd_ = /* @__PURE__ */ (() => {
   const $0 = $$char("_");
   return (s) => {
-    const v2 = alphaNumLower(s);
+    const v2 = alphaNum(s);
     if (v2.tag === "Left") {
       if (s.position === v2._1.pos) {
         const v2$1 = $0(s);
         if (v2$1.tag === "Left") {
           if (s.position === v2$1._1.pos) {
-            return $Either("Left", { pos: s.position, error: "expect lowercase alphanumeric and underscore _" });
+            return $Either("Left", { pos: s.position, error: "expect alphanumeric and underscore _" });
           }
           return $Either("Left", { error: v2$1._1.error, pos: v2$1._1.pos });
         }
@@ -4510,988 +4627,19 @@ var parseId = (x) => {
   }
   fail();
 };
-var parseId$p = (x) => parseId(x);
 
-// output-es/Data.FoldableWithIndex/index.js
-var monoidEndo2 = /* @__PURE__ */ (() => {
-  const semigroupEndo1 = { append: (v) => (v1) => (x) => v(v1(x)) };
-  return { mempty: (x) => x, Semigroup0: () => semigroupEndo1 };
-})();
-var monoidDual2 = /* @__PURE__ */ (() => {
-  const $0 = monoidEndo2.Semigroup0();
-  const semigroupDual1 = { append: (v) => (v1) => $0.append(v1)(v) };
-  return { mempty: monoidEndo2.mempty, Semigroup0: () => semigroupDual1 };
-})();
-var foldlWithIndexDefault = (dictFoldableWithIndex) => {
-  const foldMapWithIndex1 = dictFoldableWithIndex.foldMapWithIndex(monoidDual2);
-  return (c) => (u) => (xs) => foldMapWithIndex1((i) => {
-    const $0 = c(i);
-    return (x) => (a) => $0(a)(x);
-  })(xs)(u);
-};
-var foldrWithIndexDefault = (dictFoldableWithIndex) => {
-  const foldMapWithIndex1 = dictFoldableWithIndex.foldMapWithIndex(monoidEndo2);
-  return (c) => (u) => (xs) => foldMapWithIndex1((i) => c(i))(xs)(u);
-};
-
-// output-es/Data.HashMap/foreign.js
-function MapNode(datamap, nodemap, content) {
-  this.datamap = datamap;
-  this.nodemap = nodemap;
-  this.content = content;
-}
-MapNode.prototype.lookup = function lookup(Nothing2, Just2, keyEquals, key, keyHash, shift) {
-  var bit = mask(keyHash, shift);
-  if ((this.datamap & bit) !== 0) {
-    var i = index2(this.datamap, bit);
-    if (keyEquals(key)(this.content[i * 2]))
-      return Just2(this.content[i * 2 + 1]);
-    return Nothing2;
-  }
-  if ((this.nodemap & bit) !== 0) {
-    return this.content[this.content.length - 1 - index2(this.nodemap, bit)].lookup(Nothing2, Just2, keyEquals, key, keyHash, shift + 5);
-  }
-  return Nothing2;
-};
-function remove2insert1Mut(a, removeIndex, insertIndex, v1) {
-  for (var i = removeIndex; i < insertIndex; i++)
-    a[i] = a[i + 2];
-  a[i++] = v1;
-  for (; i < a.length - 1; i++)
-    a[i] = a[i + 1];
-  a.length = a.length - 1;
-}
-MapNode.prototype.insertMut = function insertMut(keyEquals, hashFunction, key, keyHash, value2, shift) {
-  var bit = mask(keyHash, shift);
-  var i = index2(this.datamap, bit);
-  if ((this.datamap & bit) !== 0) {
-    var k = this.content[i * 2];
-    if (keyEquals(k)(key)) {
-      this.content[i * 2 + 1] = value2;
-    } else {
-      var newNode = binaryNode(k, hashFunction(k), this.content[i * 2 + 1], key, keyHash, value2, shift + 5);
-      this.datamap = this.datamap ^ bit;
-      this.nodemap = this.nodemap | bit;
-      remove2insert1Mut(this.content, i * 2, this.content.length - index2(this.nodemap, bit) - 2, newNode);
-    }
-  } else if ((this.nodemap & bit) !== 0) {
-    var n = this.content.length - 1 - index2(this.nodemap, bit);
-    this.content[n].insertMut(keyEquals, hashFunction, key, keyHash, value2, shift + 5);
-  } else {
-    this.datamap = this.datamap | bit;
-    this.content.splice(i * 2, 0, key, value2);
-  }
-};
-MapNode.prototype.insert = function insert(keyEquals, hashFunction, key, keyHash, value2, shift) {
-  var bit = mask(keyHash, shift);
-  var i = index2(this.datamap, bit);
-  if ((this.datamap & bit) !== 0) {
-    var k = this.content[i * 2];
-    if (keyEquals(k)(key))
-      return new MapNode(this.datamap, this.nodemap, overwriteTwoElements(this.content, i * 2, key, value2));
-    var newNode = binaryNode(k, hashFunction(k), this.content[i * 2 + 1], key, keyHash, value2, shift + 5);
-    return new MapNode(this.datamap ^ bit, this.nodemap | bit, remove2insert1(this.content, i * 2, this.content.length - index2(this.nodemap, bit) - 2, newNode));
-  }
-  if ((this.nodemap & bit) !== 0) {
-    var n = this.content.length - 1 - index2(this.nodemap, bit);
-    return new MapNode(
-      this.datamap,
-      this.nodemap,
-      copyAndOverwriteOrExtend1(
-        this.content,
-        n,
-        this.content[n].insert(keyEquals, hashFunction, key, keyHash, value2, shift + 5)
-      )
-    );
-  }
-  return new MapNode(this.datamap | bit, this.nodemap, insert2(this.content, i * 2, key, value2));
-};
-MapNode.prototype.insertWith = function insertWith(keyEquals, hashFunction, f, key, keyHash, value2, shift) {
-  var bit = mask(keyHash, shift);
-  var i = index2(this.datamap, bit);
-  if ((this.datamap & bit) !== 0) {
-    var k = this.content[i * 2];
-    if (keyEquals(k)(key))
-      return new MapNode(this.datamap, this.nodemap, overwriteTwoElements(this.content, i * 2, key, f(this.content[i * 2 + 1])(value2)));
-    var newNode = binaryNode(k, hashFunction(k), this.content[i * 2 + 1], key, keyHash, value2, shift + 5);
-    return new MapNode(this.datamap ^ bit, this.nodemap | bit, remove2insert1(this.content, i * 2, this.content.length - index2(this.nodemap, bit) - 2, newNode));
-  }
-  if ((this.nodemap & bit) !== 0) {
-    var n = this.content.length - 1 - index2(this.nodemap, bit);
-    return new MapNode(
-      this.datamap,
-      this.nodemap,
-      copyAndOverwriteOrExtend1(
-        this.content,
-        n,
-        this.content[n].insertWith(keyEquals, hashFunction, f, key, keyHash, value2, shift + 5)
-      )
-    );
-  }
-  return new MapNode(this.datamap | bit, this.nodemap, insert2(this.content, i * 2, key, value2));
-};
-MapNode.prototype.delet = function delet(keyEquals, key, keyHash, shift) {
-  var bit = mask(keyHash, shift);
-  if ((this.datamap & bit) !== 0) {
-    var dataIndex = index2(this.datamap, bit);
-    if (keyEquals(this.content[dataIndex * 2])(key)) {
-      if (this.nodemap === 0 && this.content.length === 2)
-        return empty;
-      return new MapNode(this.datamap ^ bit, this.nodemap, remove2(this.content, dataIndex * 2));
-    }
-    return this;
-  }
-  if ((this.nodemap & bit) !== 0) {
-    var nodeIndex = index2(this.nodemap, bit);
-    var recNode = this.content[this.content.length - 1 - nodeIndex];
-    var recRes = recNode.delet(keyEquals, key, keyHash, shift + 5);
-    if (recNode === recRes)
-      return this;
-    if (recRes.isSingleton()) {
-      if (this.content.length === 1) {
-        recRes.datamap = this.nodemap;
-        return recRes;
-      }
-      return new MapNode(
-        this.datamap | bit,
-        this.nodemap ^ bit,
-        insert2remove1(this.content, 2 * index2(this.datamap, bit), recRes.content[0], recRes.content[1], this.content.length - 1 - nodeIndex)
-      );
-    }
-    return new MapNode(this.datamap, this.nodemap, copyAndOverwriteOrExtend1(this.content, this.content.length - 1 - nodeIndex, recRes));
-  }
-  return this;
-};
-MapNode.prototype.toArrayBy = function(f, res) {
-  for (var i = 0; i < popCount(this.datamap) * 2; ) {
-    var k = this.content[i++];
-    var v = this.content[i++];
-    res.push(f(k)(v));
-  }
-  for (; i < this.content.length; i++)
-    this.content[i].toArrayBy(f, res);
-};
-MapNode.prototype.isSingleton = function() {
-  return this.nodemap === 0 && this.content.length === 2;
-};
-MapNode.prototype.eq = function(kf, vf, that) {
-  if (this === that)
-    return true;
-  if (this.constructor !== that.constructor || this.nodemap !== that.nodemap || this.datamap !== that.datamap)
-    return false;
-  for (var i = 0; i < popCount(this.datamap) * 2; ) {
-    if (kf(this.content[i])(that.content[i]))
-      i++;
-    else
-      return false;
-    if (vf(this.content[i])(that.content[i]))
-      i++;
-    else
-      return false;
-  }
-  for (; i < this.content.length; i++)
-    if (!this.content[i].eq(kf, vf, that.content[i]))
-      return false;
-  return true;
-};
-MapNode.prototype.hash = function(vhash) {
-  var h = this.datamap;
-  for (var i = 0; i < popCount(this.datamap); i++)
-    h = h * 31 + vhash(this.content[i * 2 + 1]) | 0;
-  for (var j = 0; j < popCount(this.nodemap); j++)
-    h = h * 31 + this.content[this.content.length - j - 1].hash(vhash) | 0;
-  return h;
-};
-MapNode.prototype.size = function() {
-  var res = popCount(this.datamap);
-  for (var i = res * 2; i < this.content.length; i++)
-    res += this.content[i].size();
-  return res;
-};
-MapNode.prototype.imap = function(f) {
-  var newContent = this.content.slice();
-  for (var i = 0; i < popCount(this.datamap) * 2; ) {
-    var k = this.content[i++];
-    var v = this.content[i++];
-    newContent[i - 2] = k;
-    newContent[i - 1] = f(k)(v);
-  }
-  for (; i < this.content.length; i++)
-    newContent[i] = this.content[i].imap(f);
-  return new MapNode(this.datamap, this.nodemap, newContent);
-};
-MapNode.prototype.ifoldMap = function(m, mappend, f) {
-  for (var i = 0; i < popCount(this.datamap) * 2; ) {
-    var k = this.content[i++];
-    var v = this.content[i++];
-    m = mappend(m)(f(k)(v));
-  }
-  for (; i < this.content.length; i++)
-    m = this.content[i].ifoldMap(m, mappend, f);
-  return m;
-};
-function lowestBit(n) {
-  return n & -n;
-}
-function mergeState(bit, thisnode, thisdata, thatnode, thatdata) {
-  var state = 0;
-  state |= (bit & thisnode) !== 0 ? 1 : 0;
-  state |= (bit & thisdata) !== 0 ? 2 : 0;
-  state |= (bit & thatnode) !== 0 ? 4 : 0;
-  state |= (bit & thatdata) !== 0 ? 8 : 0;
-  return state;
-}
-MapNode.prototype.unionWith = function(eq2, hash, f, that, shift) {
-  if (this.constructor !== that.constructor)
-    throw "Trying to union a MapNode with something else";
-  var thisDataIndex, thatDataIndex, thisNodeIndex, thatNodeIndex;
-  var datamap = 0;
-  var nodemap = 0;
-  var data = [];
-  var nodes = [];
-  var skipmap = this.datamap | this.nodemap | that.datamap | that.nodemap;
-  while (skipmap !== 0) {
-    var bit = lowestBit(skipmap);
-    skipmap &= ~bit;
-    switch (mergeState(bit, this.nodemap, this.datamap, that.nodemap, that.datamap)) {
-      case 1:
-        thisNodeIndex = index2(this.nodemap, bit);
-        nodemap |= bit;
-        nodes.push(this.content[this.content.length - thisNodeIndex - 1]);
-        break;
-      case 2:
-        thisDataIndex = index2(this.datamap, bit);
-        datamap |= bit;
-        data.push(this.content[thisDataIndex * 2], this.content[thisDataIndex * 2 + 1]);
-        break;
-      case 4:
-        thatNodeIndex = index2(that.nodemap, bit);
-        nodemap |= bit;
-        nodes.push(that.content[that.content.length - thatNodeIndex - 1]);
-        break;
-      case 5:
-        thisNodeIndex = index2(this.nodemap, bit);
-        thatNodeIndex = index2(that.nodemap, bit);
-        nodemap |= bit;
-        nodes.push(
-          this.content[this.content.length - thisNodeIndex - 1].unionWith(eq2, hash, f, that.content[that.content.length - thatNodeIndex - 1], shift + 5)
-        );
-        break;
-      case 6:
-        thisDataIndex = index2(this.datamap, bit);
-        thatNodeIndex = index2(that.nodemap, bit);
-        var k = this.content[thisDataIndex * 2];
-        var v = this.content[thisDataIndex * 2 + 1];
-        var hk = hash(k);
-        var flippedF = function(a) {
-          return function(b) {
-            return f(b)(a);
-          };
-        };
-        nodemap |= bit;
-        nodes.push(that.content[that.content.length - thatNodeIndex - 1].insertWith(eq2, hash, flippedF, k, hk, v, shift + 5));
-        break;
-      case 8:
-        thatDataIndex = index2(that.datamap, bit);
-        datamap |= bit;
-        data.push(that.content[thatDataIndex * 2], that.content[thatDataIndex * 2 + 1]);
-        break;
-      case 9:
-        thatDataIndex = index2(that.datamap, bit);
-        thisNodeIndex = index2(this.nodemap, bit);
-        var k = that.content[thatDataIndex * 2];
-        var v = that.content[thatDataIndex * 2 + 1];
-        var hk = hash(k);
-        nodemap |= bit;
-        nodes.push(this.content[this.content.length - thisNodeIndex - 1].insertWith(eq2, hash, f, k, hk, v, shift + 5));
-        break;
-      case 10:
-        thisDataIndex = index2(this.datamap, bit);
-        thatDataIndex = index2(that.datamap, bit);
-        if (eq2(this.content[thisDataIndex * 2])(that.content[thatDataIndex * 2])) {
-          datamap |= bit;
-          data.push(this.content[thisDataIndex * 2], f(this.content[thisDataIndex * 2 + 1])(that.content[thatDataIndex * 2 + 1]));
-        } else {
-          nodemap |= bit;
-          nodes.push(binaryNode(
-            this.content[thisDataIndex * 2],
-            hash(this.content[thisDataIndex * 2]),
-            this.content[thisDataIndex * 2 + 1],
-            that.content[thatDataIndex * 2],
-            hash(that.content[thatDataIndex * 2]),
-            that.content[thatDataIndex * 2 + 1],
-            shift + 5
-          ));
-        }
-        break;
-    }
-  }
-  return new MapNode(datamap, nodemap, data.concat(nodes.reverse()));
-};
-MapNode.prototype.intersectionWith = function(Nothing2, Just2, eq2, hash, f, that, shift) {
-  if (this.constructor !== that.constructor)
-    throw "Trying to intersect a MapNode with something else";
-  var thisDataIndex, thatDataIndex, thisNodeIndex, thatNodeIndex;
-  var datamap = 0;
-  var nodemap = 0;
-  var data = [];
-  var nodes = [];
-  var skipmap = (this.datamap | this.nodemap) & (that.datamap | that.nodemap);
-  while (skipmap !== 0) {
-    var bit = lowestBit(skipmap);
-    skipmap &= ~bit;
-    switch (mergeState(bit, this.nodemap, this.datamap, that.nodemap, that.datamap)) {
-      case 5:
-        thisNodeIndex = index2(this.nodemap, bit);
-        thatNodeIndex = index2(that.nodemap, bit);
-        var recRes = this.content[this.content.length - thisNodeIndex - 1].intersectionWith(Nothing2, Just2, eq2, hash, f, that.content[that.content.length - thatNodeIndex - 1], shift + 5);
-        if (isEmpty(recRes))
-          continue;
-        if (recRes.isSingleton()) {
-          datamap |= bit;
-          data.push(recRes.content[0], recRes.content[1]);
-        } else {
-          nodemap |= bit;
-          nodes.push(recRes);
-        }
-        break;
-      case 6:
-        thisDataIndex = index2(this.datamap, bit);
-        thatNodeIndex = index2(that.nodemap, bit);
-        var k = this.content[thisDataIndex * 2];
-        var v = this.content[thisDataIndex * 2 + 1];
-        var hk = hash(k);
-        var res = that.content[that.content.length - thatNodeIndex - 1].lookup(Nothing2, Just2, eq2, k, hk, shift + 5);
-        if (res !== Nothing2) {
-          datamap |= bit;
-          data.push(k, f(v)(res.value0));
-        }
-        break;
-      case 9:
-        thatDataIndex = index2(that.datamap, bit);
-        thisNodeIndex = index2(this.nodemap, bit);
-        var k = that.content[thatDataIndex * 2];
-        var v = that.content[thatDataIndex * 2 + 1];
-        var hk = hash(k);
-        var res = this.content[this.content.length - thisNodeIndex - 1].lookup(Nothing2, Just2, eq2, k, hk, shift + 5);
-        if (res !== Nothing2) {
-          datamap |= bit;
-          data.push(k, f(res.value0)(v));
-        }
-        break;
-      case 10:
-        thisDataIndex = index2(this.datamap, bit);
-        thatDataIndex = index2(that.datamap, bit);
-        if (eq2(this.content[thisDataIndex * 2])(that.content[thatDataIndex * 2])) {
-          datamap |= bit;
-          data.push(this.content[thisDataIndex * 2], f(this.content[thisDataIndex * 2 + 1])(that.content[thatDataIndex * 2 + 1]));
-        }
-        break;
-    }
-  }
-  return new MapNode(datamap, nodemap, data.concat(nodes.reverse()));
-};
-MapNode.prototype.filterWithKey = function filterWithKey(f) {
-  var datamap = 0;
-  var nodemap = 0;
-  var data = [];
-  var nodes = [];
-  var skipmap = this.datamap | this.nodemap;
-  while (skipmap !== 0) {
-    var bit = lowestBit(skipmap);
-    skipmap &= ~bit;
-    if ((this.datamap & bit) !== 0) {
-      var dataIndex = index2(this.datamap, bit);
-      var k = this.content[dataIndex * 2];
-      var v = this.content[dataIndex * 2 + 1];
-      if (f(k)(v)) {
-        datamap |= bit;
-        data.push(k, v);
-      }
-    } else {
-      var nodeIndex = index2(this.nodemap, bit);
-      var node = this.content[this.content.length - nodeIndex - 1].filterWithKey(f);
-      if (isEmpty(node))
-        continue;
-      if (node.isSingleton()) {
-        datamap |= bit;
-        data.push(node.content[0], node.content[1]);
-      } else {
-        nodemap |= bit;
-        nodes.push(node);
-      }
-    }
-  }
-  return new MapNode(datamap, nodemap, data.concat(nodes.reverse()));
-};
-MapNode.prototype.travHelper = function() {
-  function go(vi, vm2, ni, nm, copy) {
-    if (vi < vm2)
-      return function(v) {
-        return go(vi + 1, vm2, ni, nm, function() {
-          var res = copy();
-          res.content[vi * 2 + 1] = v;
-          return res;
-        });
-      };
-    if (ni < nm)
-      return function(n) {
-        return go(vi, vm2, ni + 1, nm, function() {
-          var res = copy();
-          res.content[vm2 * 2 + ni] = n;
-          return res;
-        });
-      };
-    return copy();
-  }
-  var vm = popCount(this.datamap);
-  var self = this;
-  return go(0, vm, 0, this.content.length - vm * 2, function() {
-    return new MapNode(self.datamap, self.nodemap, self.content.slice());
-  });
-};
-MapNode.prototype.ifoldMap = function(m, mappend, f) {
-  for (var i = 0; i < popCount(this.datamap) * 2; ) {
-    var k = this.content[i++];
-    var v = this.content[i++];
-    m = mappend(m)(f(k)(v));
-  }
-  for (; i < this.content.length; i++)
-    m = this.content[i].ifoldMap(m, mappend, f);
-  return m;
-};
-MapNode.prototype.itraverse = function(pure, apply4, f) {
-  var m = pure(this.travHelper());
-  for (var i = 0; i < popCount(this.datamap) * 2; ) {
-    var k = this.content[i++];
-    var v = this.content[i++];
-    m = apply4(m)(f(k)(v));
-  }
-  for (; i < this.content.length; i++)
-    m = apply4(m)(this.content[i].itraverse(pure, apply4, f));
-  return m;
-};
-function Collision(keys3, values2) {
-  this.keys = keys3;
-  this.values = values2;
-}
-Collision.prototype.lookup = function collisionLookup(Nothing2, Just2, keyEquals, key, keyHash, shift) {
-  for (var i = 0; i < this.keys.length; i++)
-    if (keyEquals(key)(this.keys[i]))
-      return Just2(this.values[i]);
-  return Nothing2;
-};
-Collision.prototype.insert = function collisionInsert(keyEquals, hashFunction, key, keyHash, value2, shift) {
-  var i = 0;
-  for (; i < this.keys.length; i++)
-    if (keyEquals(key)(this.keys[i]))
-      break;
-  return new Collision(
-    copyAndOverwriteOrExtend1(this.keys, i, key),
-    copyAndOverwriteOrExtend1(this.values, i, value2)
-  );
-};
-Collision.prototype.insertMut = function collisionInsertMut(keyEquals, hashFunction, key, keyHash, value2, shift) {
-  var i = 0;
-  for (; i < this.keys.length; i++)
-    if (keyEquals(key)(this.keys[i]))
-      break;
-  this.keys[i] = key;
-  this.values[i] = value2;
-};
-Collision.prototype.insertWith = function collisionInsert2(keyEquals, hashFunction, f, key, keyHash, value2, shift) {
-  var i = 0;
-  for (; i < this.keys.length; i++)
-    if (keyEquals(key)(this.keys[i]))
-      return new Collision(
-        copyAndOverwriteOrExtend1(this.keys, i, key),
-        copyAndOverwriteOrExtend1(this.values, i, f(this.values[i])(value2))
-      );
-  return new Collision(
-    copyAndOverwriteOrExtend1(this.keys, i, key),
-    copyAndOverwriteOrExtend1(this.values, i, value2)
-  );
-};
-Collision.prototype.delet = function collisionDelete(keyEquals, key, keyHash, shift) {
-  var i = 0;
-  for (; i < this.keys.length; i++)
-    if (keyEquals(key)(this.keys[i]))
-      break;
-  if (i === this.keys.length)
-    return this;
-  if (this.keys.length === 2)
-    return new MapNode(1 << (keyHash & 31), 0, [this.keys[1 - i], this.values[1 - i]]);
-  return new Collision(remove1(this.keys, i), remove1(this.values, i));
-};
-Collision.prototype.toArrayBy = function(f, res) {
-  for (var i = 0; i < this.keys.length; i++)
-    res.push(f(this.keys[i])(this.values[i]));
-};
-Collision.prototype.isSingleton = function() {
-  return false;
-};
-Collision.prototype.eq = function(kf, vf, that) {
-  if (this.constructor !== that.constructor || this.keys.length !== that.keys.length)
-    return false;
-  outer:
-    for (var i = 0; i < this.keys.length; i++) {
-      for (var j = 0; j < that.keys.length; j++) {
-        if (kf(this.keys[i])(that.keys[j])) {
-          if (vf(this.values[i])(that.values[j]))
-            continue outer;
-          else
-            return false;
-        }
-      }
-    }
-  return true;
-};
-Collision.prototype.hash = function(vhash) {
-  var h = 0;
-  for (var i = 0; i < this.values.length; i++)
-    h += vhash(this.values[i]);
-  return h;
-};
-Collision.prototype.size = function() {
-  return this.keys.length;
-};
-Collision.prototype.imap = function(f) {
-  var newValues = this.values.slice();
-  for (var i = 0; i < this.values.length; i++)
-    newValues[i] = f(this.keys[i])(this.values[i]);
-  return new Collision(this.keys, newValues);
-};
-Collision.prototype.ifoldMap = function(m, mappend, f) {
-  for (var i = 0; i < this.keys.length; i++)
-    m = mappend(m)(f(this.keys[i])(this.values[i]));
-  return m;
-};
-Collision.prototype.travHelper = function() {
-  function go(i, m, copy) {
-    if (i < m)
-      return function(v) {
-        return go(i + 1, m, function() {
-          var res = copy();
-          res.values[i] = v;
-          return res;
-        });
-      };
-    return copy();
-  }
-  var self = this;
-  return go(0, this.keys.length, function() {
-    return new Collision(self.keys, self.values.slice());
-  });
-};
-Collision.prototype.itraverse = function(pure, apply4, f) {
-  var m = pure(this.travHelper());
-  for (var i = 0; i < this.keys.length; i++)
-    m = apply4(m)(f(this.keys[i])(this.values[i]));
-  return m;
-};
-Collision.prototype.unionWith = function(eq2, hash, f, that, shift) {
-  if (that.constructor !== Collision)
-    throw "Trying to union a Collision with something else";
-  var keys3 = [];
-  var values2 = [];
-  var added = Array(that.keys.length).fill(false);
-  outer:
-    for (var i = 0; i < this.keys.length; i++) {
-      for (var j = 0; j < that.keys.length; j++) {
-        if (eq2(this.keys[i])(that.keys[j])) {
-          keys3.push(this.keys[i]);
-          values2.push(f(this.values[i])(that.values[j]));
-          added[j] = true;
-          continue outer;
-        }
-      }
-      keys3.push(this.keys[i]);
-      values2.push(this.values[i]);
-      added[j] = true;
-    }
-  for (var k = 0; k < that.keys.length; k++) {
-    if (!added[k]) {
-      keys3.push(that.keys[k]);
-      values2.push(that.values[k]);
-    }
-  }
-  return new Collision(keys3, values2);
-};
-Collision.prototype.intersectionWith = function(Nothing2, Just2, eq2, hash, f, that, shift) {
-  if (that.constructor !== Collision)
-    throw "Trying to intersect a Collision with something else";
-  var keys3 = [];
-  var values2 = [];
-  outer:
-    for (var i = 0; i < this.keys.length; i++) {
-      for (var j = 0; j < that.keys.length; j++) {
-        if (eq2(this.keys[i])(that.keys[j])) {
-          keys3.push(this.keys[i]);
-          values2.push(f(this.values[i])(that.values[j]));
-          continue outer;
-        }
-      }
-    }
-  if (keys3.length === 0)
-    return empty;
-  if (keys3.length === 1)
-    return new MapNode(1, 0, [keys3[0], values2[0]]);
-  return new Collision(keys3, values2);
-};
-Collision.prototype.filterWithKey = function collisionFilterWithKey(f) {
-  var keys3 = [];
-  var values2 = [];
-  for (var i = 0; i < this.keys.length; i++) {
-    var k = this.keys[i];
-    var v = this.values[i];
-    if (f(k)(v)) {
-      keys3.push(k);
-      values2.push(v);
-    }
-  }
-  if (keys3.length === 0)
-    return empty;
-  if (keys3.length === 1)
-    return new MapNode(1, 0, [keys3[0], values2[0]]);
-  return new Collision(keys3, values2);
-};
-function mask(keyHash, shift) {
-  return 1 << (keyHash >>> shift & 31);
-}
-function index2(map3, bit) {
-  return popCount(map3 & bit - 1);
-}
-function popCount(n) {
-  n = n - (n >> 1 & 1431655765);
-  n = (n & 858993459) + (n >> 2 & 858993459);
-  return (n + (n >> 4) & 252645135) * 16843009 >> 24;
-}
-function binaryNode(k1, kh1, v1, k2, kh2, v2, s) {
-  if (s >= 32)
-    return new Collision([k1, k2], [v1, v2]);
-  var b1 = kh1 >>> s & 31;
-  var b2 = kh2 >>> s & 31;
-  if (b1 !== b2)
-    return new MapNode(1 << b1 | 1 << b2, 0, b1 >>> 0 < b2 >>> 0 ? [k1, v1, k2, v2] : [k2, v2, k1, v1]);
-  return new MapNode(0, 1 << b1, [binaryNode(k1, kh1, v1, k2, kh2, v2, s + 5)]);
-}
-function overwriteTwoElements(a, index4, v1, v2) {
-  var res = a.slice();
-  res[index4] = v1;
-  res[index4 + 1] = v2;
-  return res;
-}
-function remove2(a, index4) {
-  var res = a.slice();
-  res.splice(index4, 2);
-  return res;
-}
-function remove1(a, index4) {
-  var res = a.slice();
-  res.splice(index4, 1);
-  return res;
-}
-function copyAndOverwriteOrExtend1(a, index4, v) {
-  var res = a.slice();
-  res[index4] = v;
-  return res;
-}
-function remove2insert1(a, removeIndex, insertIndex, v1) {
-  var res = new Array(a.length - 1);
-  for (var i = 0; i < removeIndex; i++)
-    res[i] = a[i];
-  for (; i < insertIndex; i++)
-    res[i] = a[i + 2];
-  res[i++] = v1;
-  for (; i < res.length; i++)
-    res[i] = a[i + 1];
-  return res;
-}
-function insert2(a, index4, v1, v2) {
-  var res = new Array(a.length + 2);
-  for (var i = 0; i < index4; i++)
-    res[i] = a[i];
-  res[i++] = v1;
-  res[i++] = v2;
-  for (; i < res.length; i++)
-    res[i] = a[i - 2];
-  return res;
-}
-function insert2remove1(a, insertIndex, v1, v2, removeIndex) {
-  var res = new Array(a.length + 1);
-  for (var i = 0; i < insertIndex; i++)
-    res[i] = a[i];
-  res[i++] = v1;
-  res[i++] = v2;
-  for (; i < removeIndex + 2; i++)
-    res[i] = a[i - 2];
-  for (; i < res.length; i++)
-    res[i] = a[i - 1];
-  return res;
-}
-var empty = new MapNode(0, 0, []);
-function lookupPurs(Nothing2, Just2, keyEquals, key, keyHash) {
-  return function(m) {
-    return m.lookup(Nothing2, Just2, keyEquals, key, keyHash, 0);
-  };
-}
-function fromArrayPurs(keyEquals, hashFunction) {
-  return function(kf) {
-    return function(vf) {
-      return function(a) {
-        var m = new MapNode(0, 0, []);
-        for (var i = 0; i < a.length; i++) {
-          var x = a[i];
-          var k = kf(x);
-          m.insertMut(keyEquals, hashFunction, k, hashFunction(k), vf(x), 0);
-        }
-        return m;
-      };
-    };
-  };
-}
-function insertPurs(keyEquals, hashFunction) {
-  return function(key) {
-    return function(value2) {
-      return function(m) {
-        return m.insert(keyEquals, hashFunction, key, hashFunction(key), value2, 0);
-      };
-    };
-  };
-}
-function toArrayBy(f) {
-  return function(m) {
-    var res = [];
-    m.toArrayBy(f, res);
-    return res;
-  };
-}
-function singletonPurs(k) {
-  return function(keyHash) {
-    return function(v) {
-      return new MapNode(1 << (keyHash & 31), 0, [k, v]);
-    };
-  };
-}
-function isEmpty(m) {
-  return m.datamap === 0 && m.nodemap === 0;
-}
-function foldMapWithIndexPurs(mempty) {
-  return function(mappend) {
-    return function(f) {
-      return function(m) {
-        return m.ifoldMap(mempty, mappend, f);
-      };
-    };
-  };
-}
-
-// output-es/Data.HashMap/index.js
-var values = /* @__PURE__ */ toArrayBy((v) => (v1) => v1);
-var lookup2 = (dictHashable) => {
-  const eq2 = dictHashable.Eq0().eq;
-  return (k) => lookupPurs(Nothing, Just, eq2, k, dictHashable.hash(k));
-};
-var member = (dictHashable) => {
-  const lookup1 = lookup2(dictHashable);
-  return (k) => {
-    const $0 = lookup1(k);
-    return (x) => {
-      const $1 = $0(x);
-      if ($1.tag === "Nothing") {
-        return false;
-      }
-      if ($1.tag === "Just") {
-        return true;
-      }
-      fail();
-    };
-  };
-};
-var keys = /* @__PURE__ */ toArrayBy($$const);
-var foldableWithIndexHashMap = {
-  foldMapWithIndex: (dictMonoid) => foldMapWithIndexPurs(dictMonoid.mempty)(dictMonoid.Semigroup0().append),
-  foldrWithIndex: (f) => foldrWithIndexDefault(foldableWithIndexHashMap)(f),
-  foldlWithIndex: (f) => foldlWithIndexDefault(foldableWithIndexHashMap)(f),
-  Foldable0: () => foldableHashMap
-};
-var foldableHashMap = {
-  foldMap: (dictMonoid) => (f) => foldMapWithIndexPurs(dictMonoid.mempty)(dictMonoid.Semigroup0().append)((v) => f),
-  foldr: (f) => foldrDefault(foldableHashMap)(f),
-  foldl: (f) => foldlDefault(foldableHashMap)(f)
-};
-
-// output-es/Data.DDF.Atoms.Value/index.js
-var $Value = (tag, _1) => ({ tag, _1 });
-var member2 = /* @__PURE__ */ member(hashableString);
-var StrVal = (value0) => $Value("StrVal", value0);
-var showValue = {
-  show: (v) => {
-    if (v.tag === "DomainVal") {
-      return "(NonEmptyString.unsafeFromString " + showStringImpl(v._1) + ")";
-    }
-    if (v.tag === "StrVal") {
-      return showStringImpl(v._1);
-    }
-    if (v.tag === "NumVal") {
-      return showNumberImpl(v._1);
-    }
-    if (v.tag === "BoolVal") {
-      if (v._1) {
-        return "true";
-      }
-      return "false";
-    }
-    if (v.tag === "TimeVal") {
-      return showStringImpl(v._1);
-    }
-    if (v.tag === "ListVal") {
-      return showStringImpl(v._1);
-    }
-    if (v.tag === "JsonVal") {
-      return showStringImpl(v._1);
-    }
-    fail();
-  }
-};
-var parseTimeVal = (input) => {
-  const inputlen = toCodePointArray(input).length;
-  if (inputlen <= 4 && (() => {
-    const $0 = fromString(input);
-    return inputlen >= 3 && (() => {
-      if ($0.tag === "Nothing") {
-        return false;
-      }
-      if ($0.tag === "Just") {
-        return true;
-      }
-      fail();
-    })();
-  })()) {
-    return $Either("Right", $Value("TimeVal", input));
-  }
-  return $Either("Left", [$Issue("Issue", showStringImpl(input) + " is not a valid time value.")]);
-};
-var parseStrVal = (x) => $Either("Right", $Value("StrVal", x));
-var parseNumVal = (input) => {
-  const v = fromStringImpl(input, isFiniteImpl, Just, Nothing);
-  if (v.tag === "Nothing") {
-    return $Either("Left", [$Issue("Issue", input + " is not a number.")]);
-  }
-  if (v.tag === "Just") {
-    return $Either("Right", $Value("NumVal", v._1));
-  }
-  fail();
-};
-var parseDomainVal = (domainName) => (domain) => (input) => {
-  if (input === "") {
-    return $Either("Left", [$Issue("Issue", showStringImpl(input) + " is not a valid value in " + domainName + " domain.")]);
-  }
-  if (member2(input)(domain)) {
-    return $Either("Right", $Value("DomainVal", input));
-  }
-  return $Either("Left", [$Issue("Issue", showStringImpl(input) + " is not a valid value in " + domainName + " domain.")]);
-};
-var parseConstrainedDomainVal = (constrain) => (input) => {
-  if (input === "") {
-    return $Either("Left", [$Issue("Issue", showStringImpl(input) + " is not a valid value in the constrains set by filename.")]);
-  }
-  if (member2(input)(constrain)) {
-    return $Either("Right", $Value("DomainVal", input));
-  }
-  return $Either("Left", [$Issue("Issue", showStringImpl(input) + " is not a valid value in the constrains set by filename.")]);
-};
-var parseBoolVal = (v) => {
-  if (v === "TRUE") {
-    return $Either("Right", $Value("BoolVal", true));
-  }
-  if (v === "true") {
-    return $Either("Right", $Value("BoolVal", true));
-  }
-  if (v === "FALSE") {
-    return $Either("Right", $Value("BoolVal", false));
-  }
-  if (v === "false") {
-    return $Either("Right", $Value("BoolVal", false));
-  }
-  return $Either("Left", [$Issue("Issue", "not a boolean value: " + showStringImpl(v))]);
-};
-var eqValue = {
-  eq: (x) => (y) => {
-    if (x.tag === "DomainVal") {
-      return y.tag === "DomainVal" && x._1 === y._1;
-    }
-    if (x.tag === "StrVal") {
-      return y.tag === "StrVal" && x._1 === y._1;
-    }
-    if (x.tag === "NumVal") {
-      return y.tag === "NumVal" && x._1 === y._1;
-    }
-    if (x.tag === "BoolVal") {
-      return y.tag === "BoolVal" && x._1 === y._1;
-    }
-    if (x.tag === "TimeVal") {
-      return y.tag === "TimeVal" && x._1 === y._1;
-    }
-    if (x.tag === "ListVal") {
-      return y.tag === "ListVal" && x._1 === y._1;
-    }
-    return x.tag === "JsonVal" && y.tag === "JsonVal" && x._1 === y._1;
-  }
-};
-var ordValue = {
-  compare: (v) => (v1) => {
-    if (v.tag === "DomainVal") {
-      if (v1.tag === "DomainVal") {
-        return ordString.compare(v._1)(v1._1);
-      }
-      return _crashWith("the comparsion failed because we are comparing different types of value");
-    }
-    if (v.tag === "StrVal") {
-      if (v1.tag === "StrVal") {
-        return ordString.compare(v._1)(v1._1);
-      }
-      return _crashWith("the comparsion failed because we are comparing different types of value");
-    }
-    if (v.tag === "NumVal") {
-      if (v1.tag === "NumVal") {
-        return ordNumber.compare(v._1)(v1._1);
-      }
-      return _crashWith("the comparsion failed because we are comparing different types of value");
-    }
-    if (v.tag === "BoolVal") {
-      if (v1.tag === "BoolVal") {
-        return ordBoolean.compare(v._1)(v1._1);
-      }
-      return _crashWith("the comparsion failed because we are comparing different types of value");
-    }
-    if (v.tag === "TimeVal") {
-      if (v1.tag === "TimeVal") {
-        return ordString.compare(v._1)(v1._1);
-      }
-      return _crashWith("the comparsion failed because we are comparing different types of value");
-    }
-    if (v.tag === "ListVal") {
-      if (v1.tag === "ListVal") {
-        return ordString.compare(v._1)(v1._1);
-      }
-      return _crashWith("the comparsion failed because we are comparing different types of value");
-    }
-    if (v.tag === "JsonVal" && v1.tag === "JsonVal") {
-      return ordString.compare(v._1)(v1._1);
-    }
-    return _crashWith("the comparsion failed because we are comparing different types of value");
-  },
-  Eq0: () => eqValue
-};
+// output-es/Data.DDF.Internal/index.js
+var $ItemInfo = (_1, _2) => ({ tag: "ItemInfo", _1, _2 });
 
 // output-es/Data.Map.Internal/index.js
 var $$$Map = (tag, _1, _2, _3, _4, _5, _6) => ({ tag, _1, _2, _3, _4, _5, _6 });
 var $MapIter = (tag, _1, _2, _3) => ({ tag, _1, _2, _3 });
+var $MapIterStep = (tag, _1, _2, _3) => ({ tag, _1, _2, _3 });
 var $Split = (_1, _2, _3) => ({ tag: "Split", _1, _2, _3 });
 var $SplitLast = (_1, _2, _3) => ({ tag: "SplitLast", _1, _2, _3 });
 var Leaf2 = /* @__PURE__ */ $$$Map("Leaf");
 var IterLeaf = /* @__PURE__ */ $MapIter("IterLeaf");
+var IterDone = /* @__PURE__ */ $MapIterStep("IterDone");
 var unsafeNode = (k, v, l, r) => {
   if (l.tag === "Leaf") {
     if (r.tag === "Leaf") {
@@ -5636,6 +4784,26 @@ var unsafeDifference = (comp, l, r) => {
   }
   fail();
 };
+var unsafeUnionWith = (comp, app, l, r) => {
+  if (l.tag === "Leaf") {
+    return r;
+  }
+  if (r.tag === "Leaf") {
+    return l;
+  }
+  if (r.tag === "Node") {
+    const v = unsafeSplit(comp, r._3, l);
+    const l$p = unsafeUnionWith(comp, app, v._2, r._5);
+    const r$p = unsafeUnionWith(comp, app, v._3, r._6);
+    if (v._1.tag === "Just") {
+      return unsafeBalancedNode(r._3, app(v._1._1)(r._4), l$p, r$p);
+    }
+    if (v._1.tag === "Nothing") {
+      return unsafeBalancedNode(r._3, r._4, l$p, r$p);
+    }
+  }
+  fail();
+};
 var pop = (dictOrd) => {
   const compare2 = dictOrd.compare;
   return (k) => (m) => {
@@ -5646,7 +4814,7 @@ var pop = (dictOrd) => {
     return Nothing;
   };
 };
-var lookup3 = (dictOrd) => (k) => {
+var lookup = (dictOrd) => (k) => {
   const go = (go$a0$copy) => {
     let go$a0 = go$a0$copy, go$c = true, go$r;
     while (go$c) {
@@ -5721,7 +4889,96 @@ var stepUnorderedCps = (next) => (done) => {
   return go;
 };
 var stepUnfoldrUnordered = /* @__PURE__ */ stepUnorderedCps((k, v, next) => $Maybe("Just", $Tuple($Tuple(k, v), next)))((v) => Nothing);
-var insert3 = (dictOrd) => (k) => (v) => {
+var stepAscCps = (next) => (done) => {
+  const go = (go$a0$copy) => {
+    let go$a0 = go$a0$copy, go$c = true, go$r;
+    while (go$c) {
+      const v = go$a0;
+      if (v.tag === "IterLeaf") {
+        go$c = false;
+        go$r = done();
+        continue;
+      }
+      if (v.tag === "IterEmit") {
+        go$c = false;
+        go$r = next(v._1, v._2, v._3);
+        continue;
+      }
+      if (v.tag === "IterNode") {
+        go$a0 = (() => {
+          const go$1 = (go$1$a0$copy) => (go$1$a1$copy) => {
+            let go$1$a0 = go$1$a0$copy, go$1$a1 = go$1$a1$copy, go$1$c = true, go$1$r;
+            while (go$1$c) {
+              const iter = go$1$a0, v$1 = go$1$a1;
+              if (v$1.tag === "Leaf") {
+                go$1$c = false;
+                go$1$r = iter;
+                continue;
+              }
+              if (v$1.tag === "Node") {
+                if (v$1._6.tag === "Leaf") {
+                  go$1$a0 = $MapIter("IterEmit", v$1._3, v$1._4, iter);
+                  go$1$a1 = v$1._5;
+                  continue;
+                }
+                go$1$a0 = $MapIter("IterEmit", v$1._3, v$1._4, $MapIter("IterNode", v$1._6, iter));
+                go$1$a1 = v$1._5;
+                continue;
+              }
+              fail();
+            }
+            return go$1$r;
+          };
+          return go$1(v._2)(v._1);
+        })();
+        continue;
+      }
+      fail();
+    }
+    return go$r;
+  };
+  return go;
+};
+var stepAsc = /* @__PURE__ */ stepAscCps((k, v, next) => $MapIterStep("IterNext", k, v, next))((v) => IterDone);
+var eqMapIter = (dictEq) => (dictEq1) => ({
+  eq: (() => {
+    const go = (a) => (b) => {
+      const v = stepAsc(a);
+      if (v.tag === "IterNext") {
+        const v2 = stepAsc(b);
+        return v2.tag === "IterNext" && dictEq.eq(v._1)(v2._1) && dictEq1.eq(v._2)(v2._2) && go(v._3)(v2._3);
+      }
+      if (v.tag === "IterDone") {
+        return true;
+      }
+      fail();
+    };
+    return go;
+  })()
+});
+var stepUnfoldr = /* @__PURE__ */ stepAscCps((k, v, next) => $Maybe("Just", $Tuple($Tuple(k, v), next)))((v) => Nothing);
+var insertWith = (dictOrd) => (app) => (k) => (v) => {
+  const go = (v1) => {
+    if (v1.tag === "Leaf") {
+      return $$$Map("Node", 1, 1, k, v, Leaf2, Leaf2);
+    }
+    if (v1.tag === "Node") {
+      const v2 = dictOrd.compare(k)(v1._3);
+      if (v2 === "LT") {
+        return unsafeBalancedNode(v1._3, v1._4, go(v1._5), v1._6);
+      }
+      if (v2 === "GT") {
+        return unsafeBalancedNode(v1._3, v1._4, v1._5, go(v1._6));
+      }
+      if (v2 === "EQ") {
+        return $$$Map("Node", v1._1, v1._2, k, app(v1._4)(v), v1._5, v1._6);
+      }
+    }
+    fail();
+  };
+  return go;
+};
+var insert = (dictOrd) => (k) => (v) => {
   const go = (v1) => {
     if (v1.tag === "Leaf") {
       return $$$Map("Node", 1, 1, k, v, Leaf2, Leaf2);
@@ -5756,7 +5013,61 @@ var functorMap = {
     return go;
   }
 };
-var fromFoldable = (dictOrd) => (dictFoldable) => dictFoldable.foldl((m) => (v) => insert3(dictOrd)(v._1)(v._2)(m))(Leaf2);
+var keys = /* @__PURE__ */ (() => {
+  const go = (m$p, z$p) => {
+    if (m$p.tag === "Leaf") {
+      return z$p;
+    }
+    if (m$p.tag === "Node") {
+      return go(m$p._5, $List("Cons", m$p._3, go(m$p._6, z$p)));
+    }
+    fail();
+  };
+  return (m) => go(m, Nil);
+})();
+var values = /* @__PURE__ */ (() => {
+  const go = (m$p, z$p) => {
+    if (m$p.tag === "Leaf") {
+      return z$p;
+    }
+    if (m$p.tag === "Node") {
+      return go(m$p._5, $List("Cons", m$p._4, go(m$p._6, z$p)));
+    }
+    fail();
+  };
+  return (m) => go(m, Nil);
+})();
+var filterKeys = (dictOrd) => (f) => {
+  const go = (v) => {
+    if (v.tag === "Leaf") {
+      return Leaf2;
+    }
+    if (v.tag === "Node") {
+      if (f(v._3)) {
+        return unsafeBalancedNode(v._3, v._4, go(v._5), go(v._6));
+      }
+      return unsafeJoinNodes(go(v._5), go(v._6));
+    }
+    fail();
+  };
+  return go;
+};
+var eqMap = (dictEq) => (dictEq1) => ({
+  eq: (xs) => (ys) => {
+    if (xs.tag === "Leaf") {
+      return ys.tag === "Leaf";
+    }
+    if (xs.tag === "Node") {
+      return ys.tag === "Node" && xs._2 === ys._2 && eqMapIter(dictEq)(dictEq1).eq($MapIter("IterNode", xs, IterLeaf))($MapIter("IterNode", ys, IterLeaf));
+    }
+    fail();
+  }
+});
+var fromFoldable = (dictOrd) => (dictFoldable) => dictFoldable.foldl((m) => (v) => insert(dictOrd)(v._1)(v._2)(m))(Leaf2);
+var fromFoldableWith = (dictOrd) => (dictFoldable) => (f) => {
+  const f$p = insertWith(dictOrd)((b) => (a) => f(a)(b));
+  return dictFoldable.foldl((m) => (v) => f$p(v._1)(v._2)(m))(Leaf2);
+};
 var $$delete = (dictOrd) => (k) => {
   const go = (v) => {
     if (v.tag === "Leaf") {
@@ -5780,16 +5091,10 @@ var $$delete = (dictOrd) => (k) => {
 };
 
 // output-es/Data.Map.Extra/index.js
-var lookupV = (dictShow) => (dictOrd) => (key) => (m) => {
-  const v = lookup3(dictOrd)(key)(m);
-  if (v.tag === "Just") {
-    return $Either("Right", v._1);
-  }
-  if (v.tag === "Nothing") {
-    return $Either("Left", [$Issue("Issue", "key not found: " + dictShow.show(key))]);
-  }
-  fail();
-};
+var mapKeysWith = (dictOrd) => (c) => (f) => (m) => fromFoldableWith(dictOrd)(foldableList)(c)(listMap((v) => $Tuple(
+  f(v._1),
+  v._2
+))(unfoldableList.unfoldr(stepUnfoldr)($MapIter("IterNode", m, IterLeaf))));
 
 // output-es/Data.Validation.Semigroup/index.js
 var applyV = (dictSemigroup) => ({
@@ -5879,8 +5184,10 @@ var notReserved = (conceptId) => {
   }
   return $Either("Right", conceptId);
 };
+var isEntitySet = (v) => v.conceptType.tag === "EntitySetC";
+var isEntityDomain = (v) => v.conceptType.tag === "EntityDomainC";
 var hasFieldAndGetValue = (field) => (input) => {
-  const v = lookup3(ordId)(field === "" ? "undefined_id" : field)(input);
+  const v = lookup(ordId)(field === "" ? "undefined_id" : field)(input);
   if (v.tag === "Nothing") {
     return $Either("Left", [$Issue("Issue", "field " + field + " MUST exist for concept")]);
   }
@@ -5897,30 +5204,7 @@ var checkMandatoryField = (v) => {
       return $Either("Left", $0._1);
     }
     if ($0.tag === "Right") {
-      if ((() => {
-        if ($0._1.tag === "DomainVal") {
-          return true;
-        }
-        if ($0._1.tag === "StrVal") {
-          return $0._1._1 === "";
-        }
-        if ($0._1.tag === "NumVal") {
-          return true;
-        }
-        if ($0._1.tag === "BoolVal") {
-          return true;
-        }
-        if ($0._1.tag === "TimeVal") {
-          return $0._1._1 === "";
-        }
-        if ($0._1.tag === "ListVal") {
-          return $0._1._1 === "";
-        }
-        if ($0._1.tag === "JsonVal") {
-          return $0._1._1 === "";
-        }
-        fail();
-      })()) {
+      if ($0._1 === "") {
         return $Either("Left", [$Issue("Issue", "field domain MUST not be empty")]);
       }
       return $Either("Right", v);
@@ -5948,7 +5232,10 @@ var parseConcept = (input) => {
       return $Either("Right", concept($12._1));
     }
     fail();
-  })())(parseConceptType(input.conceptType)))($Either("Right", functorMap.map(StrVal)(input.props)));
+  })())(parseConceptType(input.conceptType)))($Either(
+    "Right",
+    mapKeysWith(ordId)((x) => (y) => x)(unsafeCoerce)(input.props)
+  ));
   const $1 = (() => {
     if ($0.tag === "Left") {
       return $Either("Left", $0._1);
@@ -5967,28 +5254,15 @@ var parseConcept = (input) => {
   fail();
 };
 
-// output-es/Data.HashSet/index.js
-var identity6 = (x) => x;
-var insert4 = (dictHashable) => {
-  const insert12 = insertPurs(dictHashable.Eq0().eq, dictHashable.hash);
-  return (a) => (v) => insert12(a)()(v);
-};
-var fromArray2 = (dictHashable) => fromArrayPurs(dictHashable.Eq0().eq, dictHashable.hash)(identity6)((v) => {
-});
-var foldableHashSet = {
-  foldr: (f) => (a) => (v) => foldrWithIndexDefault(foldableWithIndexHashMap)((k) => (v1) => f(k))(a)(v),
-  foldl: (f) => (a) => (v) => foldlWithIndexDefault(foldableWithIndexHashMap)((k) => (b) => (v1) => f(b)(k))(a)(v),
-  foldMap: (dictMonoid) => {
-    const foldMapWithIndex1 = foldMapWithIndexPurs(dictMonoid.mempty)(dictMonoid.Semigroup0().append);
-    return (f) => (v) => foldMapWithIndex1((k) => (v1) => f(k))(v);
-  }
-};
-var map = (dictHashable) => {
-  const insert12 = insert4(dictHashable);
-  return (f) => foldableHashSet.foldr((x) => insert12(f(x)))(empty);
-};
-
 // output-es/Data.Array.NonEmpty.Internal/foreign.js
+var foldl1Impl = function(f, xs) {
+  var acc = xs[0];
+  var len = xs.length;
+  for (var i = 1; i < len; i++) {
+    acc = f(acc)(xs[i]);
+  }
+  return acc;
+};
 var traverse1Impl = function() {
   function Cont(fn) {
     this.fn = fn;
@@ -6015,208 +5289,31 @@ var traverse1Impl = function() {
     }
     return arr;
   }
-  return function(apply4, map3, f) {
+  return function(apply4, map2, f) {
     var buildFrom = function(x, ys) {
-      return apply4(map3(consList)(f(x)))(ys);
+      return apply4(map2(consList)(f(x)))(ys);
     };
     var go = function(acc, currentLen, xs) {
       if (currentLen === 0) {
         return acc;
       } else {
-        var last5 = xs[currentLen - 1];
+        var last3 = xs[currentLen - 1];
         return new Cont(function() {
-          var built = go(buildFrom(last5, acc), currentLen - 1, xs);
+          var built = go(buildFrom(last3, acc), currentLen - 1, xs);
           return built;
         });
       }
     };
     return function(array) {
-      var acc = map3(finalCell)(f(array[array.length - 1]));
+      var acc = map2(finalCell)(f(array[array.length - 1]));
       var result = go(acc, array.length - 1, array);
       while (result instanceof Cont) {
         result = result.fn();
       }
-      return map3(listToArray)(result);
+      return map2(listToArray)(result);
     };
   };
 }();
-
-// output-es/Data.Array.NonEmpty/index.js
-var toArray2 = (v) => v;
-var last3 = (x) => {
-  const $0 = last(x);
-  if ($0.tag === "Just") {
-    return $0._1;
-  }
-  fail();
-};
-
-// output-es/Foreign/foreign.js
-var isArray = Array.isArray || function(value2) {
-  return Object.prototype.toString.call(value2) === "[object Array]";
-};
-
-// output-es/Node.FS.Stats/foreign.js
-var isDirectoryImpl = (s) => s.isDirectory();
-var isFileImpl = (s) => s.isFile();
-
-// output-es/Node.Path/foreign.js
-import path from "path";
-var normalize = path.normalize;
-function concat3(segments) {
-  return path.join.apply(this, segments);
-}
-var basename = path.basename;
-var extname = path.extname;
-var sep = path.sep;
-var delimiter = path.delimiter;
-var parse3 = path.parse;
-var isAbsolute = path.isAbsolute;
-
-// output-es/Utils/index.js
-var getFiles = (x) => (excl) => _bind(toAff1(readdir2)(x))((allFiles) => foldM(monadAff)((acc) => (f) => _bind(toAff1(stat2)(f))((st) => {
-  if (isFileImpl(st) && extname(basename(f)) === ".csv") {
-    return _pure([f, ...acc]);
-  }
-  if (isDirectoryImpl(st)) {
-    return _bind(getFiles(f)([]))((dirfs) => _pure([...acc, ...dirfs]));
-  }
-  return _pure(acc);
-}))([])(arrayMap((f) => concat3([x, f]))(filterImpl((f) => !elem(eqString)(f)(excl), allFiles))));
-var dupsBy = (func) => (lst) => arrayMap(last3)(filterImpl((g) => g.length > 1, groupAllBy(func)(lst)));
-
-// output-es/Data.DDF.BaseDataSet/index.js
-var fromArray3 = /* @__PURE__ */ fromArray2(hashableString);
-var lookup4 = /* @__PURE__ */ lookup2(hashableId);
-var map2 = /* @__PURE__ */ map(hashableString);
-var fromArray1 = /* @__PURE__ */ (() => fromArrayPurs(eqId.eq, hashableId.hash)(fst)(snd))();
-var insert5 = /* @__PURE__ */ (() => insertPurs(eqId.eq, hashableId.hash))();
-var insert1 = /* @__PURE__ */ insert4(hashableId);
-var updateValueParserWithConstrain = (v) => (v1) => {
-  if (v1.tag === "DataPoints") {
-    return zipWith2((vp) => (con) => {
-      if (con.tag === "Nothing") {
-        return vp;
-      }
-      if (con.tag === "Just") {
-        return parseConstrainedDomainVal(fromArray3([con._1]));
-      }
-      fail();
-    })(v)(v1._1.constrains);
-  }
-  return v;
-};
-var getDomainSetValues = (v) => (c) => {
-  const v1 = lookup4(c)(v.entityDomains);
-  if (v1.tag === "Just") {
-    return map2(value)(v1._1);
-  }
-  if (v1.tag === "Nothing") {
-    return empty;
-  }
-  fail();
-};
-var getConcept = (v) => (c) => {
-  const v1 = lookup4(c)(v.concepts);
-  if (v1.tag === "Just") {
-    return $Either("Right", v1._1);
-  }
-  if (v1.tag === "Nothing") {
-    return $Either("Left", [$Issue("Issue", "concept not found: " + c)]);
-  }
-  fail();
-};
-var getValueParser = (d) => (c) => {
-  const $0 = getConcept(d)(c);
-  if ($0.tag === "Left") {
-    return $Either("Left", $0._1);
-  }
-  if ($0.tag === "Right") {
-    if ($0._1.conceptType.tag === "StringC") {
-      return $Either("Right", parseStrVal);
-    }
-    if ($0._1.conceptType.tag === "MeasureC") {
-      return $Either("Right", parseNumVal);
-    }
-    if ($0._1.conceptType.tag === "BooleanC") {
-      return $Either("Right", parseBoolVal);
-    }
-    if ($0._1.conceptType.tag === "IntervalC") {
-      return $Either("Right", parseStrVal);
-    }
-    if ($0._1.conceptType.tag === "EntityDomainC") {
-      return $Either("Right", parseDomainVal(c)(getDomainSetValues(d)(c)));
-    }
-    if ($0._1.conceptType.tag === "EntitySetC") {
-      return $Either("Right", parseDomainVal(c)(getDomainSetValues(d)(c)));
-    }
-    if ($0._1.conceptType.tag === "RoleC") {
-      return $Either("Right", parseStrVal);
-    }
-    if ($0._1.conceptType.tag === "CompositeC") {
-      return $Either("Right", parseStrVal);
-    }
-    if ($0._1.conceptType.tag === "TimeC") {
-      return $Either("Right", parseTimeVal);
-    }
-    if ($0._1.conceptType.tag === "CustomC") {
-      return $Either("Right", parseStrVal);
-    }
-  }
-  fail();
-};
-var fromConcepts = (lst) => {
-  const dups = dupsBy((x) => (y) => ordString.compare(x.conceptId)(y.conceptId))(lst);
-  if (dups.length === 0) {
-    return $Either("Right", { concepts: fromArray1(arrayMap((x) => $Tuple(x.conceptId, x))(lst)), entityDomains: empty });
-  }
-  return $Either(
-    "Left",
-    fromFoldableImpl(
-      foldrArray,
-      arrayMap((v) => {
-        if (v._info.tag === "Nothing") {
-          return $Issue("InvalidItem", "", -1, "multiple definition found for " + v.conceptId);
-        }
-        if (v._info.tag === "Just") {
-          return $Issue("InvalidItem", v._info._1.filepath, v._info._1.row, "multiple definition found for " + v.conceptId);
-        }
-        fail();
-      })(dups)
-    )
-  );
-};
-var appendEntity = (v) => (v1) => {
-  const eid = v.entityId;
-  return {
-    ...v1,
-    entityDomains: (() => {
-      const $0 = (domain, domainMap) => {
-        const v2 = lookup4(domain)(domainMap);
-        if (v2.tag === "Nothing") {
-          return insert5(domain)(singletonPurs(eid)(hashString(eid))())(domainMap);
-        }
-        if (v2.tag === "Just") {
-          return insert5(domain)(insert1(eid)(v2._1))(domainMap);
-        }
-        fail();
-      };
-      return $0(v.entityDomain, foldableList.foldr(($1) => ($2) => $0($1, $2))(v1.entityDomains)(v.entitySets));
-    })()
-  };
-};
-var parseBaseDataSet = (v) => {
-  if (v.concepts.length === 0) {
-    return $Either("Left", [$Issue("Issue", "Data set must have concepts")]);
-  }
-  if (fromConcepts(v.concepts).tag === "Left") {
-    return $Either("Left", fromConcepts(v.concepts)._1);
-  }
-  if (fromConcepts(v.concepts).tag === "Right") {
-    return $Either("Right", foldrArray(appendEntity)(fromConcepts(v.concepts)._1)(v.entities));
-  }
-  fail();
-};
 
 // output-es/Data.Show.Generic/foreign.js
 var intercalate = function(separator) {
@@ -6266,7 +5363,50 @@ var is_header = (s) => {
     })()((v1$1) => $Either("Right", { result: $1 + v1$1.result, suffix: v1$1.suffix }));
   });
 };
-var header = (s) => {
+var showHeader = {
+  show: /* @__PURE__ */ (() => {
+    const $0 = genericShowConstructor({ genericShowArgs: (v) => ["(NonEmptyString.unsafeFromString " + showStringImpl(v) + ")"] })({
+      reflectSymbol: () => "Header"
+    });
+    return (x) => $0["genericShow'"](x);
+  })()
+};
+var generalHeader = (s) => {
+  const $0 = identifier(s);
+  return (() => {
+    if ($0.tag === "Left") {
+      const $1 = $0._1;
+      return (v) => $Either("Left", $1);
+    }
+    if ($0.tag === "Right") {
+      const $1 = $0._1;
+      return (f) => f($1);
+    }
+    fail();
+  })()((v1) => {
+    const $1 = eof(v1.suffix);
+    if ($1.tag === "Left") {
+      return $Either("Left", $1._1);
+    }
+    if ($1.tag === "Right") {
+      return $Either("Right", { result: v1.result, suffix: $1._1.suffix });
+    }
+    fail();
+  });
+};
+var parseGeneralHeader = (x) => {
+  const $0 = generalHeader({ substring: x, position: 0 });
+  if ($0.tag === "Left") {
+    return $Either("Left", [$Issue("InvalidCSV", "invalid header: " + x + ", " + $0._1.error + "at pos " + showIntImpl($0._1.pos))]);
+  }
+  if ($0.tag === "Right") {
+    return $Either("Right", $0._1.result);
+  }
+  fail();
+};
+var eqHeader = { eq: (x) => (y) => x === y };
+var ordHeader = { compare: (x) => (y) => ordString.compare(x)(y), Eq0: () => eqHeader };
+var entityHeader = (s) => {
   const v2 = is_header(s);
   const $0 = (() => {
     if (v2.tag === "Left") {
@@ -6298,8 +5438,8 @@ var header = (s) => {
     fail();
   });
 };
-var parseHeader = (x) => {
-  const $0 = header({ substring: x, position: 0 });
+var parseEntityHeader = (x) => {
+  const $0 = entityHeader({ substring: x, position: 0 });
   if ($0.tag === "Left") {
     return $Either("Left", [$Issue("InvalidCSV", "invalid header: " + x + ", " + $0._1.error + "at pos " + showIntImpl($0._1.pos))]);
   }
@@ -6308,16 +5448,44 @@ var parseHeader = (x) => {
   }
   fail();
 };
-var showHeader = {
-  show: /* @__PURE__ */ (() => {
-    const $0 = genericShowConstructor({ genericShowArgs: (v) => ["(NonEmptyString.unsafeFromString " + showStringImpl(v) + ")"] })({
-      reflectSymbol: () => "Header"
-    });
-    return (x) => $0["genericShow'"](x);
-  })()
+
+// output-es/Data.Set/index.js
+var foldableSet = {
+  foldMap: (dictMonoid) => {
+    const foldMap1 = foldableList.foldMap(dictMonoid);
+    return (f) => {
+      const $0 = foldMap1(f);
+      return (x) => $0(keys(x));
+    };
+  },
+  foldl: (f) => (x) => {
+    const go = (go$a0$copy) => (go$a1$copy) => {
+      let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
+      while (go$c) {
+        const b = go$a0, v = go$a1;
+        if (v.tag === "Nil") {
+          go$c = false;
+          go$r = b;
+          continue;
+        }
+        if (v.tag === "Cons") {
+          go$a0 = f(b)(v._1);
+          go$a1 = v._2;
+          continue;
+        }
+        fail();
+      }
+      return go$r;
+    };
+    const $0 = go(x);
+    return (x$1) => $0(keys(x$1));
+  },
+  foldr: (f) => (x) => {
+    const $0 = foldableList.foldr(f)(x);
+    return (x$1) => $0(keys(x$1));
+  }
 };
-var eqHeader = { eq: (x) => (y) => x === y };
-var ordHeader = { compare: (x) => (y) => ordString.compare(x)(y), Eq0: () => eqHeader };
+var map = (dictOrd) => (f) => foldableSet.foldl((m) => (a) => insert(dictOrd)(f(a))()(m))(Leaf2);
 
 // output-es/Data.String.NonEmpty.Internal/index.js
 var toString = (v) => v;
@@ -6341,74 +5509,227 @@ function startsWithImpl(searchString, s) {
   return s.startsWith(searchString);
 }
 
+// output-es/Foreign/foreign.js
+var isArray = Array.isArray || function(value2) {
+  return Object.prototype.toString.call(value2) === "[object Array]";
+};
+
+// output-es/Node.FS.Stats/foreign.js
+var isDirectoryImpl = (s) => s.isDirectory();
+var isFileImpl = (s) => s.isFile();
+
+// output-es/Node.Path/foreign.js
+import path from "path";
+var normalize = path.normalize;
+function concat3(segments) {
+  return path.join.apply(this, segments);
+}
+var basename = path.basename;
+var extname = path.extname;
+var sep = path.sep;
+var delimiter = path.delimiter;
+var parse3 = path.parse;
+var isAbsolute = path.isAbsolute;
+
+// output-es/Utils/index.js
+var unsafeLookup = (dictShow) => (dictOrd) => (k) => (m) => {
+  const v = lookup(dictOrd)(k)(m);
+  if (v.tag === "Just") {
+    return v._1;
+  }
+  if (v.tag === "Nothing") {
+    return _crashWith("looked up a key which is not existed in the Map: " + dictShow.show(k));
+  }
+  fail();
+};
+var getFiles = (x) => (excl) => _bind(toAff1(readdir2)(x))((allFiles) => foldM(monadAff)((acc) => (f) => _bind(toAff1(stat2)(f))((st) => {
+  if (isFileImpl(st) && extname(basename(f)) === ".csv") {
+    return _pure([f, ...acc]);
+  }
+  if (isDirectoryImpl(st)) {
+    return _bind(getFiles(f)([]))((dirfs) => _pure([...acc, ...dirfs]));
+  }
+  return _pure(acc);
+}))([])(arrayMap((f) => concat3([x, f]))(filterImpl((f) => !elem(eqString)(f)(excl), allFiles))));
+var findDupsL = (func) => {
+  const go = (go$a0$copy) => (go$a1$copy) => {
+    let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
+    while (go$c) {
+      const v = go$a0, v1 = go$a1;
+      if (v1.tag === "Cons" && v1._2.tag === "Cons") {
+        if (func(v1._1)(v1._2._1) === "EQ") {
+          go$a0 = foldableList.foldr(Cons)($List("Cons", v1._2._1, Nil))(v);
+          go$a1 = $List("Cons", v1._2._1, v1._2._2);
+          continue;
+        }
+        go$a0 = v;
+        go$a1 = $List("Cons", v1._2._1, v1._2._2);
+        continue;
+      }
+      go$c = false;
+      go$r = v;
+    }
+    return go$r;
+  };
+  return go(Nil);
+};
+var findDups = (func) => {
+  const go = (go$a0$copy) => (go$a1$copy) => {
+    let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
+    while (go$c) {
+      const acc = go$a0, lst = go$a1;
+      const v = sliceImpl(0, 2, lst);
+      if (v.length === 2) {
+        const remain = sliceImpl(1, lst.length, lst);
+        if (func(v[0])(v[1]) === "EQ") {
+          go$a0 = snoc(acc)(v[1]);
+          go$a1 = remain;
+          continue;
+        }
+        go$a0 = acc;
+        go$a1 = remain;
+        continue;
+      }
+      go$c = false;
+      go$r = acc;
+    }
+    return go$r;
+  };
+  return go([]);
+};
+
 // output-es/Data.DDF.Csv.CsvFile/index.js
+var show = /* @__PURE__ */ showArrayImpl(showStringImpl);
 var applicativeV = /* @__PURE__ */ (() => {
   const applyV1 = applyV(semigroupArray);
   return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
 })();
-var show = /* @__PURE__ */ showArrayImpl(showStringImpl);
-var eq = /* @__PURE__ */ eqArrayImpl(eqStringImpl);
-var show1 = /* @__PURE__ */ showArrayImpl((v) => "(Tuple " + showStringImpl(v._1) + " " + showIntImpl(v._2) + ")");
+var eq1 = /* @__PURE__ */ (() => eqArrayImpl(eqHeader.eq))();
+var show1 = /* @__PURE__ */ showArrayImpl((v) => "(Tuple " + showHeader.show(v._1) + " " + showIntImpl(v._2) + ")");
+var sort1 = /* @__PURE__ */ (() => {
+  const compare2 = ordTuple(ordString)(ordInt).compare;
+  return (xs) => sortBy(compare2)(xs);
+})();
+var fromFoldable1 = /* @__PURE__ */ foldrArray(Cons)(Nil);
+var fromFoldable3 = /* @__PURE__ */ fromFoldable(ordHeader)(foldableArray);
 var sequence = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV)(identity2))();
 var show2 = /* @__PURE__ */ (() => showArrayImpl(showNonEmptyString.show))();
+var fromFoldable4 = /* @__PURE__ */ foldlArray((m) => (a) => insert(ordString)(a)()(m))(Leaf2);
+var fromFoldable7 = /* @__PURE__ */ fromFoldable(ordString)(foldableNonEmptyList);
+var fromFoldable8 = /* @__PURE__ */ fromFoldable(ordString)(foldableArray);
+var elem4 = /* @__PURE__ */ (() => {
+  const any1 = foldableNonEmptyList.foldMap((() => {
+    const semigroupDisj1 = { append: (v) => (v1) => v || v1 };
+    return { mempty: false, Semigroup0: () => semigroupDisj1 };
+  })());
+  return (x) => any1(($0) => x === $0);
+})();
 var apply2 = /* @__PURE__ */ (() => applyV(semigroupArray).apply)();
 var oneOfHeaderExists = (expected) => (csvcontent) => {
-  const actual = fromFoldableImpl(foldrArray, csvcontent.headers);
-  if (foldrArray((x) => (acc) => {
-    const $0 = elem(eqString)(x)(actual);
-    if ($0) {
-      return !acc;
-    }
-    return !$0 && acc;
-  })(false)(expected)) {
-    return applicativeV.pure(csvcontent);
+  const intersection = intersectBy(eqStringImpl)(expected)(arrayMap((x) => x)(fromFoldableImpl(
+    foldrArray,
+    csvcontent.headers
+  )));
+  if (intersection.length !== 1) {
+    return $Either("Left", [$Issue("InvalidCSV", "file MUST have one and only one of follwoing field: " + show(expected))]);
   }
-  return $Either("Left", [$Issue("InvalidCSV", "file MUST have one and only one of follwoing field: " + show(expected))]);
+  return applicativeV.pure($Tuple(intersection[0], csvcontent));
 };
 var notEmptyCsv = (input) => {
-  if (input.headers.tag === "Just" && input.headers._1.length > 0) {
-    if (input.rows.tag === "Nothing") {
-      return applicativeV.pure({ headers: input.headers._1, rows: [] });
+  if (input.headers.length > 0) {
+    if (input.columns.length > 0) {
+      if (input.headers.length === input.columns.length) {
+        return applicativeV.pure({ headers: input.headers, index: input.index, columns: input.columns });
+      }
+      return $Either("Left", [$Issue("InvalidCSV", "header length doesn't match column length")]);
     }
-    if (input.rows.tag === "Just") {
-      return applicativeV.pure({ headers: input.headers._1, rows: input.rows._1 });
-    }
-    fail();
+    return $Either("Left", [$Issue("InvalidCSV", "Empty Csv")]);
   }
-  return $Either("Left", [$Issue("InvalidCSV", "no headers")]);
+  return $Either("Left", [$Issue("InvalidCSV", "Empty Csv")]);
 };
 var noDupCols = (input) => {
-  const dups = filterImpl(
-    (x) => x._2 > 1,
-    arrayMap((x) => $Tuple(
-      (() => {
-        if (0 < x.length) {
-          return x[0];
-        }
-        fail();
-      })(),
-      x.length
-    ))(groupBy(eqStringImpl)(sortBy(ordString.compare)(input.headers)))
-  );
-  if (eq(nubBy(ordString.compare)(input.headers))(input.headers)) {
+  if (eq1(nubBy(ordHeader.compare)(input.headers))(input.headers)) {
     return applicativeV.pure(input);
   }
-  return $Either("Left", [$Issue("InvalidCSV", "duplicated headers: " + show1(dups))]);
+  return $Either(
+    "Left",
+    [
+      $Issue(
+        "InvalidCSV",
+        "duplicated headers: " + show1(filterImpl(
+          (x) => x._2 > 1,
+          arrayMap((x) => $Tuple(
+            (() => {
+              if (0 < x.length) {
+                return x[0];
+              }
+              fail();
+            })(),
+            x.length
+          ))(groupBy(eqHeader.eq)(sortBy(ordHeader.compare)(input.headers)))
+        ))
+      )
+    ]
+  );
 };
 var hasCols = (dictFoldable) => (dictOrd) => {
-  const fromFoldable32 = dictFoldable.foldl((m) => (a) => insert3(dictOrd)(a)()(m))(Leaf2);
+  const fromFoldable112 = dictFoldable.foldl((m) => (a) => insert(dictOrd)(a)()(m))(Leaf2);
   const compare2 = dictOrd.compare;
-  return (dictEq) => (expected) => (actual) => unsafeDifference(compare2, fromFoldable32(expected), fromFoldable32(actual)).tag === "Leaf";
+  return (dictEq) => (expected) => (actual) => unsafeDifference(compare2, fromFoldable112(expected), fromFoldable112(actual)).tag === "Leaf";
 };
 var hasCols1 = /* @__PURE__ */ hasCols(foldableArray)(ordString)(eqString);
 var headersExists = (expected) => (csvcontent) => {
-  if (hasCols1(expected)(fromFoldableImpl(foldrArray, csvcontent.headers))) {
+  if (hasCols1(expected)(arrayMap((x) => x)(fromFoldableImpl(foldrArray, csvcontent.headers)))) {
     return applicativeV.pure(csvcontent);
   }
   return $Either("Left", [$Issue("InvalidCSV", "file MUST have following field: " + show(expected))]);
 };
+var findInvalid = (col) => (x) => {
+  const $0 = findIndexImpl(Just, Nothing, (v) => v === x, col);
+  if ($0.tag === "Just") {
+    return $0._1;
+  }
+  fail();
+};
+var findDupsForColumns = (headers) => (values3) => {
+  const colsToCheck = arrayMap((h) => unsafeLookup(showHeader)(ordHeader)(h)(values3))(headers);
+  return fromFoldableImpl(
+    foldableList.foldr,
+    listMap(snd)(findDupsL((x) => (y) => ordString.compare(x._1)(y._1))(fromFoldable1(sort1(zipWithImpl(
+      Tuple,
+      foldl1Impl(zipWith((a) => (b) => a + "," + b), colsToCheck),
+      rangeImpl(
+        0,
+        (() => {
+          if (0 < colsToCheck.length) {
+            return colsToCheck[0].length;
+          }
+          fail();
+        })()
+      )
+    )))))
+  );
+};
+var noDuplicatedByKey = (key) => (fileInfo) => (v) => {
+  const header = key === "" ? "undefined_id" : key;
+  const columnMap = fromFoldable3(zipWithImpl(Tuple, v.headers, v.columns));
+  const dups = findDupsForColumns([header])(columnMap);
+  if (dups.length === 0) {
+    return applicativeV.pure(v);
+  }
+  const fp = fileInfo._1;
+  return $Either(
+    "Left",
+    arrayMap((x) => $Issue(
+      "InvalidItem",
+      fp,
+      v.index[x],
+      "Duplicated " + key + ": " + unsafeLookup(showHeader)(ordHeader)(header)(columnMap)[x]
+    ))(dups)
+  );
+};
 var colsAreValidIds = (input) => {
-  const $0 = sequence(arrayMap(parseHeader)(input.headers));
+  const $0 = sequence(arrayMap(parseGeneralHeader)(input.headers));
   if ($0.tag === "Right") {
     const is_headers = filterImpl((x) => startsWithImpl("is--", x), arrayMap(unsafeCoerce)($0._1));
     if (is_headers.length === 0) {
@@ -6422,7 +5743,7 @@ var colsAreValidIds = (input) => {
   fail();
 };
 var colsAreValidHeaders = (input) => {
-  const $0 = sequence(arrayMap(parseHeader)(input.headers));
+  const $0 = sequence(arrayMap(parseEntityHeader)(input.headers));
   if ($0.tag === "Right") {
     return applicativeV.pure({ ...input, headers: $0._1 });
   }
@@ -6431,70 +5752,133 @@ var colsAreValidHeaders = (input) => {
   }
   fail();
 };
+var checkOneColumn = (val) => (col) => {
+  if (val.tag === "Nothing") {
+    return [];
+  }
+  if (val.tag === "Just") {
+    const res = unsafeDifference(
+      ordString.compare,
+      fromFoldable4(col),
+      $$$Map("Node", 1, 1, val._1, void 0, Leaf2, Leaf2)
+    );
+    if (res.tag === "Leaf") {
+      return [];
+    }
+    return fromFoldableImpl(
+      foldableSet.foldr,
+      map(ordTuple(ordInt)(ordString))((x) => $Tuple(findInvalid(col)(x), x))(res)
+    );
+  }
+  fail();
+};
+var constrainsAreMet = (fp) => (v) => (v1) => {
+  const $0 = v.pkeys;
+  const v2 = concat(fromFoldableImpl(
+    foldableList.foldr,
+    zipWith2(checkOneColumn)(values(fromFoldable7(zipWith3(Tuple)($0)(v.constrains))))(values(filterKeys(ordString)((k) => elem4(k)($0))(fromFoldable8(zipWithImpl(
+      Tuple,
+      arrayMap(unsafeCoerce)(v1.headers),
+      v1.columns
+    )))))
+  ));
+  if (v2.length === 0) {
+    return applicativeV.pure(v1);
+  }
+  return $Either("Left", arrayMap((v3) => $Issue("InvalidItem", fp, v1.index[v3._1], "constrain violation: " + v3._2))(v2));
+};
 var parseCsvFile = (v) => {
-  const $0 = notEmptyCsv(v.csvContent);
-  const goodCsvContent = (() => {
-    if ($0.tag === "Left") {
-      return $Either("Left", $0._1);
-    }
-    if ($0.tag === "Right") {
-      return noDupCols($0._1);
-    }
-    fail();
-  })();
   if (v.fileInfo._2.tag === "Concepts") {
     return apply2((() => {
-      const $1 = applicativeV.pure(v.fileInfo);
-      if ($1.tag === "Left") {
-        return $Either("Left", $1._1);
+      const $0 = applicativeV.pure(v.fileInfo);
+      if ($0.tag === "Left") {
+        return $Either("Left", $0._1);
       }
-      if ($1.tag === "Right") {
+      if ($0.tag === "Right") {
         return $Either(
           "Right",
           (() => {
-            const $2 = $1._1;
-            return (csv) => ({ fileInfo: $2, csvContent: csv });
+            const $1 = $0._1;
+            return (csvContent) => ({ fileInfo: $1, csvContent });
           })()
         );
       }
       fail();
     })())((() => {
+      const $0 = notEmptyCsv(v.csvContent);
       const $1 = (() => {
-        if (goodCsvContent.tag === "Left") {
-          return $Either("Left", goodCsvContent._1);
+        if ($0.tag === "Left") {
+          return $Either("Left", $0._1);
         }
-        if (goodCsvContent.tag === "Right") {
-          return headersExists(["concept", "concept_type"])(goodCsvContent._1);
+        if ($0.tag === "Right") {
+          return colsAreValidIds($0._1);
         }
         fail();
       })();
-      if ($1.tag === "Left") {
-        return $Either("Left", $1._1);
+      const $2 = (() => {
+        if ($1.tag === "Left") {
+          return $Either("Left", $1._1);
+        }
+        if ($1.tag === "Right") {
+          return noDupCols($1._1);
+        }
+        fail();
+      })();
+      const $3 = (() => {
+        if ($2.tag === "Left") {
+          return $Either("Left", $2._1);
+        }
+        if ($2.tag === "Right") {
+          return headersExists(["concept", "concept_type"])($2._1);
+        }
+        fail();
+      })();
+      if ($3.tag === "Left") {
+        return $Either("Left", $3._1);
       }
-      if ($1.tag === "Right") {
-        return colsAreValidIds($1._1);
+      if ($3.tag === "Right") {
+        return noDuplicatedByKey("concept")(v.fileInfo)($3._1);
       }
       fail();
     })());
   }
   if (v.fileInfo._2.tag === "Entities") {
     return apply2((() => {
-      const $1 = applicativeV.pure(v.fileInfo);
-      if ($1.tag === "Left") {
-        return $Either("Left", $1._1);
+      const $0 = applicativeV.pure(v.fileInfo);
+      if ($0.tag === "Left") {
+        return $Either("Left", $0._1);
       }
-      if ($1.tag === "Right") {
+      if ($0.tag === "Right") {
         return $Either(
           "Right",
           (() => {
-            const $2 = $1._1;
-            return (csv) => ({ fileInfo: $2, csvContent: csv });
+            const $1 = $0._1;
+            return (csvContent) => ({ fileInfo: $1, csvContent });
           })()
         );
       }
       fail();
     })())((() => {
-      const $1 = oneOfHeaderExists((() => {
+      const $0 = notEmptyCsv(v.csvContent);
+      const $1 = (() => {
+        if ($0.tag === "Left") {
+          return $Either("Left", $0._1);
+        }
+        if ($0.tag === "Right") {
+          return colsAreValidHeaders($0._1);
+        }
+        fail();
+      })();
+      const $2 = (() => {
+        if ($1.tag === "Left") {
+          return $Either("Left", $1._1);
+        }
+        if ($1.tag === "Right") {
+          return noDupCols($1._1);
+        }
+        fail();
+      })();
+      const $3 = oneOfHeaderExists((() => {
         if (v.fileInfo._2._1.set.tag === "Just") {
           return [v.fileInfo._2._1.set._1, v.fileInfo._2._1.domain];
         }
@@ -6503,62 +5887,81 @@ var parseCsvFile = (v) => {
         }
         fail();
       })());
-      const $2 = (() => {
-        if (goodCsvContent.tag === "Left") {
-          return $Either("Left", goodCsvContent._1);
+      const $4 = (() => {
+        if ($2.tag === "Left") {
+          return $Either("Left", $2._1);
         }
-        if (goodCsvContent.tag === "Right") {
-          return $1(goodCsvContent._1);
+        if ($2.tag === "Right") {
+          return $3($2._1);
         }
         fail();
       })();
-      if ($2.tag === "Left") {
-        return $Either("Left", $2._1);
+      if ($4.tag === "Left") {
+        return $Either("Left", $4._1);
       }
-      if ($2.tag === "Right") {
-        return colsAreValidHeaders($2._1);
+      if ($4.tag === "Right") {
+        return noDuplicatedByKey($4._1._1)(v.fileInfo)($4._1._2);
       }
       fail();
     })());
   }
   if (v.fileInfo._2.tag === "DataPoints") {
     return apply2((() => {
-      const $1 = applicativeV.pure(v.fileInfo);
-      if ($1.tag === "Left") {
-        return $Either("Left", $1._1);
+      const $0 = applicativeV.pure(v.fileInfo);
+      if ($0.tag === "Left") {
+        return $Either("Left", $0._1);
       }
-      if ($1.tag === "Right") {
+      if ($0.tag === "Right") {
         return $Either(
           "Right",
           (() => {
-            const $2 = $1._1;
-            return (csv) => ({ fileInfo: $2, csvContent: csv });
+            const $1 = $0._1;
+            return (csvContent) => ({ fileInfo: $1, csvContent });
           })()
         );
       }
       fail();
     })())((() => {
-      const $1 = headersExists([
+      const $0 = notEmptyCsv(v.csvContent);
+      const $1 = (() => {
+        if ($0.tag === "Left") {
+          return $Either("Left", $0._1);
+        }
+        if ($0.tag === "Right") {
+          return colsAreValidIds($0._1);
+        }
+        fail();
+      })();
+      const $2 = (() => {
+        if ($1.tag === "Left") {
+          return $Either("Left", $1._1);
+        }
+        if ($1.tag === "Right") {
+          return noDupCols($1._1);
+        }
+        fail();
+      })();
+      const $3 = headersExists([
         v.fileInfo._2._1.indicator,
         ...fromFoldableImpl(
           foldableNonEmptyList.foldr,
           $NonEmpty(v.fileInfo._2._1.pkeys._1, listMap(toString)(v.fileInfo._2._1.pkeys._2))
         )
       ]);
-      const $2 = (() => {
-        if (goodCsvContent.tag === "Left") {
-          return $Either("Left", goodCsvContent._1);
+      const $4 = (() => {
+        if ($2.tag === "Left") {
+          return $Either("Left", $2._1);
         }
-        if (goodCsvContent.tag === "Right") {
-          return $1(goodCsvContent._1);
+        if ($2.tag === "Right") {
+          return $3($2._1);
         }
         fail();
       })();
-      if ($2.tag === "Left") {
-        return $Either("Left", $2._1);
+      if ($4.tag === "Left") {
+        return $Either("Left", $4._1);
       }
-      if ($2.tag === "Right") {
-        return colsAreValidIds($2._1);
+      if ($4.tag === "Right") {
+        return constrainsAreMet(v.fileInfo._1)(v.fileInfo._2._1)($4._1);
       }
       fail();
     })());
@@ -6566,612 +5969,52 @@ var parseCsvFile = (v) => {
   return $Either("Left", [NotImplemented]);
 };
 
-// output-es/Data.DDF.Csv.Utils/index.js
-var fromFoldable2 = /* @__PURE__ */ fromFoldable(ordHeader)(foldableArray);
-var applyV2 = /* @__PURE__ */ applyV(semigroupArray);
-var sequence1 = /* @__PURE__ */ (() => traversable1NonEmptyList.traverse1(applyV2)(identity5))();
-var pop2 = /* @__PURE__ */ pop(ordHeader);
-var fromFoldable1 = /* @__PURE__ */ fromFoldable(ordId)(foldableArray);
-var createPointInput = (fp) => (indicator) => (pkeys) => (headers) => (v) => {
-  const rowMap = fromFoldable2(zipWithImpl(Tuple, headers, v._2));
-  return applyV2.apply(applyV2.apply(headers.length !== v._2.length ? $Either("Left", [$Issue("InvalidCSV", "bad csv row")]) : $Either("Right", (v2) => (v3) => ({ key: v2, value: v3, _info: $Maybe("Just", { filepath: fp, row: v._1 }) })))(sequence1($NonEmpty(
-    lookupV(showHeader)(ordHeader)(pkeys._1)(rowMap),
-    listMap((k) => lookupV(showHeader)(ordHeader)(k)(rowMap))(pkeys._2)
-  ))))(lookupV(showHeader)(ordHeader)(indicator)(rowMap));
-};
-var createEntityInput = (fp) => (v) => (headers) => (v1) => {
-  const $0 = pop2((() => {
-    if (v.set.tag === "Nothing") {
-      return v.domain;
-    }
-    if (v.set.tag === "Just") {
-      if (elem(eqHeader)(v.set._1)(headers)) {
-        return v.set._1;
-      }
-      return v.domain;
-    }
-    fail();
-  })())(fromFoldable2(zipWithImpl(Tuple, headers, v1._2)));
-  const v2 = (() => {
-    if ($0.tag === "Just") {
-      return $0._1;
-    }
-    fail();
-  })();
-  if (headers.length !== v1._2.length) {
-    return $Either("Left", [$Issue("InvalidCSV", "bad csv row")]);
-  }
-  return applyV2.apply(applyV2.apply(applyV2.apply(applyV2.apply($Either(
-    "Right",
-    (() => {
-      const $1 = v2._1;
-      return (v3) => (v4) => (v5) => (v6) => ({ entityId: $1, entityDomain: v3, entitySet: v4, props: v5, _info: v6 });
-    })()
-  ))($Either("Right", v.domain)))($Either("Right", v.set)))($Either("Right", v2._2)))($Either(
-    "Right",
-    $Maybe("Just", { filepath: fp, row: v1._1 })
-  ));
-};
-var createConceptInput = (fp) => (headers) => (v) => {
-  const rowMap = fromFoldable1(zipWithImpl(Tuple, arrayMap(unsafeCoerce)(headers), v._2));
-  const props = $$delete(ordId)("concept_type")($$delete(ordId)("concept")(rowMap));
-  if (headers.length !== v._2.length) {
-    return $Either("Left", [$Issue("InvalidCSV", "bad csv row")]);
-  }
-  return applyV2.apply(applyV2.apply(applyV2.apply((() => {
-    const $0 = lookupV(showId2)(ordId)("concept")(rowMap);
-    if ($0.tag === "Left") {
-      return $Either("Left", $0._1);
-    }
-    if ($0.tag === "Right") {
-      return $Either(
-        "Right",
-        (() => {
-          const $1 = $0._1;
-          return (v2) => (v3) => (v4) => ({ conceptId: $1, conceptType: v2, props: v3, _info: v4 });
-        })()
-      );
-    }
-    fail();
-  })())(lookupV(showId2)(ordId)("concept_type")(rowMap)))($Either("Right", props)))($Either(
-    "Right",
-    $Maybe("Just", { filepath: fp, row: v._1 })
-  ));
-};
-
-// output-es/Data.DDF.DataPoint/index.js
-var applyV3 = /* @__PURE__ */ applyV(semigroupArray);
-var sequence12 = /* @__PURE__ */ (() => traversable1NonEmptyList.traverse1(applyV3)(identity5))();
-var applicativeV2 = /* @__PURE__ */ (() => {
-  const applyV1 = applyV(semigroupArray);
-  return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
-})();
-var compare = /* @__PURE__ */ (() => ordNonEmpty2(ordValue).compare)();
-var show12 = /* @__PURE__ */ (() => {
-  const $0 = showNonEmptyList(showValue);
-  return (record) => (() => {
-    if (record._info.tag === "Just") {
-      return "{ _info: (Just { filepath: " + showStringImpl(record._info._1.filepath) + ", row: " + showIntImpl(record._info._1.row) + " }), key: ";
-    }
-    if (record._info.tag === "Nothing") {
-      return "{ _info: Nothing, key: ";
-    }
-    fail();
-  })() + $0.show(record.key) + ", value: " + showValue.show(record.value) + " }";
-})();
-var parseDataPointWithValueParser = (keyParsers) => (valParser) => (input) => applyV3.apply((() => {
-  const $0 = valParser(input.value);
-  if ($0.tag === "Left") {
-    return $Either("Left", $0._1);
-  }
-  if ($0.tag === "Right") {
-    return $Either(
-      "Right",
-      (() => {
-        const $1 = $0._1;
-        return (v1) => ({ key: v1, value: $1, _info: input._info });
-      })()
-    );
-  }
-  fail();
-})())(sequence12(zipWith2((f) => (x) => f(x))(keyParsers)(input.key)));
-var checkDuplicatedPoints = (pts) => {
-  const dups = dupsBy((x) => (y) => compare(x.key)(y.key))(pts);
-  if (0 < dups.length) {
-    return $Either(
-      "Left",
-      arrayMap((p) => {
-        if (p._info.tag === "Just") {
-          return $Issue("InvalidItem", p._info._1.filepath, p._info._1.row, "duplicated datapoints");
-        }
-        if (p._info.tag === "Nothing") {
-          return $Issue("Issue", "duplicated datapoints: " + show12(p));
-        }
-        fail();
-      })(dups)
-    );
-  }
-  return applicativeV2.pure(pts);
-};
-var parseDataPointList = (v) => applyV3.apply(applyV3.apply((() => {
-  const $0 = applicativeV2.pure(v.indicatorId);
-  if ($0.tag === "Left") {
-    return $Either("Left", $0._1);
-  }
-  if ($0.tag === "Right") {
-    return $Either(
-      "Right",
-      (() => {
-        const $1 = $0._1;
-        return (primaryKeys) => (datapoints) => ({ indicatorId: $1, primaryKeys, datapoints });
-      })()
-    );
-  }
-  fail();
-})())(applicativeV2.pure(v.primaryKeys)))(checkDuplicatedPoints(v.datapoints));
-
-// output-es/Data.DDF.Entity/index.js
-var applicativeV3 = /* @__PURE__ */ (() => {
-  const applyV1 = applyV(semigroupArray);
-  return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
-})();
-var sequence2 = /* @__PURE__ */ (() => traversableList.traverse(applicativeV3)(identity5))();
-var fromFoldable3 = /* @__PURE__ */ fromFoldable(ordId)(foldableList);
-var apply3 = /* @__PURE__ */ (() => applyV(semigroupArray).apply)();
-var splitEntAndProps = (props) => {
-  const v = partition((v2) => {
-    const v1 = stripPrefix2("is--")(v2._1);
-    if (v1.tag === "Nothing") {
-      return false;
-    }
-    if (v1.tag === "Just") {
-      return true;
-    }
-    fail();
-  })(unfoldableList.unfoldr(stepUnfoldrUnordered)($MapIter("IterNode", props, IterLeaf)));
-  return $Tuple(
-    listMap((v1) => $Tuple(
-      (() => {
-        const $0 = drop(length2(take2(4)(v1._1)))(v1._1);
-        if ($0 === "") {
-          return "undefined_id";
-        }
-        return $0;
-      })(),
-      v1._2
-    ))(v.yes),
-    listMap((v1) => $Tuple(v1._1 === "" ? "undefined_id" : v1._1, v1._2))(v.no)
-  );
-};
-var getEntitySets = (lst) => sequence2(listMap((v) => {
-  if (v._2 === "TRUE" || v._2 === "true" || v._2 === "FALSE" || v._2 === "false") {
-    return applicativeV3.pure(v._1);
-  }
-  return $Either("Left", [$Issue("Issue", "invalid boolean value for " + v._1 + ": " + v._2)]);
-})(lst));
-var entity = (entityId) => (entityDomain) => (entitySets) => (props) => ({ entityId, entityDomain, entitySets, props, _info: Nothing });
-var compareEntSets = (setsFromHeader) => (setsFromFileName) => {
-  if (setsFromFileName.tag === "Nothing") {
-    return applicativeV3.pure(setsFromHeader);
-  }
-  if (setsFromFileName.tag === "Just") {
-    if (setsFromHeader.tag === "Nil") {
-      return $Either("Left", [$Issue("Issue", "there should be a header is--" + setsFromFileName._1)]);
-    }
-    if (setsFromHeader.tag === "Cons") {
-      if (setsFromHeader._1 === setsFromFileName._1) {
-        return applicativeV3.pure(setsFromHeader);
-      }
-      return $Either("Left", [$Issue("Issue", "there should be only one is--entity header: is--" + setsFromHeader._1)]);
-    }
-  }
-  fail();
-};
-var parseEntity = (v) => {
-  if (v.entityId === "") {
-    return $Either("Left", [$Issue("Issue", "entity MUST have an entity id")]);
-  }
-  const v1 = splitEntAndProps(v.props);
-  const $0 = apply3(apply3(apply3((() => {
-    const $02 = parseId(v.entityId);
-    if ($02.tag === "Left") {
-      return $Either("Left", $02._1);
-    }
-    if ($02.tag === "Right") {
-      return $Either("Right", entity($02._1));
-    }
-    fail();
-  })())(applicativeV3.pure(v.entityDomain)))((() => {
-    const $02 = getEntitySets(v1._1);
-    if ($02.tag === "Left") {
-      return $Either("Left", $02._1);
-    }
-    if ($02.tag === "Right") {
-      return compareEntSets($02._1)(v.entitySet);
-    }
-    fail();
-  })()))(applicativeV3.pure(functorMap.map(StrVal)(fromFoldable3(v1._2))));
-  if ($0.tag === "Left") {
-    return $Either("Left", $0._1);
-  }
-  if ($0.tag === "Right") {
-    return applicativeV3.pure({ ...$0._1, _info: v._info });
-  }
-  fail();
-};
-
-// output-es/Data.Validation.Result/index.js
-var showMessage = (v) => {
-  const statstr = v.isWarning ? "[WARN] " : "[ERR] ";
-  const linestr = v.lineNo === -1 ? "" : showIntImpl(v.lineNo) + ":";
-  const filestr = v.file === "" ? "" : v.file + ":";
-  if (filestr === "" && linestr === "") {
-    return statstr + v.message;
-  }
-  return statstr + filestr + linestr + " " + v.message;
-};
-var messageFromIssue = (v) => {
-  if (v.tag === "InvalidItem") {
-    return { message: v._3, file: v._1, lineNo: v._2, isWarning: true };
-  }
-  return { message: showId.show(v), file: "", lineNo: -1, isWarning: true };
-};
-var hasError = (msgs) => {
-  const v = find((msg) => !msg.isWarning)(msgs);
-  if (v.tag === "Nothing") {
-    return false;
-  }
-  if (v.tag === "Just") {
-    return true;
-  }
-  fail();
-};
-
-// output-es/Data.Validation.ValidationT/index.js
-var vWarning = (dictMonad) => {
-  const $0 = monadStateExceptT(monadStateStateT(dictMonad));
-  return (dictMonoid) => (e) => $0.state((s) => $Tuple(void 0, dictMonoid.Semigroup0().append(s)(e)));
-};
-var vError = (dictMonad) => monadThrowExceptT({
-  Applicative0: () => applicativeStateT(dictMonad),
-  Bind1: () => bindStateT(dictMonad)
-}).throwError;
-var runValidationT = (dictMonad) => (dictMonoid) => {
-  const mempty = dictMonoid.mempty;
-  return (v) => dictMonad.Bind1().bind(v(mempty))((v1) => dictMonad.Applicative0().pure((() => {
-    if (v1._1.tag === "Left") {
-      return $Tuple(dictMonoid.Semigroup0().append(v1._1._1)(v1._2), Nothing);
-    }
-    if (v1._1.tag === "Right") {
-      return $Tuple(v1._2, $Maybe("Just", v1._1._1));
-    }
-    fail();
-  })()));
-};
-var monadtransVT = {
-  lift: (dictMonad) => (x) => bindStateT(dictMonad).bind((s) => dictMonad.Bind1().bind(x)((x$1) => dictMonad.Applicative0().pure($Tuple(x$1, s))))((a) => applicativeStateT(dictMonad).pure($Either(
-    "Right",
-    a
-  )))
-};
-var monadVT = (dictMonad) => {
-  const $0 = { Applicative0: () => applicativeStateT(dictMonad), Bind1: () => bindStateT(dictMonad) };
-  return { Applicative0: () => applicativeExceptT($0), Bind1: () => bindExceptT($0) };
-};
-
-// output-es/App.Validations/index.js
-var applicativeV4 = /* @__PURE__ */ (() => {
-  const applyV1 = applyV(semigroupArray);
-  return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
-})();
-var applyV4 = /* @__PURE__ */ applyV(semigroupArray);
-var sequence3 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV4)(identity2))();
-var sequence13 = /* @__PURE__ */ (() => traversable1NonEmptyList.traverse1(applyV4)(identity5))();
-var sequence22 = /* @__PURE__ */ (() => traversableNonEmptyList.sequence(applicativeV4))();
-var validateOneDataPointFile = (headers) => (indicatorId) => (pKeys) => (keyParsers) => (valueParser) => (csvfile) => {
-  const $0 = applyV4.apply(applyV4.apply(applyV4.apply((() => {
-    if (indicatorId.tag === "Left") {
-      return $Either("Left", indicatorId._1);
-    }
-    if (indicatorId.tag === "Right") {
-      return $Either(
-        "Right",
-        (() => {
-          const $02 = indicatorId._1;
-          return (pk) => (kp) => (vp) => (row) => {
-            const $1 = createPointInput(csvfile.fileInfo._1)($02)(pk)(headers)(row);
-            if ($1.tag === "Left") {
-              return $Either("Left", $1._1);
-            }
-            if ($1.tag === "Right") {
-              if ($1._1._info.tag === "Nothing") {
-                return parseDataPointWithValueParser(kp)(vp)($1._1);
-              }
-              if ($1._1._info.tag === "Just") {
-                return withRowInfo($1._1._info._1.filepath)($1._1._info._1.row)(parseDataPointWithValueParser(kp)(vp)($1._1));
-              }
-            }
-            fail();
-          };
-        })()
-      );
-    }
-    fail();
-  })())(pKeys))((() => {
-    if (keyParsers.tag === "Left") {
-      return $Either("Left", keyParsers._1);
-    }
-    if (keyParsers.tag === "Right") {
-      return applicativeV4.pure(updateValueParserWithConstrain(keyParsers._1)(csvfile.fileInfo._2));
-    }
-    fail();
-  })()))(valueParser);
-  if ($0.tag === "Right") {
-    return sequence3(arrayMap($0._1)(csvfile.csvContent.rows));
-  }
-  if ($0.tag === "Left") {
-    return $Either("Left", $0._1);
-  }
-  fail();
-};
-var validateEntities = (csvfile) => (dictMonad) => {
-  const vWarning2 = vWarning(dictMonad)(monoidArray);
-  const $0 = applicativeExceptT({
-    Applicative0: () => applicativeStateT(dictMonad),
-    Bind1: () => bindStateT(dictMonad)
-  });
-  if (csvfile.fileInfo._2.tag === "Entities") {
-    const $1 = csvfile.fileInfo._2._1;
-    return foldM(monadVT(dictMonad))((acc) => (row) => {
-      const $2 = createEntityInput(csvfile.fileInfo._1)($1)(csvfile.csvContent.headers)(row);
-      const v1 = (() => {
-        if ($2.tag === "Left") {
-          return $Either("Left", $2._1);
-        }
-        if ($2.tag === "Right") {
-          return parseEntity($2._1);
-        }
-        fail();
-      })();
-      if (v1.tag === "Left") {
-        return bindExceptT({
-          Applicative0: () => applicativeStateT(dictMonad),
-          Bind1: () => bindStateT(dictMonad)
-        }).bind(vWarning2(arrayMap((() => {
-          const $3 = row._1;
-          return (x) => ({ ...messageFromIssue(x), file: csvfile.fileInfo._1, isWarning: false, lineNo: $3 });
-        })())(v1._1)))(() => $0.pure(acc));
-      }
-      if (v1.tag === "Right") {
-        return $0.pure([v1._1, ...acc]);
-      }
-      fail();
-    })([])(csvfile.csvContent.rows);
-  }
-  return $0.pure([]);
-};
-var validateDataPoints = (dataset) => (csvfiles) => (dictMonad) => {
-  const bindVT2 = bindExceptT({
-    Applicative0: () => applicativeStateT(dictMonad),
-    Bind1: () => bindStateT(dictMonad)
-  });
-  const applicativeVT2 = applicativeExceptT({
-    Applicative0: () => applicativeStateT(dictMonad),
-    Bind1: () => bindStateT(dictMonad)
-  });
-  const vWarning2 = vWarning(dictMonad)(monoidArray);
-  const csvfile = (() => {
-    if (0 < csvfiles.length) {
-      return csvfiles[0];
-    }
-    fail();
-  })();
-  if (csvfile.fileInfo._2.tag === "DataPoints") {
-    const vpkeys = sequence13($NonEmpty(
-      parseId(csvfile.fileInfo._2._1.pkeys._1),
-      listMap(parseId$p)(csvfile.fileInfo._2._1.pkeys._2)
-    ));
-    const vid = parseId(csvfile.fileInfo._2._1.indicator);
-    const valueParser = (() => {
-      if (vid.tag === "Left") {
-        return $Either("Left", vid._1);
-      }
-      if (vid.tag === "Right") {
-        return getValueParser(dataset)(vid._1);
-      }
-      fail();
-    })();
-    const keyParsers = (() => {
-      if (vpkeys.tag === "Left") {
-        return $Either("Left", vpkeys._1);
-      }
-      if (vpkeys.tag === "Right") {
-        return sequence22($NonEmpty(
-          getValueParser(dataset)(vpkeys._1._1),
-          listMap(getValueParser(dataset))(vpkeys._1._2)
-        ));
-      }
-      fail();
-    })();
-    return bindVT2.bind(traversableArray.traverse(applicativeVT2)((f) => {
-      const $0 = validateOneDataPointFile(csvfile.csvContent.headers)(vid)(vpkeys)(keyParsers)(valueParser)(f);
-      if ($0.tag === "Right") {
-        return applicativeVT2.pure($0._1);
-      }
-      if ($0.tag === "Left") {
-        if (101 < $0._1.length) {
-          const msgEnd = [
-            {
-              ...messageFromIssue($Issue("Issue", "too many issues detected, please fix and check again.")),
-              file: csvfile.fileInfo._1,
-              isWarning: false
-            }
-          ];
-          return bindVT2.bind(vWarning2(arrayMap((x) => ({ ...messageFromIssue(x), isWarning: false }))(sliceImpl(0, 100, $0._1))))(() => bindVT2.bind(vWarning2(msgEnd))(() => applicativeVT2.pure([])));
-        }
-        return bindVT2.bind(vWarning2(arrayMap((x) => ({ ...messageFromIssue(x), isWarning: false }))($0._1)))(() => applicativeVT2.pure([]));
-      }
-      fail();
-    })(csvfiles))((points) => {
-      const $0 = applyV4.apply(applyV4.apply((() => {
-        if (vid.tag === "Left") {
-          return $Either("Left", vid._1);
-        }
-        if (vid.tag === "Right") {
-          return $Either(
-            "Right",
-            (() => {
-              const $02 = vid._1;
-              return (v2) => (v3) => ({ indicatorId: $02, primaryKeys: v2, datapoints: v3 });
-            })()
-          );
-        }
-        fail();
-      })())(vpkeys))(applicativeV4.pure(concat(points)));
-      const v1 = (() => {
-        if ($0.tag === "Left") {
-          return $Either("Left", $0._1);
-        }
-        if ($0.tag === "Right") {
-          return parseDataPointList($0._1);
-        }
-        fail();
-      })();
-      if (v1.tag === "Right") {
-        return applicativeVT2.pure([v1._1]);
-      }
-      if (v1.tag === "Left") {
-        return bindVT2.bind(vWarning2(arrayMap((x) => ({ ...messageFromIssue(x), isWarning: false }))(v1._1)))(() => applicativeVT2.pure([]));
-      }
-      fail();
-    });
-  }
-  return applicativeVT2.pure([]);
-};
-var validateCsvHeaders = (v) => (v1) => (dictMonad) => {
-  const applicativeVT2 = applicativeExceptT({
-    Applicative0: () => applicativeStateT(dictMonad),
-    Bind1: () => bindStateT(dictMonad)
-  });
-  const vWarning2 = vWarning(dictMonad)(monoidArray);
-  const reserved = arrayMap(unsafeCoerce)(reservedConcepts);
-  const filepath = v1.fileInfo._1;
-  const concepts = arrayMap(unsafeCoerce)(keys(v.concepts));
-  return bindExceptT({
-    Applicative0: () => applicativeStateT(dictMonad),
-    Bind1: () => bindStateT(dictMonad)
-  }).bind(traversableArray.traverse(applicativeVT2)((h) => {
-    const $0 = vWarning2([
-      { ...messageFromIssue($Issue("Issue", h + " is not in concept list but it's in the header.")), file: filepath }
-    ]);
-    if (!(take2(4)(h) === "is--" || elem(eqString)(h)(reserved) || elem(eqString)(h)(concepts))) {
-      return $0;
-    }
-    return applicativeVT2.pure();
-  })(arrayMap(unsafeCoerce)(v1.csvContent.headers)))(() => applicativeVT2.pure());
-};
-var validateCsvFile = (v) => (dictMonad) => {
-  const $0 = applicativeExceptT({
-    Applicative0: () => applicativeStateT(dictMonad),
-    Bind1: () => bindStateT(dictMonad)
-  });
-  const $1 = parseCsvFile({ fileInfo: v._1, csvContent: create(v._2) });
-  if ($1.tag === "Right") {
-    return $0.pure([$1._1]);
-  }
-  if ($1.tag === "Left") {
-    return bindExceptT({
-      Applicative0: () => applicativeStateT(dictMonad),
-      Bind1: () => bindStateT(dictMonad)
-    }).bind(vWarning(dictMonad)(monoidArray)(arrayMap((x) => ({ ...messageFromIssue(x), file: v._1._1 }))($1._1)))(() => $0.pure([]));
-  }
-  fail();
-};
-var validateCsvFiles = (xs) => (dictMonad) => {
-  const applicativeVT2 = applicativeExceptT({
-    Applicative0: () => applicativeStateT(dictMonad),
-    Bind1: () => bindStateT(dictMonad)
-  });
-  return bindExceptT({
-    Applicative0: () => applicativeStateT(dictMonad),
-    Bind1: () => bindStateT(dictMonad)
-  }).bind(traversableArray.traverse(applicativeVT2)((x) => validateCsvFile(x)(dictMonad))(xs))((rs) => applicativeVT2.pure(concat(rs)));
-};
-var validateConcepts = (csvfile) => (dictMonad) => {
-  const vWarning2 = vWarning(dictMonad)(monoidArray);
-  const $0 = applicativeExceptT({
-    Applicative0: () => applicativeStateT(dictMonad),
-    Bind1: () => bindStateT(dictMonad)
-  });
-  if (csvfile.fileInfo._2.tag === "Concepts") {
-    return foldM(monadVT(dictMonad))((acc) => (row) => {
-      const $1 = createConceptInput(csvfile.fileInfo._1)(csvfile.csvContent.headers)(row);
-      const v1 = (() => {
-        if ($1.tag === "Left") {
-          return $Either("Left", $1._1);
-        }
-        if ($1.tag === "Right") {
-          return parseConcept($1._1);
-        }
-        fail();
-      })();
-      if (v1.tag === "Left") {
-        return bindExceptT({
-          Applicative0: () => applicativeStateT(dictMonad),
-          Bind1: () => bindStateT(dictMonad)
-        }).bind(vWarning2(arrayMap((() => {
-          const $2 = row._1;
-          return (x) => ({ ...messageFromIssue(x), file: csvfile.fileInfo._1, isWarning: false, lineNo: $2 });
-        })())(v1._1)))(() => $0.pure(acc));
-      }
-      if (v1.tag === "Right") {
-        return $0.pure([v1._1, ...acc]);
-      }
-      fail();
-    })([])(csvfile.csvContent.rows);
-  }
-  return $0.pure([]);
-};
-var validateConceptLength = (v) => (dictMonad) => {
-  const $0 = sequence3(arrayMap((concept2) => {
-    if (concept2._info.tag === "Just") {
-      return withRowInfo(concept2._info._1.filepath)(concept2._info._1.row)(isLongerThan64Chars(concept2.conceptId));
-    }
-    if (concept2._info.tag === "Nothing") {
-      return isLongerThan64Chars(concept2.conceptId);
-    }
-    fail();
-  })(values(v.concepts)));
-  if ($0.tag === "Left") {
-    return vWarning(dictMonad)(monoidArray)(arrayMap(messageFromIssue)($0._1));
-  }
-  if ($0.tag === "Right") {
-    return applicativeExceptT({
-      Applicative0: () => applicativeStateT(dictMonad),
-      Bind1: () => bindStateT(dictMonad)
-    }).pure();
-  }
-  fail();
-};
-var createCsvFileInput = (fi) => _bind(readCsv(fi._1))((csvRows) => _pure($Tuple(fi, csvRows)));
-var checkNonEmptyArray = (name2) => (xs) => (dictMonad) => {
-  if (xs.length > 0) {
-    return applicativeExceptT({
-      Applicative0: () => applicativeStateT(dictMonad),
-      Bind1: () => bindStateT(dictMonad)
-    }).pure(xs);
-  }
-  return vError(dictMonad)([
-    messageFromIssue($Issue("Issue", "expect " + name2 + " has at least one item"))
-  ]);
-};
-
 // output-es/Data.DDF.Csv.FileInfo/index.js
 var $CollectionInfo = (tag, _1) => ({ tag, _1 });
 var $FileInfo = (_1, _2, _3) => ({ tag: "FileInfo", _1, _2, _3 });
 var choice = /* @__PURE__ */ (() => foldlArray(altParser.alt)((v) => $Either("Left", { pos: v.position, error: "Nothing to parse" })))();
-var compare1 = /* @__PURE__ */ (() => ordNonEmpty2(ordString).compare)();
 var Concepts = /* @__PURE__ */ $CollectionInfo("Concepts");
+var showCollection = {
+  show: (v) => {
+    if (v.tag === "Concepts") {
+      return "concepts";
+    }
+    if (v.tag === "Entities") {
+      if (v._1.set.tag === "Nothing") {
+        return "entity_domain: (NonEmptyString.unsafeFromString " + showStringImpl(v._1.domain) + ")";
+      }
+      if (v._1.set.tag === "Just") {
+        return "entity_domain: (NonEmptyString.unsafeFromString " + showStringImpl(v._1.domain) + "); entnty_set: (NonEmptyString.unsafeFromString " + showStringImpl(v._1.set._1) + ")";
+      }
+      fail();
+    }
+    if (v.tag === "DataPoints") {
+      const go = (go$a0$copy) => (go$a1$copy) => {
+        let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
+        while (go$c) {
+          const b = go$a0, v$1 = go$a1;
+          if (v$1.tag === "Nil") {
+            go$c = false;
+            go$r = b;
+            continue;
+          }
+          if (v$1.tag === "Cons") {
+            go$a0 = b.init ? { init: false, acc: v$1._1 } : { init: false, acc: b.acc + "," + v$1._1 };
+            go$a1 = v$1._2;
+            continue;
+          }
+          fail();
+        }
+        return go$r;
+      };
+      return "datapoints: (NonEmptyString.unsafeFromString " + showStringImpl(v._1.indicator) + "), by: " + go({ init: false, acc: v._1.pkeys._1 })(v._1.pkeys._2).acc;
+    }
+    if (v.tag === "Other") {
+      return "custom collection: (NonEmptyString.unsafeFromString " + showStringImpl(v._1) + ")";
+    }
+    fail();
+  }
+};
 var pkeyWithConstrain = (s) => {
   const $0 = identifier(s);
   return (() => {
@@ -7528,15 +6371,6 @@ var datapointFile = (s) => {
     });
   });
 };
-var compareDP = (v) => (v1) => {
-  if (v.tag === "DataPoints" && v1.tag === "DataPoints") {
-    if (v._1.indicator === v1._1.indicator) {
-      return compare1(v._1.pkeys)(v1._1.pkeys);
-    }
-    return ordString.compare(v._1.indicator)(v1._1.indicator);
-  }
-  return EQ;
-};
 var c2 = (s) => {
   const $0 = string("ddf--concepts--")(s);
   return (() => {
@@ -7673,6 +6507,1850 @@ var validateFileInfo = (fp) => {
   fail();
 };
 
+// output-es/Data.DDF.Csv.Utils/index.js
+var fromFoldable2 = /* @__PURE__ */ fromFoldable(ordHeader)(foldableArray);
+var pop2 = /* @__PURE__ */ pop(ordHeader);
+var fromFoldable12 = /* @__PURE__ */ fromFoldable(ordId)(foldableArray);
+var fromFoldable11 = /* @__PURE__ */ (() => {
+  const $0 = foldable1NonEmptyList.Foldable0().foldr;
+  return (x) => fromFoldableImpl($0, x);
+})();
+var createEntityInput = (v) => {
+  if (v.fileInfo._2.tag === "Entities") {
+    const $0 = v.fileInfo._2._1.domain;
+    const $1 = v.fileInfo._2._1.set;
+    const $2 = v.csvContent.headers;
+    const fp = v.fileInfo._1;
+    const entityCol = (() => {
+      if ($1.tag === "Nothing") {
+        return $0;
+      }
+      if ($1.tag === "Just") {
+        if (elem(eqHeader)($1._1)($2)) {
+          return $1._1;
+        }
+        return $0;
+      }
+      fail();
+    })();
+    return $Either(
+      "Right",
+      foldrArray((v2) => (acc) => {
+        const $3 = pop2(entityCol)(fromFoldable2(zipWithImpl(Tuple, $2, v2._2)));
+        const v3 = (() => {
+          if ($3.tag === "Just") {
+            return $3._1;
+          }
+          fail();
+        })();
+        return snoc(acc)({ entityId: v3._1, entityDomain: $0, entitySet: $1, props: v3._2, _info: $Maybe("Just", $ItemInfo(fp, v2._1)) });
+      })([])(zipWithImpl(Tuple, v.csvContent.index, transpose(v.csvContent.columns)))
+    );
+  }
+  return $Either(
+    "Left",
+    [
+      $Issue(
+        "Issue",
+        "can not create entity input for file: " + v.fileInfo._1 + "; collection: " + showCollection.show(v.fileInfo._2)
+      )
+    ]
+  );
+};
+var createDataPointsInput = (v) => {
+  if (v.fileInfo._2.tag === "DataPoints") {
+    const fp = v.fileInfo._1;
+    return $Either(
+      "Right",
+      {
+        indicatorId: v.fileInfo._2._1.indicator,
+        by: fromFoldable11($NonEmpty(v.fileInfo._2._1.pkeys._1, listMap(unsafeCoerce)(v.fileInfo._2._1.pkeys._2))),
+        itemInfo: arrayMap((x) => $ItemInfo(fp, x))(v.csvContent.index),
+        values: fromFoldable12(zipWithImpl(Tuple, arrayMap(unsafeCoerce)(v.csvContent.headers), v.csvContent.columns))
+      }
+    );
+  }
+  return $Either(
+    "Left",
+    [
+      $Issue(
+        "Issue",
+        "can not create datapoint input for file: " + v.fileInfo._1 + "; collection: " + showCollection.show(v.fileInfo._2)
+      )
+    ]
+  );
+};
+var createConceptInput = (v) => {
+  const rows = zipWithImpl(Tuple, v.csvContent.index, transpose(v.csvContent.columns));
+  const headers_ = arrayMap(unsafeCoerce)(v.csvContent.headers);
+  if (v.fileInfo._2.tag === "Concepts") {
+    return $Either(
+      "Right",
+      foldrArray((v2) => (acc) => {
+        const rowMap = fromFoldable2(zipWithImpl(Tuple, headers_, v2._2));
+        return snoc(acc)({
+          conceptId: unsafeLookup(showHeader)(ordHeader)("concept")(rowMap),
+          conceptType: unsafeLookup(showHeader)(ordHeader)("concept_type")(rowMap),
+          props: $$delete(ordHeader)("concept_type")($$delete(ordHeader)("concept")(rowMap)),
+          _info: $Maybe("Just", $ItemInfo(v.fileInfo._1, v2._1))
+        });
+      })([])(rows)
+    );
+  }
+  return $Either(
+    "Left",
+    [
+      $Issue(
+        "Issue",
+        "can not create concept input for file: " + v.fileInfo._1 + "; collection: " + showCollection.show(v.fileInfo._2)
+      )
+    ]
+  );
+};
+
+// output-es/Data.Array.NonEmpty/index.js
+var toArray2 = (v) => v;
+var uncons2 = (x) => {
+  const $0 = unconsImpl((v) => Nothing, (x$1) => (xs) => $Maybe("Just", { head: x$1, tail: xs }), x);
+  if ($0.tag === "Just") {
+    return $0._1;
+  }
+  fail();
+};
+
+// output-es/Data.Map/index.js
+var keys2 = /* @__PURE__ */ (() => functorMap.map((v) => {
+}))();
+
+// output-es/Data.DDF.DataPoint/index.js
+var fromFoldable5 = /* @__PURE__ */ foldrArray(Cons)(Nil);
+var eq12 = /* @__PURE__ */ (() => eqArrayImpl(eqId.eq))();
+var sort = /* @__PURE__ */ (() => {
+  const compare2 = ordTuple(ordString)(ordInt).compare;
+  return (xs) => sortBy(compare2)(xs);
+})();
+var fromFoldable32 = /* @__PURE__ */ foldlArray((m) => (a) => insert(ordId)(a)()(m))(Leaf2);
+var mergeTwoDataPointsInput = (a) => (b) => {
+  if (a.indicatorId === b.indicatorId && eq12(a.by)(b.by)) {
+    return $Maybe(
+      "Just",
+      {
+        indicatorId: a.indicatorId,
+        by: a.by,
+        values: unsafeUnionWith(ordId.compare, concatArray, a.values, b.values),
+        itemInfo: [...a.itemInfo, ...b.itemInfo]
+      }
+    );
+  }
+  return Nothing;
+};
+var mergeDataPointsInput = (inputs) => {
+  const v = uncons2(inputs);
+  const v1 = foldrArray((x) => (acc) => {
+    if (acc.tag === "Nothing") {
+      return Nothing;
+    }
+    if (acc.tag === "Just") {
+      return mergeTwoDataPointsInput(acc._1)(x);
+    }
+    fail();
+  })($Maybe("Just", v.head))(v.tail);
+  if (v1.tag === "Nothing") {
+    return $Either("Left", [$Issue("Issue", "cannot merge datapoints inputs with different indicator id and keys")]);
+  }
+  if (v1.tag === "Just") {
+    return $Either("Right", v1._1);
+  }
+  fail();
+};
+var headersMatchesData = (expected) => (actual) => {
+  if (eqMap(eqId)(eqUnit).eq(expected)(actual)) {
+    return $Either("Right", void 0);
+  }
+  return $Either("Left", [$Issue("Issue", "headers mismatch")]);
+};
+var findDupsForColumns2 = (headers) => (values3) => {
+  const colsToCheck = arrayMap((h) => unsafeLookup(showId2)(ordId)(h)(values3))(headers);
+  return fromFoldableImpl(
+    foldableList.foldr,
+    listMap(snd)(findDupsL((x) => (y) => ordString.compare(x._1)(y._1))(fromFoldable5(sort(zipWithImpl(
+      Tuple,
+      foldl1Impl(zipWith((a) => (b) => a + "," + b), colsToCheck),
+      rangeImpl(
+        0,
+        (() => {
+          if (0 < colsToCheck.length) {
+            return colsToCheck[0].length;
+          }
+          fail();
+        })()
+      )
+    )))))
+  );
+};
+var parseDataPoints = (v) => {
+  const $0 = headersMatchesData(fromFoldable32(snoc(v.by)(v.indicatorId)))(keys2(v.values));
+  if ($0.tag === "Left") {
+    return $Either("Left", $0._1);
+  }
+  if ($0.tag === "Right") {
+    const v2 = findDupsForColumns2(v.by)(v.values);
+    if (v2.length === 0) {
+      return $Either("Right", { indicatorId: v.indicatorId, by: v.by, values: v.values, itemInfo: v.itemInfo });
+    }
+    return $Either(
+      "Left",
+      arrayMap((info2) => $Issue("InvalidItem", info2._1, info2._2, "Duplicated datapoints"))(arrayMap((i) => v.itemInfo[i])(v2))
+    );
+  }
+  fail();
+};
+
+// output-es/Data.HashMap/foreign.js
+function MapNode(datamap, nodemap, content) {
+  this.datamap = datamap;
+  this.nodemap = nodemap;
+  this.content = content;
+}
+MapNode.prototype.lookup = function lookup2(Nothing2, Just2, keyEquals, key, keyHash, shift) {
+  var bit = mask(keyHash, shift);
+  if ((this.datamap & bit) !== 0) {
+    var i = index3(this.datamap, bit);
+    if (keyEquals(key)(this.content[i * 2]))
+      return Just2(this.content[i * 2 + 1]);
+    return Nothing2;
+  }
+  if ((this.nodemap & bit) !== 0) {
+    return this.content[this.content.length - 1 - index3(this.nodemap, bit)].lookup(Nothing2, Just2, keyEquals, key, keyHash, shift + 5);
+  }
+  return Nothing2;
+};
+function remove2insert1Mut(a, removeIndex, insertIndex, v1) {
+  for (var i = removeIndex; i < insertIndex; i++)
+    a[i] = a[i + 2];
+  a[i++] = v1;
+  for (; i < a.length - 1; i++)
+    a[i] = a[i + 1];
+  a.length = a.length - 1;
+}
+MapNode.prototype.insertMut = function insertMut(keyEquals, hashFunction, key, keyHash, value2, shift) {
+  var bit = mask(keyHash, shift);
+  var i = index3(this.datamap, bit);
+  if ((this.datamap & bit) !== 0) {
+    var k = this.content[i * 2];
+    if (keyEquals(k)(key)) {
+      this.content[i * 2 + 1] = value2;
+    } else {
+      var newNode = binaryNode(k, hashFunction(k), this.content[i * 2 + 1], key, keyHash, value2, shift + 5);
+      this.datamap = this.datamap ^ bit;
+      this.nodemap = this.nodemap | bit;
+      remove2insert1Mut(this.content, i * 2, this.content.length - index3(this.nodemap, bit) - 2, newNode);
+    }
+  } else if ((this.nodemap & bit) !== 0) {
+    var n = this.content.length - 1 - index3(this.nodemap, bit);
+    this.content[n].insertMut(keyEquals, hashFunction, key, keyHash, value2, shift + 5);
+  } else {
+    this.datamap = this.datamap | bit;
+    this.content.splice(i * 2, 0, key, value2);
+  }
+};
+MapNode.prototype.insert = function insert2(keyEquals, hashFunction, key, keyHash, value2, shift) {
+  var bit = mask(keyHash, shift);
+  var i = index3(this.datamap, bit);
+  if ((this.datamap & bit) !== 0) {
+    var k = this.content[i * 2];
+    if (keyEquals(k)(key))
+      return new MapNode(this.datamap, this.nodemap, overwriteTwoElements(this.content, i * 2, key, value2));
+    var newNode = binaryNode(k, hashFunction(k), this.content[i * 2 + 1], key, keyHash, value2, shift + 5);
+    return new MapNode(this.datamap ^ bit, this.nodemap | bit, remove2insert1(this.content, i * 2, this.content.length - index3(this.nodemap, bit) - 2, newNode));
+  }
+  if ((this.nodemap & bit) !== 0) {
+    var n = this.content.length - 1 - index3(this.nodemap, bit);
+    return new MapNode(
+      this.datamap,
+      this.nodemap,
+      copyAndOverwriteOrExtend1(
+        this.content,
+        n,
+        this.content[n].insert(keyEquals, hashFunction, key, keyHash, value2, shift + 5)
+      )
+    );
+  }
+  return new MapNode(this.datamap | bit, this.nodemap, insert22(this.content, i * 2, key, value2));
+};
+MapNode.prototype.insertWith = function insertWith2(keyEquals, hashFunction, f, key, keyHash, value2, shift) {
+  var bit = mask(keyHash, shift);
+  var i = index3(this.datamap, bit);
+  if ((this.datamap & bit) !== 0) {
+    var k = this.content[i * 2];
+    if (keyEquals(k)(key))
+      return new MapNode(this.datamap, this.nodemap, overwriteTwoElements(this.content, i * 2, key, f(this.content[i * 2 + 1])(value2)));
+    var newNode = binaryNode(k, hashFunction(k), this.content[i * 2 + 1], key, keyHash, value2, shift + 5);
+    return new MapNode(this.datamap ^ bit, this.nodemap | bit, remove2insert1(this.content, i * 2, this.content.length - index3(this.nodemap, bit) - 2, newNode));
+  }
+  if ((this.nodemap & bit) !== 0) {
+    var n = this.content.length - 1 - index3(this.nodemap, bit);
+    return new MapNode(
+      this.datamap,
+      this.nodemap,
+      copyAndOverwriteOrExtend1(
+        this.content,
+        n,
+        this.content[n].insertWith(keyEquals, hashFunction, f, key, keyHash, value2, shift + 5)
+      )
+    );
+  }
+  return new MapNode(this.datamap | bit, this.nodemap, insert22(this.content, i * 2, key, value2));
+};
+MapNode.prototype.delet = function delet(keyEquals, key, keyHash, shift) {
+  var bit = mask(keyHash, shift);
+  if ((this.datamap & bit) !== 0) {
+    var dataIndex = index3(this.datamap, bit);
+    if (keyEquals(this.content[dataIndex * 2])(key)) {
+      if (this.nodemap === 0 && this.content.length === 2)
+        return empty;
+      return new MapNode(this.datamap ^ bit, this.nodemap, remove2(this.content, dataIndex * 2));
+    }
+    return this;
+  }
+  if ((this.nodemap & bit) !== 0) {
+    var nodeIndex = index3(this.nodemap, bit);
+    var recNode = this.content[this.content.length - 1 - nodeIndex];
+    var recRes = recNode.delet(keyEquals, key, keyHash, shift + 5);
+    if (recNode === recRes)
+      return this;
+    if (recRes.isSingleton()) {
+      if (this.content.length === 1) {
+        recRes.datamap = this.nodemap;
+        return recRes;
+      }
+      return new MapNode(
+        this.datamap | bit,
+        this.nodemap ^ bit,
+        insert2remove1(this.content, 2 * index3(this.datamap, bit), recRes.content[0], recRes.content[1], this.content.length - 1 - nodeIndex)
+      );
+    }
+    return new MapNode(this.datamap, this.nodemap, copyAndOverwriteOrExtend1(this.content, this.content.length - 1 - nodeIndex, recRes));
+  }
+  return this;
+};
+MapNode.prototype.toArrayBy = function(f, res) {
+  for (var i = 0; i < popCount(this.datamap) * 2; ) {
+    var k = this.content[i++];
+    var v = this.content[i++];
+    res.push(f(k)(v));
+  }
+  for (; i < this.content.length; i++)
+    this.content[i].toArrayBy(f, res);
+};
+MapNode.prototype.isSingleton = function() {
+  return this.nodemap === 0 && this.content.length === 2;
+};
+MapNode.prototype.eq = function(kf, vf, that) {
+  if (this === that)
+    return true;
+  if (this.constructor !== that.constructor || this.nodemap !== that.nodemap || this.datamap !== that.datamap)
+    return false;
+  for (var i = 0; i < popCount(this.datamap) * 2; ) {
+    if (kf(this.content[i])(that.content[i]))
+      i++;
+    else
+      return false;
+    if (vf(this.content[i])(that.content[i]))
+      i++;
+    else
+      return false;
+  }
+  for (; i < this.content.length; i++)
+    if (!this.content[i].eq(kf, vf, that.content[i]))
+      return false;
+  return true;
+};
+MapNode.prototype.hash = function(vhash) {
+  var h = this.datamap;
+  for (var i = 0; i < popCount(this.datamap); i++)
+    h = h * 31 + vhash(this.content[i * 2 + 1]) | 0;
+  for (var j = 0; j < popCount(this.nodemap); j++)
+    h = h * 31 + this.content[this.content.length - j - 1].hash(vhash) | 0;
+  return h;
+};
+MapNode.prototype.size = function() {
+  var res = popCount(this.datamap);
+  for (var i = res * 2; i < this.content.length; i++)
+    res += this.content[i].size();
+  return res;
+};
+MapNode.prototype.imap = function(f) {
+  var newContent = this.content.slice();
+  for (var i = 0; i < popCount(this.datamap) * 2; ) {
+    var k = this.content[i++];
+    var v = this.content[i++];
+    newContent[i - 2] = k;
+    newContent[i - 1] = f(k)(v);
+  }
+  for (; i < this.content.length; i++)
+    newContent[i] = this.content[i].imap(f);
+  return new MapNode(this.datamap, this.nodemap, newContent);
+};
+MapNode.prototype.ifoldMap = function(m, mappend, f) {
+  for (var i = 0; i < popCount(this.datamap) * 2; ) {
+    var k = this.content[i++];
+    var v = this.content[i++];
+    m = mappend(m)(f(k)(v));
+  }
+  for (; i < this.content.length; i++)
+    m = this.content[i].ifoldMap(m, mappend, f);
+  return m;
+};
+function lowestBit(n) {
+  return n & -n;
+}
+function mergeState(bit, thisnode, thisdata, thatnode, thatdata) {
+  var state = 0;
+  state |= (bit & thisnode) !== 0 ? 1 : 0;
+  state |= (bit & thisdata) !== 0 ? 2 : 0;
+  state |= (bit & thatnode) !== 0 ? 4 : 0;
+  state |= (bit & thatdata) !== 0 ? 8 : 0;
+  return state;
+}
+MapNode.prototype.unionWith = function(eq, hash, f, that, shift) {
+  if (this.constructor !== that.constructor)
+    throw "Trying to union a MapNode with something else";
+  var thisDataIndex, thatDataIndex, thisNodeIndex, thatNodeIndex;
+  var datamap = 0;
+  var nodemap = 0;
+  var data = [];
+  var nodes = [];
+  var skipmap = this.datamap | this.nodemap | that.datamap | that.nodemap;
+  while (skipmap !== 0) {
+    var bit = lowestBit(skipmap);
+    skipmap &= ~bit;
+    switch (mergeState(bit, this.nodemap, this.datamap, that.nodemap, that.datamap)) {
+      case 1:
+        thisNodeIndex = index3(this.nodemap, bit);
+        nodemap |= bit;
+        nodes.push(this.content[this.content.length - thisNodeIndex - 1]);
+        break;
+      case 2:
+        thisDataIndex = index3(this.datamap, bit);
+        datamap |= bit;
+        data.push(this.content[thisDataIndex * 2], this.content[thisDataIndex * 2 + 1]);
+        break;
+      case 4:
+        thatNodeIndex = index3(that.nodemap, bit);
+        nodemap |= bit;
+        nodes.push(that.content[that.content.length - thatNodeIndex - 1]);
+        break;
+      case 5:
+        thisNodeIndex = index3(this.nodemap, bit);
+        thatNodeIndex = index3(that.nodemap, bit);
+        nodemap |= bit;
+        nodes.push(
+          this.content[this.content.length - thisNodeIndex - 1].unionWith(eq, hash, f, that.content[that.content.length - thatNodeIndex - 1], shift + 5)
+        );
+        break;
+      case 6:
+        thisDataIndex = index3(this.datamap, bit);
+        thatNodeIndex = index3(that.nodemap, bit);
+        var k = this.content[thisDataIndex * 2];
+        var v = this.content[thisDataIndex * 2 + 1];
+        var hk = hash(k);
+        var flippedF = function(a) {
+          return function(b) {
+            return f(b)(a);
+          };
+        };
+        nodemap |= bit;
+        nodes.push(that.content[that.content.length - thatNodeIndex - 1].insertWith(eq, hash, flippedF, k, hk, v, shift + 5));
+        break;
+      case 8:
+        thatDataIndex = index3(that.datamap, bit);
+        datamap |= bit;
+        data.push(that.content[thatDataIndex * 2], that.content[thatDataIndex * 2 + 1]);
+        break;
+      case 9:
+        thatDataIndex = index3(that.datamap, bit);
+        thisNodeIndex = index3(this.nodemap, bit);
+        var k = that.content[thatDataIndex * 2];
+        var v = that.content[thatDataIndex * 2 + 1];
+        var hk = hash(k);
+        nodemap |= bit;
+        nodes.push(this.content[this.content.length - thisNodeIndex - 1].insertWith(eq, hash, f, k, hk, v, shift + 5));
+        break;
+      case 10:
+        thisDataIndex = index3(this.datamap, bit);
+        thatDataIndex = index3(that.datamap, bit);
+        if (eq(this.content[thisDataIndex * 2])(that.content[thatDataIndex * 2])) {
+          datamap |= bit;
+          data.push(this.content[thisDataIndex * 2], f(this.content[thisDataIndex * 2 + 1])(that.content[thatDataIndex * 2 + 1]));
+        } else {
+          nodemap |= bit;
+          nodes.push(binaryNode(
+            this.content[thisDataIndex * 2],
+            hash(this.content[thisDataIndex * 2]),
+            this.content[thisDataIndex * 2 + 1],
+            that.content[thatDataIndex * 2],
+            hash(that.content[thatDataIndex * 2]),
+            that.content[thatDataIndex * 2 + 1],
+            shift + 5
+          ));
+        }
+        break;
+    }
+  }
+  return new MapNode(datamap, nodemap, data.concat(nodes.reverse()));
+};
+MapNode.prototype.intersectionWith = function(Nothing2, Just2, eq, hash, f, that, shift) {
+  if (this.constructor !== that.constructor)
+    throw "Trying to intersect a MapNode with something else";
+  var thisDataIndex, thatDataIndex, thisNodeIndex, thatNodeIndex;
+  var datamap = 0;
+  var nodemap = 0;
+  var data = [];
+  var nodes = [];
+  var skipmap = (this.datamap | this.nodemap) & (that.datamap | that.nodemap);
+  while (skipmap !== 0) {
+    var bit = lowestBit(skipmap);
+    skipmap &= ~bit;
+    switch (mergeState(bit, this.nodemap, this.datamap, that.nodemap, that.datamap)) {
+      case 5:
+        thisNodeIndex = index3(this.nodemap, bit);
+        thatNodeIndex = index3(that.nodemap, bit);
+        var recRes = this.content[this.content.length - thisNodeIndex - 1].intersectionWith(Nothing2, Just2, eq, hash, f, that.content[that.content.length - thatNodeIndex - 1], shift + 5);
+        if (isEmpty2(recRes))
+          continue;
+        if (recRes.isSingleton()) {
+          datamap |= bit;
+          data.push(recRes.content[0], recRes.content[1]);
+        } else {
+          nodemap |= bit;
+          nodes.push(recRes);
+        }
+        break;
+      case 6:
+        thisDataIndex = index3(this.datamap, bit);
+        thatNodeIndex = index3(that.nodemap, bit);
+        var k = this.content[thisDataIndex * 2];
+        var v = this.content[thisDataIndex * 2 + 1];
+        var hk = hash(k);
+        var res = that.content[that.content.length - thatNodeIndex - 1].lookup(Nothing2, Just2, eq, k, hk, shift + 5);
+        if (res !== Nothing2) {
+          datamap |= bit;
+          data.push(k, f(v)(res.value0));
+        }
+        break;
+      case 9:
+        thatDataIndex = index3(that.datamap, bit);
+        thisNodeIndex = index3(this.nodemap, bit);
+        var k = that.content[thatDataIndex * 2];
+        var v = that.content[thatDataIndex * 2 + 1];
+        var hk = hash(k);
+        var res = this.content[this.content.length - thisNodeIndex - 1].lookup(Nothing2, Just2, eq, k, hk, shift + 5);
+        if (res !== Nothing2) {
+          datamap |= bit;
+          data.push(k, f(res.value0)(v));
+        }
+        break;
+      case 10:
+        thisDataIndex = index3(this.datamap, bit);
+        thatDataIndex = index3(that.datamap, bit);
+        if (eq(this.content[thisDataIndex * 2])(that.content[thatDataIndex * 2])) {
+          datamap |= bit;
+          data.push(this.content[thisDataIndex * 2], f(this.content[thisDataIndex * 2 + 1])(that.content[thatDataIndex * 2 + 1]));
+        }
+        break;
+    }
+  }
+  return new MapNode(datamap, nodemap, data.concat(nodes.reverse()));
+};
+MapNode.prototype.filterWithKey = function filterWithKey(f) {
+  var datamap = 0;
+  var nodemap = 0;
+  var data = [];
+  var nodes = [];
+  var skipmap = this.datamap | this.nodemap;
+  while (skipmap !== 0) {
+    var bit = lowestBit(skipmap);
+    skipmap &= ~bit;
+    if ((this.datamap & bit) !== 0) {
+      var dataIndex = index3(this.datamap, bit);
+      var k = this.content[dataIndex * 2];
+      var v = this.content[dataIndex * 2 + 1];
+      if (f(k)(v)) {
+        datamap |= bit;
+        data.push(k, v);
+      }
+    } else {
+      var nodeIndex = index3(this.nodemap, bit);
+      var node = this.content[this.content.length - nodeIndex - 1].filterWithKey(f);
+      if (isEmpty2(node))
+        continue;
+      if (node.isSingleton()) {
+        datamap |= bit;
+        data.push(node.content[0], node.content[1]);
+      } else {
+        nodemap |= bit;
+        nodes.push(node);
+      }
+    }
+  }
+  return new MapNode(datamap, nodemap, data.concat(nodes.reverse()));
+};
+MapNode.prototype.travHelper = function() {
+  function go(vi, vm2, ni, nm, copy) {
+    if (vi < vm2)
+      return function(v) {
+        return go(vi + 1, vm2, ni, nm, function() {
+          var res = copy();
+          res.content[vi * 2 + 1] = v;
+          return res;
+        });
+      };
+    if (ni < nm)
+      return function(n) {
+        return go(vi, vm2, ni + 1, nm, function() {
+          var res = copy();
+          res.content[vm2 * 2 + ni] = n;
+          return res;
+        });
+      };
+    return copy();
+  }
+  var vm = popCount(this.datamap);
+  var self = this;
+  return go(0, vm, 0, this.content.length - vm * 2, function() {
+    return new MapNode(self.datamap, self.nodemap, self.content.slice());
+  });
+};
+MapNode.prototype.ifoldMap = function(m, mappend, f) {
+  for (var i = 0; i < popCount(this.datamap) * 2; ) {
+    var k = this.content[i++];
+    var v = this.content[i++];
+    m = mappend(m)(f(k)(v));
+  }
+  for (; i < this.content.length; i++)
+    m = this.content[i].ifoldMap(m, mappend, f);
+  return m;
+};
+MapNode.prototype.itraverse = function(pure, apply4, f) {
+  var m = pure(this.travHelper());
+  for (var i = 0; i < popCount(this.datamap) * 2; ) {
+    var k = this.content[i++];
+    var v = this.content[i++];
+    m = apply4(m)(f(k)(v));
+  }
+  for (; i < this.content.length; i++)
+    m = apply4(m)(this.content[i].itraverse(pure, apply4, f));
+  return m;
+};
+MapNode.prototype.any = function(predicate) {
+  for (var i = 1; i < popCount(this.datamap) * 2; i = i + 2) {
+    var v = this.content[i];
+    if (predicate(v)) {
+      return true;
+    }
+  }
+  i--;
+  for (; i < this.content.length; i++) {
+    if (this.content[i].any(predicate)) {
+      return true;
+    }
+  }
+  return false;
+};
+function Collision(keys5, values3) {
+  this.keys = keys5;
+  this.values = values3;
+}
+Collision.prototype.lookup = function collisionLookup(Nothing2, Just2, keyEquals, key, keyHash, shift) {
+  for (var i = 0; i < this.keys.length; i++)
+    if (keyEquals(key)(this.keys[i]))
+      return Just2(this.values[i]);
+  return Nothing2;
+};
+Collision.prototype.insert = function collisionInsert(keyEquals, hashFunction, key, keyHash, value2, shift) {
+  var i = 0;
+  for (; i < this.keys.length; i++)
+    if (keyEquals(key)(this.keys[i]))
+      break;
+  return new Collision(
+    copyAndOverwriteOrExtend1(this.keys, i, key),
+    copyAndOverwriteOrExtend1(this.values, i, value2)
+  );
+};
+Collision.prototype.insertMut = function collisionInsertMut(keyEquals, hashFunction, key, keyHash, value2, shift) {
+  var i = 0;
+  for (; i < this.keys.length; i++)
+    if (keyEquals(key)(this.keys[i]))
+      break;
+  this.keys[i] = key;
+  this.values[i] = value2;
+};
+Collision.prototype.insertWith = function collisionInsert2(keyEquals, hashFunction, f, key, keyHash, value2, shift) {
+  var i = 0;
+  for (; i < this.keys.length; i++)
+    if (keyEquals(key)(this.keys[i]))
+      return new Collision(
+        copyAndOverwriteOrExtend1(this.keys, i, key),
+        copyAndOverwriteOrExtend1(this.values, i, f(this.values[i])(value2))
+      );
+  return new Collision(
+    copyAndOverwriteOrExtend1(this.keys, i, key),
+    copyAndOverwriteOrExtend1(this.values, i, value2)
+  );
+};
+Collision.prototype.delet = function collisionDelete(keyEquals, key, keyHash, shift) {
+  var i = 0;
+  for (; i < this.keys.length; i++)
+    if (keyEquals(key)(this.keys[i]))
+      break;
+  if (i === this.keys.length)
+    return this;
+  if (this.keys.length === 2)
+    return new MapNode(1 << (keyHash & 31), 0, [this.keys[1 - i], this.values[1 - i]]);
+  return new Collision(remove1(this.keys, i), remove1(this.values, i));
+};
+Collision.prototype.toArrayBy = function(f, res) {
+  for (var i = 0; i < this.keys.length; i++)
+    res.push(f(this.keys[i])(this.values[i]));
+};
+Collision.prototype.isSingleton = function() {
+  return false;
+};
+Collision.prototype.eq = function(kf, vf, that) {
+  if (this.constructor !== that.constructor || this.keys.length !== that.keys.length)
+    return false;
+  outer:
+    for (var i = 0; i < this.keys.length; i++) {
+      for (var j = 0; j < that.keys.length; j++) {
+        if (kf(this.keys[i])(that.keys[j])) {
+          if (vf(this.values[i])(that.values[j]))
+            continue outer;
+          else
+            return false;
+        }
+      }
+    }
+  return true;
+};
+Collision.prototype.hash = function(vhash) {
+  var h = 0;
+  for (var i = 0; i < this.values.length; i++)
+    h += vhash(this.values[i]);
+  return h;
+};
+Collision.prototype.size = function() {
+  return this.keys.length;
+};
+Collision.prototype.imap = function(f) {
+  var newValues = this.values.slice();
+  for (var i = 0; i < this.values.length; i++)
+    newValues[i] = f(this.keys[i])(this.values[i]);
+  return new Collision(this.keys, newValues);
+};
+Collision.prototype.ifoldMap = function(m, mappend, f) {
+  for (var i = 0; i < this.keys.length; i++)
+    m = mappend(m)(f(this.keys[i])(this.values[i]));
+  return m;
+};
+Collision.prototype.travHelper = function() {
+  function go(i, m, copy) {
+    if (i < m)
+      return function(v) {
+        return go(i + 1, m, function() {
+          var res = copy();
+          res.values[i] = v;
+          return res;
+        });
+      };
+    return copy();
+  }
+  var self = this;
+  return go(0, this.keys.length, function() {
+    return new Collision(self.keys, self.values.slice());
+  });
+};
+Collision.prototype.itraverse = function(pure, apply4, f) {
+  var m = pure(this.travHelper());
+  for (var i = 0; i < this.keys.length; i++)
+    m = apply4(m)(f(this.keys[i])(this.values[i]));
+  return m;
+};
+Collision.prototype.unionWith = function(eq, hash, f, that, shift) {
+  if (that.constructor !== Collision)
+    throw "Trying to union a Collision with something else";
+  var keys5 = [];
+  var values3 = [];
+  var added = Array(that.keys.length).fill(false);
+  outer:
+    for (var i = 0; i < this.keys.length; i++) {
+      for (var j = 0; j < that.keys.length; j++) {
+        if (eq(this.keys[i])(that.keys[j])) {
+          keys5.push(this.keys[i]);
+          values3.push(f(this.values[i])(that.values[j]));
+          added[j] = true;
+          continue outer;
+        }
+      }
+      keys5.push(this.keys[i]);
+      values3.push(this.values[i]);
+      added[j] = true;
+    }
+  for (var k = 0; k < that.keys.length; k++) {
+    if (!added[k]) {
+      keys5.push(that.keys[k]);
+      values3.push(that.values[k]);
+    }
+  }
+  return new Collision(keys5, values3);
+};
+Collision.prototype.intersectionWith = function(Nothing2, Just2, eq, hash, f, that, shift) {
+  if (that.constructor !== Collision)
+    throw "Trying to intersect a Collision with something else";
+  var keys5 = [];
+  var values3 = [];
+  outer:
+    for (var i = 0; i < this.keys.length; i++) {
+      for (var j = 0; j < that.keys.length; j++) {
+        if (eq(this.keys[i])(that.keys[j])) {
+          keys5.push(this.keys[i]);
+          values3.push(f(this.values[i])(that.values[j]));
+          continue outer;
+        }
+      }
+    }
+  if (keys5.length === 0)
+    return empty;
+  if (keys5.length === 1)
+    return new MapNode(1, 0, [keys5[0], values3[0]]);
+  return new Collision(keys5, values3);
+};
+Collision.prototype.filterWithKey = function collisionFilterWithKey(f) {
+  var keys5 = [];
+  var values3 = [];
+  for (var i = 0; i < this.keys.length; i++) {
+    var k = this.keys[i];
+    var v = this.values[i];
+    if (f(k)(v)) {
+      keys5.push(k);
+      values3.push(v);
+    }
+  }
+  if (keys5.length === 0)
+    return empty;
+  if (keys5.length === 1)
+    return new MapNode(1, 0, [keys5[0], values3[0]]);
+  return new Collision(keys5, values3);
+};
+Collision.prototype.any = function(predicate) {
+  for (var i = 0; i < this.keys.length; i++) {
+    if (predicate(this.values[i])) {
+      return true;
+    }
+  }
+  return false;
+};
+function mask(keyHash, shift) {
+  return 1 << (keyHash >>> shift & 31);
+}
+function index3(map2, bit) {
+  return popCount(map2 & bit - 1);
+}
+function popCount(n) {
+  n = n - (n >> 1 & 1431655765);
+  n = (n & 858993459) + (n >> 2 & 858993459);
+  return (n + (n >> 4) & 252645135) * 16843009 >> 24;
+}
+function binaryNode(k1, kh1, v1, k2, kh2, v2, s) {
+  if (s >= 32)
+    return new Collision([k1, k2], [v1, v2]);
+  var b1 = kh1 >>> s & 31;
+  var b2 = kh2 >>> s & 31;
+  if (b1 !== b2)
+    return new MapNode(1 << b1 | 1 << b2, 0, b1 >>> 0 < b2 >>> 0 ? [k1, v1, k2, v2] : [k2, v2, k1, v1]);
+  return new MapNode(0, 1 << b1, [binaryNode(k1, kh1, v1, k2, kh2, v2, s + 5)]);
+}
+function overwriteTwoElements(a, index4, v1, v2) {
+  var res = a.slice();
+  res[index4] = v1;
+  res[index4 + 1] = v2;
+  return res;
+}
+function remove2(a, index4) {
+  var res = a.slice();
+  res.splice(index4, 2);
+  return res;
+}
+function remove1(a, index4) {
+  var res = a.slice();
+  res.splice(index4, 1);
+  return res;
+}
+function copyAndOverwriteOrExtend1(a, index4, v) {
+  var res = a.slice();
+  res[index4] = v;
+  return res;
+}
+function remove2insert1(a, removeIndex, insertIndex, v1) {
+  var res = new Array(a.length - 1);
+  for (var i = 0; i < removeIndex; i++)
+    res[i] = a[i];
+  for (; i < insertIndex; i++)
+    res[i] = a[i + 2];
+  res[i++] = v1;
+  for (; i < res.length; i++)
+    res[i] = a[i + 1];
+  return res;
+}
+function insert22(a, index4, v1, v2) {
+  var res = new Array(a.length + 2);
+  for (var i = 0; i < index4; i++)
+    res[i] = a[i];
+  res[i++] = v1;
+  res[i++] = v2;
+  for (; i < res.length; i++)
+    res[i] = a[i - 2];
+  return res;
+}
+function insert2remove1(a, insertIndex, v1, v2, removeIndex) {
+  var res = new Array(a.length + 1);
+  for (var i = 0; i < insertIndex; i++)
+    res[i] = a[i];
+  res[i++] = v1;
+  res[i++] = v2;
+  for (; i < removeIndex + 2; i++)
+    res[i] = a[i - 2];
+  for (; i < res.length; i++)
+    res[i] = a[i - 1];
+  return res;
+}
+var empty = new MapNode(0, 0, []);
+function lookupPurs(Nothing2, Just2, keyEquals, key, keyHash) {
+  return function(m) {
+    return m.lookup(Nothing2, Just2, keyEquals, key, keyHash, 0);
+  };
+}
+function fromArrayPurs(keyEquals, hashFunction) {
+  return function(kf) {
+    return function(vf) {
+      return function(a) {
+        var m = new MapNode(0, 0, []);
+        for (var i = 0; i < a.length; i++) {
+          var x = a[i];
+          var k = kf(x);
+          m.insertMut(keyEquals, hashFunction, k, hashFunction(k), vf(x), 0);
+        }
+        return m;
+      };
+    };
+  };
+}
+function toArrayBy(f) {
+  return function(m) {
+    var res = [];
+    m.toArrayBy(f, res);
+    return res;
+  };
+}
+function isEmpty2(m) {
+  return m.datamap === 0 && m.nodemap === 0;
+}
+
+// output-es/Data.HashMap/index.js
+var values2 = /* @__PURE__ */ toArrayBy((v) => (v1) => v1);
+var lookup3 = (dictHashable) => {
+  const eq = dictHashable.Eq0().eq;
+  return (k) => lookupPurs(Nothing, Just, eq, k, dictHashable.hash(k));
+};
+var member = (dictHashable) => {
+  const lookup1 = lookup3(dictHashable);
+  return (k) => {
+    const $0 = lookup1(k);
+    return (x) => {
+      const $1 = $0(x);
+      if ($1.tag === "Nothing") {
+        return false;
+      }
+      if ($1.tag === "Just") {
+        return true;
+      }
+      fail();
+    };
+  };
+};
+var keys3 = /* @__PURE__ */ toArrayBy($$const);
+
+// output-es/Data.DDF.Atoms.Value/index.js
+var $Value = (tag, _1) => ({ tag, _1 });
+var member2 = /* @__PURE__ */ member(hashableString);
+var parseTimeVal = (input) => {
+  const inputlen = toCodePointArray(input).length;
+  if (inputlen <= 4 && (() => {
+    const $0 = fromString(input);
+    return inputlen >= 3 && (() => {
+      if ($0.tag === "Nothing") {
+        return false;
+      }
+      if ($0.tag === "Just") {
+        return true;
+      }
+      fail();
+    })();
+  })()) {
+    return $Either("Right", $Value("TimeVal", input));
+  }
+  return $Either("Left", [$Issue("Issue", showStringImpl(input) + " is not a valid time value.")]);
+};
+var parseStrVal = (x) => $Either("Right", $Value("StrVal", x));
+var parseNumVal = (input) => {
+  const v = fromStringImpl(input, isFiniteImpl, Just, Nothing);
+  if (v.tag === "Nothing") {
+    return $Either("Left", [$Issue("Issue", input + " is not a number.")]);
+  }
+  if (v.tag === "Just") {
+    return $Either("Right", $Value("NumVal", v._1));
+  }
+  fail();
+};
+var parseDomainVal = (domainName) => (domain) => (input) => {
+  if (input === "") {
+    return $Either("Left", [$Issue("Issue", showStringImpl(input) + " is not a valid value in " + domainName + " domain.")]);
+  }
+  if (member2(input)(domain)) {
+    return $Either("Right", $Value("DomainVal", input));
+  }
+  return $Either("Left", [$Issue("Issue", showStringImpl(input) + " is not a valid value in " + domainName + " domain.")]);
+};
+var parseBoolVal = (v) => {
+  if (v === "TRUE") {
+    return $Either("Right", $Value("BoolVal", true));
+  }
+  if (v === "true") {
+    return $Either("Right", $Value("BoolVal", true));
+  }
+  if (v === "FALSE") {
+    return $Either("Right", $Value("BoolVal", false));
+  }
+  if (v === "false") {
+    return $Either("Right", $Value("BoolVal", false));
+  }
+  return $Either("Left", [$Issue("Issue", "not a boolean value: " + showStringImpl(v))]);
+};
+
+// output-es/Data.DDF.Entity/index.js
+var applicativeV2 = /* @__PURE__ */ (() => {
+  const applyV1 = applyV(semigroupArray);
+  return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
+})();
+var toUnfoldableUnordered = /* @__PURE__ */ (() => {
+  const $0 = unfoldableArray.unfoldr(stepUnfoldrUnordered);
+  return (x) => $0($MapIter("IterNode", x, IterLeaf));
+})();
+var traverse = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV2))();
+var fromFoldable6 = /* @__PURE__ */ fromFoldable(ordId)(foldableArray);
+var apply3 = /* @__PURE__ */ (() => applyV(semigroupArray).apply)();
+var splitEntAndProps = (props) => {
+  const v = partitionImpl(
+    (v2) => {
+      const v1 = stripPrefix2("is--")(v2._1);
+      if (v1.tag === "Nothing") {
+        return false;
+      }
+      if (v1.tag === "Just") {
+        return true;
+      }
+      fail();
+    },
+    toUnfoldableUnordered(props)
+  );
+  return $Tuple(
+    arrayMap((v1) => $Tuple(
+      (() => {
+        const $0 = drop(length2(take2(4)(v1._1)))(v1._1);
+        if ($0 === "") {
+          return "undefined_id";
+        }
+        return $0;
+      })(),
+      v1._2
+    ))(v.yes),
+    arrayMap((v1) => $Tuple(v1._1 === "" ? "undefined_id" : v1._1, v1._2))(v.no)
+  );
+};
+var removeIsDomainProp = (domain) => (xs) => {
+  const v = findIndexImpl(Just, Nothing, (v2) => v2 === domain, arrayMap((x) => x._1)(xs));
+  if (v.tag === "Nothing") {
+    return applicativeV2.pure(xs);
+  }
+  if (v.tag === "Just") {
+    const $0 = _deleteAt(Just, Nothing, v._1, xs);
+    const xs$p = (() => {
+      if ($0.tag === "Just") {
+        return $0._1;
+      }
+      fail();
+    })();
+    const $1 = xs[v._1];
+    if ($1._2 === "TRUE") {
+      return applicativeV2.pure(xs$p);
+    }
+    if ($1._2 === "true") {
+      return applicativeV2.pure(xs$p);
+    }
+    if ($1._2 === "FALSE") {
+      return $Either("Left", [$Issue("Issue", "is--" + domain + " must be TRUE for " + domain + " domain.")]);
+    }
+    if ($1._2 === "false") {
+      return $Either("Left", [$Issue("Issue", "is--" + domain + " must be TRUE for " + domain + " domain.")]);
+    }
+    return $Either("Left", [$Issue("InvalidValue", $1._2, "not a boolean value")]);
+  }
+  fail();
+};
+var getEntitySetsFromHeaders = (lst) => {
+  const $0 = traverse((v) => {
+    if (v._2 === "TRUE") {
+      return applicativeV2.pure($Maybe("Just", v._1));
+    }
+    if (v._2 === "true") {
+      return applicativeV2.pure($Maybe("Just", v._1));
+    }
+    if (v._2 === "FALSE") {
+      return applicativeV2.pure(Nothing);
+    }
+    if (v._2 === "false") {
+      return applicativeV2.pure(Nothing);
+    }
+    return $Either("Left", [$Issue("InvalidValue", v._2, "not a boolean value")]);
+  })(lst);
+  if ($0.tag === "Left") {
+    return $Either("Left", $0._1);
+  }
+  if ($0.tag === "Right") {
+    return applicativeV2.pure(mapMaybe((x) => x)($0._1));
+  }
+  fail();
+};
+var entity = (entityId) => (entityDomain) => (entitySets) => (props) => ({ entityId, entityDomain, entitySets, props, _info: Nothing });
+var parseEntity = (v) => {
+  if (v.entityId === "") {
+    return $Either("Left", [$Issue("Issue", "entity MUST have an entity id")]);
+  }
+  const v1 = splitEntAndProps(v.props);
+  const $0 = apply3(apply3(apply3((() => {
+    const $02 = parseId(v.entityId);
+    if ($02.tag === "Left") {
+      return $Either("Left", $02._1);
+    }
+    if ($02.tag === "Right") {
+      return $Either("Right", entity($02._1));
+    }
+    fail();
+  })())(applicativeV2.pure(v.entityDomain)))((() => {
+    const $02 = removeIsDomainProp(v.entityDomain)(v1._1);
+    const $1 = (() => {
+      if ($02.tag === "Left") {
+        return $Either("Left", $02._1);
+      }
+      if ($02.tag === "Right") {
+        return getEntitySetsFromHeaders($02._1);
+      }
+      fail();
+    })();
+    if ($1.tag === "Left") {
+      return $Either("Left", $1._1);
+    }
+    if ($1.tag === "Right") {
+      if (v.entitySet.tag === "Nothing") {
+        return applicativeV2.pure($1._1);
+      }
+      if (v.entitySet.tag === "Just") {
+        return applicativeV2.pure(nubBy(ordId.compare)([v.entitySet._1, ...$1._1]));
+      }
+    }
+    fail();
+  })()))(applicativeV2.pure(fromFoldable6(v1._2)));
+  if ($0.tag === "Left") {
+    return $Either("Left", $0._1);
+  }
+  if ($0.tag === "Right") {
+    return applicativeV2.pure({ ...$0._1, _info: v._info });
+  }
+  fail();
+};
+
+// output-es/Data.HashSet/index.js
+var identity9 = (x) => x;
+var fromArray2 = (dictHashable) => fromArrayPurs(dictHashable.Eq0().eq, dictHashable.hash)(identity9)((v) => {
+});
+
+// output-es/Data.DDF.DataSet/index.js
+var applicativeV3 = /* @__PURE__ */ (() => {
+  const applyV1 = applyV(semigroupArray);
+  return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
+})();
+var fromArrayBy = /* @__PURE__ */ fromArrayPurs(eqStringImpl, hashString);
+var identity10 = (x) => x;
+var traverse_2 = /* @__PURE__ */ traverse_(applicativeV3)(foldableArray);
+var lookup4 = /* @__PURE__ */ lookup3(hashableString);
+var for_2 = /* @__PURE__ */ for_(applicativeV3)(foldableArray);
+var fromArray3 = /* @__PURE__ */ fromArray2(hashableString);
+var compare = /* @__PURE__ */ (() => ordTuple(ordId)(ordString).compare)();
+var fromArray1 = /* @__PURE__ */ fromArrayPurs(eqStringImpl, hashString)(fst)(snd);
+var unsafeLookupHM = (dictHashable) => {
+  const lookup1 = lookup3(dictHashable);
+  return (dictShow) => (k) => (m) => {
+    const v = lookup1(k)(m);
+    if (v.tag === "Nothing") {
+      return _crashWith("error finding key: " + dictShow.show(k));
+    }
+    if (v.tag === "Just") {
+      return v._1;
+    }
+    fail();
+  };
+};
+var unsafeLookupHM1 = /* @__PURE__ */ unsafeLookupHM(hashableString)(showString);
+var parseColumnValues = (vp) => (vals) => (iteminfo) => traverse_2((v) => {
+  const res = vp(v._1);
+  if (res.tag === "Right") {
+    return applicativeV3.pure();
+  }
+  return withRowInfo(v._2._1)(v._2._2)((() => {
+    if (res.tag === "Left") {
+      return $Either("Left", res._1);
+    }
+    if (res.tag === "Right") {
+      return applicativeV3.pure();
+    }
+    fail();
+  })());
+})(values2(fromArrayBy(fst)(identity10)(zipWithImpl(Tuple, vals, iteminfo))));
+var getValueParser = (v) => (k) => {
+  const v1 = lookup4(k)(v._valueParsers);
+  if (v1.tag === "Just") {
+    return applicativeV3.pure(v1._1);
+  }
+  if (v1.tag === "Nothing") {
+    return $Either("Left", [$Issue("Issue", "no such concept in dataset: " + k)]);
+  }
+  fail();
+};
+var parseDataPoints2 = (v) => (v1) => for_2(snoc(v1.by)(v1.indicatorId))((c) => {
+  const $0 = getValueParser(v)(c);
+  if ($0.tag === "Left") {
+    return $Either("Left", $0._1);
+  }
+  if ($0.tag === "Right") {
+    return parseColumnValues($0._1)(unsafeLookup(showId2)(ordId)(c)(v1.values))(v1.itemInfo);
+  }
+  fail();
+});
+var getEntities = (v) => (v1) => (v2) => {
+  if (v2.tag === "Nothing") {
+    return lookup4(v1)(v.entities);
+  }
+  if (v2.tag === "Just") {
+    const v3 = lookup4(v1)(v.entities);
+    if (v3.tag === "Nothing") {
+      return Nothing;
+    }
+    if (v3.tag === "Just") {
+      return $Maybe(
+        "Just",
+        arrayMap(fst)(filterImpl(
+          (x) => elem(eqString)(v2._1)(x._2),
+          arrayMap((e) => $Tuple(e, arrayMap(value)(e.entitySets)))(v3._1)
+        ))
+      );
+    }
+  }
+  fail();
+};
+var getDomainForEntitySet = (dataset) => (k) => {
+  const $0 = lookup4(k)(dataset.concepts);
+  if ($0.tag === "Just") {
+    return lookup(ordId)("domain")($0._1.props);
+  }
+  if ($0.tag === "Nothing") {
+    return Nothing;
+  }
+  fail();
+};
+var makeValueParser = (v) => (k) => {
+  const $0 = unsafeLookupHM1(k)(v.concepts);
+  if ($0.conceptType.tag === "StringC") {
+    return parseStrVal;
+  }
+  if ($0.conceptType.tag === "MeasureC") {
+    return parseNumVal;
+  }
+  if ($0.conceptType.tag === "BooleanC") {
+    return parseBoolVal;
+  }
+  if ($0.conceptType.tag === "IntervalC") {
+    return parseStrVal;
+  }
+  if ($0.conceptType.tag === "EntityDomainC") {
+    return parseDomainVal(k)(fromArray3(arrayMap((x) => x.entityId)((() => {
+      const v2 = lookup4(k)(v.entities);
+      if (v2.tag === "Nothing") {
+        return [];
+      }
+      if (v2.tag === "Just") {
+        return v2._1;
+      }
+      fail();
+    })())));
+  }
+  if ($0.conceptType.tag === "EntitySetC") {
+    const v2 = getDomainForEntitySet(v)(k);
+    if (v2.tag === "Nothing") {
+      return parseDomainVal(k)(empty);
+    }
+    if (v2.tag === "Just") {
+      const v3 = getEntities(v)(v2._1)($Maybe("Just", k));
+      if (v3.tag === "Nothing") {
+        return parseDomainVal(k)(empty);
+      }
+      if (v3.tag === "Just") {
+        return parseDomainVal(k)(fromArray3(arrayMap((x) => x.entityId)(v3._1)));
+      }
+    }
+    fail();
+  }
+  if ($0.conceptType.tag === "RoleC") {
+    return parseStrVal;
+  }
+  if ($0.conceptType.tag === "CompositeC") {
+    return parseStrVal;
+  }
+  if ($0.conceptType.tag === "TimeC") {
+    return parseTimeVal;
+  }
+  if ($0.conceptType.tag === "CustomC") {
+    return parseStrVal;
+  }
+  fail();
+};
+var checkDuplicatedEntities = (input) => {
+  const dups = findDups((x) => (y) => compare($Tuple(
+    x.entityId,
+    (() => {
+      if (x._info.tag === "Nothing") {
+        return "";
+      }
+      if (x._info.tag === "Just") {
+        return x._info._1._1;
+      }
+      fail();
+    })()
+  ))($Tuple(
+    y.entityId,
+    (() => {
+      if (y._info.tag === "Nothing") {
+        return "";
+      }
+      if (y._info.tag === "Just") {
+        return y._info._1._1;
+      }
+      fail();
+    })()
+  )))(sortBy((x) => (y) => compare($Tuple(
+    x.entityId,
+    (() => {
+      if (x._info.tag === "Nothing") {
+        return "";
+      }
+      if (x._info.tag === "Just") {
+        return x._info._1._1;
+      }
+      fail();
+    })()
+  ))($Tuple(
+    y.entityId,
+    (() => {
+      if (y._info.tag === "Nothing") {
+        return "";
+      }
+      if (y._info.tag === "Just") {
+        return y._info._1._1;
+      }
+      fail();
+    })()
+  )))(input));
+  if (dups.length === 0) {
+    return applicativeV3.pure(input);
+  }
+  return $Either(
+    "Left",
+    arrayMap((e) => {
+      const $0 = (() => {
+        if (e._info.tag === "Nothing") {
+          return $ItemInfo("", -1);
+        }
+        if (e._info.tag === "Just") {
+          return e._info._1;
+        }
+        fail();
+      })();
+      return $Issue("InvalidItem", $0._1, $0._2, "Multiple definition found: " + e.entityId);
+    })(dups)
+  );
+};
+var parseEntityDomains = (conceptdb) => (input) => {
+  const $0 = checkDuplicatedEntities(input);
+  if ($0.tag === "Left") {
+    return $Either("Left", $0._1);
+  }
+  if ($0.tag === "Right") {
+    return applicativeV3.pure(fromArrayBy((x) => {
+      if (0 < x.length) {
+        return x[0].entityDomain;
+      }
+      fail();
+    })(toArray2)(groupAllBy((x) => (y) => ordString.compare(x.entityDomain)(y.entityDomain))($0._1)));
+  }
+  fail();
+};
+var checkDuplicatedConcepts = (input) => {
+  const dups = findDups((x) => (y) => ordString.compare(x.conceptId)(y.conceptId))(sortBy((x) => (y) => ordString.compare(x.conceptId)(y.conceptId))(input));
+  if (dups.length === 0) {
+    return applicativeV3.pure(input);
+  }
+  return $Either(
+    "Left",
+    arrayMap((c) => {
+      const $0 = (() => {
+        if (c._info.tag === "Nothing") {
+          return $ItemInfo("", -1);
+        }
+        if (c._info.tag === "Just") {
+          return c._info._1;
+        }
+        fail();
+      })();
+      return $Issue("InvalidItem", $0._1, $0._2, "Multiple definition found: " + c.conceptId);
+    })(dups)
+  );
+};
+var checkConceptDomain = (input) => {
+  const domainNames = arrayMap((x) => x.conceptId)(filterImpl(isEntityDomain, input));
+  const $0 = traverse_2((c) => {
+    const v = lookup(ordId)("domain")(c.props);
+    if (v.tag === "Just") {
+      const $02 = (() => {
+        if (c._info.tag === "Nothing") {
+          return $ItemInfo("", -1);
+        }
+        if (c._info.tag === "Just") {
+          return c._info._1;
+        }
+        fail();
+      })();
+      const msg = "the domain of the entity set is not a vaild domain: " + v._1;
+      if (elem(eqString)(v._1)(domainNames)) {
+        return applicativeV3.pure();
+      }
+      return $Either("Left", [$Issue("InvalidItem", $02._1, $02._2, msg)]);
+    }
+    if (v.tag === "Nothing") {
+      const $02 = (() => {
+        if (c._info.tag === "Nothing") {
+          return $ItemInfo("", -1);
+        }
+        if (c._info.tag === "Just") {
+          return c._info._1;
+        }
+        fail();
+      })();
+      return $Either("Left", [$Issue("InvalidItem", $02._1, $02._2, "the entity must have domain property.")]);
+    }
+    fail();
+  })(filterImpl(isEntitySet, input));
+  if ($0.tag === "Left") {
+    return $Either("Left", $0._1);
+  }
+  if ($0.tag === "Right") {
+    return applicativeV3.pure(input);
+  }
+  fail();
+};
+var parseConcepts = (input) => {
+  if (input.length === 0) {
+    return $Either("Left", [$Issue("Issue", "Data set must have at least one concept")]);
+  }
+  const $0 = (() => {
+    if (applicativeV3.pure(input).tag === "Left") {
+      return $Either("Left", applicativeV3.pure(input)._1);
+    }
+    if (applicativeV3.pure(input).tag === "Right") {
+      return checkDuplicatedConcepts(applicativeV3.pure(input)._1);
+    }
+    fail();
+  })();
+  const $1 = (() => {
+    if ($0.tag === "Left") {
+      return $Either("Left", $0._1);
+    }
+    if ($0.tag === "Right") {
+      return checkConceptDomain($0._1);
+    }
+    fail();
+  })();
+  if ($1.tag === "Left") {
+    return $Either("Left", $1._1);
+  }
+  if ($1.tag === "Right") {
+    return applicativeV3.pure(fromArrayBy((x) => x.conceptId)(identity10)($1._1));
+  }
+  fail();
+};
+var parseBaseDataSet = (conceptsInput) => (entitiesInput) => {
+  const $0 = parseConcepts(conceptsInput);
+  const $1 = (() => {
+    if ($0.tag === "Left") {
+      return $Either("Left", $0._1);
+    }
+    if ($0.tag === "Right") {
+      const $12 = parseEntityDomains($0._1)(entitiesInput);
+      const $2 = (() => {
+        if ($12.tag === "Left") {
+          return $Either("Left", $12._1);
+        }
+        if ($12.tag === "Right") {
+          return applicativeV3.pure($12._1);
+        }
+        fail();
+      })();
+      if ($2.tag === "Left") {
+        return $Either("Left", $2._1);
+      }
+      if ($2.tag === "Right") {
+        return applicativeV3.pure({ concepts: $0._1, entities: $2._1, datapoints: empty, _valueParsers: empty });
+      }
+    }
+    fail();
+  })();
+  if ($1.tag === "Left") {
+    return $Either("Left", $1._1);
+  }
+  if ($1.tag === "Right") {
+    const $2 = $1._1;
+    return applicativeV3.pure({ ...$2, _valueParsers: fromArray1(arrayMap((x) => $Tuple(x, makeValueParser($2)(x)))(keys3($2.concepts))) });
+  }
+  fail();
+};
+
+// output-es/Data.Validation.Result/index.js
+var showMessage = (v) => {
+  const statstr = v.isWarning ? "[WARN] " : "[ERR] ";
+  const linestr = v.lineNo === -1 ? "" : showIntImpl(v.lineNo) + ":";
+  const filestr = v.file === "" ? "" : v.file + ":";
+  if (filestr === "" && linestr === "") {
+    return statstr + v.message;
+  }
+  return statstr + filestr + linestr + " " + v.message;
+};
+var messageFromIssue = (v) => {
+  if (v.tag === "InvalidItem") {
+    return { message: v._3, file: v._1, lineNo: v._2, isWarning: true };
+  }
+  return { message: showId.show(v), file: "", lineNo: -1, isWarning: true };
+};
+var hasError = (msgs) => {
+  const v = find((msg) => !msg.isWarning)(msgs);
+  if (v.tag === "Nothing") {
+    return false;
+  }
+  if (v.tag === "Just") {
+    return true;
+  }
+  fail();
+};
+
+// output-es/Data.Validation.ValidationT/index.js
+var vWarning = (dictMonad) => {
+  const $0 = monadStateExceptT(monadStateStateT(dictMonad));
+  return (dictMonoid) => (e) => $0.state((s) => $Tuple(void 0, dictMonoid.Semigroup0().append(s)(e)));
+};
+var vError = (dictMonad) => monadThrowExceptT({
+  Applicative0: () => applicativeStateT(dictMonad),
+  Bind1: () => bindStateT(dictMonad)
+}).throwError;
+var runValidationT = (dictMonad) => (dictMonoid) => {
+  const mempty = dictMonoid.mempty;
+  return (v) => dictMonad.Bind1().bind(v(mempty))((v1) => dictMonad.Applicative0().pure((() => {
+    if (v1._1.tag === "Left") {
+      return $Tuple(dictMonoid.Semigroup0().append(v1._2)(v1._1._1), Nothing);
+    }
+    if (v1._1.tag === "Right") {
+      return $Tuple(v1._2, $Maybe("Just", v1._1._1));
+    }
+    fail();
+  })()));
+};
+var monadtransVT = {
+  lift: (dictMonad) => (x) => bindStateT(dictMonad).bind((s) => dictMonad.Bind1().bind(x)((x$1) => dictMonad.Applicative0().pure($Tuple(x$1, s))))((a) => applicativeStateT(dictMonad).pure($Either(
+    "Right",
+    a
+  )))
+};
+var monadVT = (dictMonad) => {
+  const $0 = { Applicative0: () => applicativeStateT(dictMonad), Bind1: () => bindStateT(dictMonad) };
+  return { Applicative0: () => applicativeExceptT($0), Bind1: () => bindExceptT($0) };
+};
+
+// output-es/App.Validations/index.js
+var applicativeV4 = /* @__PURE__ */ (() => {
+  const applyV1 = applyV(semigroupArray);
+  return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
+})();
+var sequence2 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV4)(identity2))();
+var identity11 = (x) => x;
+var emitErrorsAndStop = (dictMonad) => {
+  const vError2 = vError(dictMonad);
+  return (issues) => vError2(arrayMap((x) => ({ ...messageFromIssue(x), isWarning: false }))(issues));
+};
+var validateBaseDataSet = (conceptsInput) => (entitiesInput) => (dictMonad) => {
+  const $0 = parseBaseDataSet(conceptsInput)(entitiesInput);
+  if ($0.tag === "Right") {
+    return applicativeExceptT({
+      Applicative0: () => applicativeStateT(dictMonad),
+      Bind1: () => bindStateT(dictMonad)
+    }).pure($0._1);
+  }
+  if ($0.tag === "Left") {
+    return emitErrorsAndStop(dictMonad)($0._1);
+  }
+  fail();
+};
+var validateConcepts = (csvfile) => (dictMonad) => {
+  const vWarning3 = vWarning(dictMonad)(monoidArray);
+  const $0 = applicativeExceptT({
+    Applicative0: () => applicativeStateT(dictMonad),
+    Bind1: () => bindStateT(dictMonad)
+  });
+  const $1 = createConceptInput(csvfile);
+  if ($1.tag === "Left") {
+    return emitErrorsAndStop(dictMonad)($1._1);
+  }
+  if ($1.tag === "Right") {
+    return foldM(monadVT(dictMonad))((acc) => (input) => {
+      if (input._info.tag === "Nothing") {
+        const $22 = parseConcept(input);
+        if ($22.tag === "Left") {
+          return bindExceptT({
+            Applicative0: () => applicativeStateT(dictMonad),
+            Bind1: () => bindStateT(dictMonad)
+          }).bind(vWarning3(arrayMap((x) => ({ ...messageFromIssue(x), file: "", isWarning: false, lineNo: -1 }))($22._1)))(() => $0.pure(acc));
+        }
+        if ($22.tag === "Right") {
+          return $0.pure(snoc(acc)($22._1));
+        }
+        fail();
+      }
+      if (input._info.tag === "Just") {
+        const $22 = parseConcept(input);
+        if ($22.tag === "Left") {
+          return bindExceptT({
+            Applicative0: () => applicativeStateT(dictMonad),
+            Bind1: () => bindStateT(dictMonad)
+          }).bind(vWarning3(arrayMap((x) => ({ ...messageFromIssue(x), file: input._info._1._1, isWarning: false, lineNo: input._info._1._2 }))($22._1)))(() => $0.pure(acc));
+        }
+        if ($22.tag === "Right") {
+          return $0.pure(snoc(acc)($22._1));
+        }
+        fail();
+      }
+      const $2 = parseConcept(input);
+      if ($2.tag === "Left") {
+        return bindExceptT({
+          Applicative0: () => applicativeStateT(dictMonad),
+          Bind1: () => bindStateT(dictMonad)
+        }).bind(vWarning3(arrayMap((x) => ({ ...messageFromIssue(x), file: fail(), isWarning: false, lineNo: fail() }))($2._1)))(() => $0.pure(acc));
+      }
+      if ($2.tag === "Right") {
+        return $0.pure(snoc(acc)($2._1));
+      }
+      fail();
+    })([])($1._1);
+  }
+  fail();
+};
+var validateEntities = (csvfile) => (dictMonad) => {
+  const vWarning3 = vWarning(dictMonad)(monoidArray);
+  const $0 = applicativeExceptT({
+    Applicative0: () => applicativeStateT(dictMonad),
+    Bind1: () => bindStateT(dictMonad)
+  });
+  const $1 = createEntityInput(csvfile);
+  if ($1.tag === "Left") {
+    return emitErrorsAndStop(dictMonad)($1._1);
+  }
+  if ($1.tag === "Right") {
+    return foldM(monadVT(dictMonad))((acc) => (input) => {
+      if (input._info.tag === "Nothing") {
+        const $22 = parseEntity(input);
+        if ($22.tag === "Left") {
+          return bindExceptT({
+            Applicative0: () => applicativeStateT(dictMonad),
+            Bind1: () => bindStateT(dictMonad)
+          }).bind(vWarning3(arrayMap((x) => ({ ...messageFromIssue(x), file: "", isWarning: false, lineNo: -1 }))($22._1)))(() => $0.pure(acc));
+        }
+        if ($22.tag === "Right") {
+          return $0.pure(snoc(acc)($22._1));
+        }
+        fail();
+      }
+      if (input._info.tag === "Just") {
+        const $22 = parseEntity(input);
+        if ($22.tag === "Left") {
+          return bindExceptT({
+            Applicative0: () => applicativeStateT(dictMonad),
+            Bind1: () => bindStateT(dictMonad)
+          }).bind(vWarning3(arrayMap((x) => ({ ...messageFromIssue(x), file: input._info._1._1, isWarning: false, lineNo: input._info._1._2 }))($22._1)))(() => $0.pure(acc));
+        }
+        if ($22.tag === "Right") {
+          return $0.pure(snoc(acc)($22._1));
+        }
+        fail();
+      }
+      const $2 = parseEntity(input);
+      if ($2.tag === "Left") {
+        return bindExceptT({
+          Applicative0: () => applicativeStateT(dictMonad),
+          Bind1: () => bindStateT(dictMonad)
+        }).bind(vWarning3(arrayMap((x) => ({ ...messageFromIssue(x), file: fail(), isWarning: false, lineNo: fail() }))($2._1)))(() => $0.pure(acc));
+      }
+      if ($2.tag === "Right") {
+        return $0.pure(snoc(acc)($2._1));
+      }
+      fail();
+    })([])($1._1);
+  }
+  fail();
+};
+var emitErrorsAndContinue = (dictMonad) => {
+  const vWarning3 = vWarning(dictMonad)(monoidArray);
+  return (issues) => bindExceptT({
+    Applicative0: () => applicativeStateT(dictMonad),
+    Bind1: () => bindStateT(dictMonad)
+  }).bind(vWarning3(arrayMap((x) => ({ ...messageFromIssue(x), isWarning: false }))(issues)))(() => applicativeExceptT({
+    Applicative0: () => applicativeStateT(dictMonad),
+    Bind1: () => bindStateT(dictMonad)
+  }).pure());
+};
+var validateDataPoints = (csvfiles) => (dictMonad) => {
+  const $0 = applicativeExceptT({
+    Applicative0: () => applicativeStateT(dictMonad),
+    Bind1: () => bindStateT(dictMonad)
+  });
+  const $1 = sequence2(arrayMap(createDataPointsInput)(csvfiles));
+  const $2 = (() => {
+    if ($1.tag === "Left") {
+      return $Either("Left", $1._1);
+    }
+    if ($1.tag === "Right") {
+      return mergeDataPointsInput($1._1);
+    }
+    fail();
+  })();
+  const v = (() => {
+    if ($2.tag === "Left") {
+      return $Either("Left", $2._1);
+    }
+    if ($2.tag === "Right") {
+      return parseDataPoints($2._1);
+    }
+    fail();
+  })();
+  if (v.tag === "Left") {
+    return bindExceptT({
+      Applicative0: () => applicativeStateT(dictMonad),
+      Bind1: () => bindStateT(dictMonad)
+    }).bind(emitErrorsAndContinue(dictMonad)(v._1))(() => $0.pure(Nothing));
+  }
+  if (v.tag === "Right") {
+    return $0.pure($Maybe("Just", v._1));
+  }
+  fail();
+};
+var validateDataPointsWithDataSet = (ds) => (dps) => (dictMonad) => {
+  const $0 = parseDataPoints2(ds)(dps);
+  if ($0.tag === "Left") {
+    return emitErrorsAndContinue(dictMonad)($0._1);
+  }
+  if ($0.tag === "Right") {
+    return applicativeExceptT({
+      Applicative0: () => applicativeStateT(dictMonad),
+      Bind1: () => bindStateT(dictMonad)
+    }).pure();
+  }
+  fail();
+};
+var dropAndWarnBadCsvRows = (fp) => (content) => (dictMonad) => {
+  const v = filterBadRows(content);
+  const $0 = v._2;
+  return bindExceptT({
+    Applicative0: () => applicativeStateT(dictMonad),
+    Bind1: () => bindStateT(dictMonad)
+  }).bind(vWarning(dictMonad)(monoidArray)(arrayMap((idx) => ({ ...messageFromIssue($Issue("Issue", "Bad Csv row")), file: fp, lineNo: idx }))(v._1)))(() => applicativeExceptT({
+    Applicative0: () => applicativeStateT(dictMonad),
+    Bind1: () => bindStateT(dictMonad)
+  }).pure($0));
+};
+var validateCsvFile = (v) => (dictMonad) => {
+  const bindVT2 = bindExceptT({
+    Applicative0: () => applicativeStateT(dictMonad),
+    Bind1: () => bindStateT(dictMonad)
+  });
+  const $0 = applicativeExceptT({
+    Applicative0: () => applicativeStateT(dictMonad),
+    Bind1: () => bindStateT(dictMonad)
+  });
+  const vWarning3 = vWarning(dictMonad)(monoidArray);
+  const $1 = v._1;
+  const fp = $1._1;
+  return bindVT2.bind(dropAndWarnBadCsvRows(fp)(v._2)(dictMonad))((rawcsv$p) => {
+    const $2 = parseCsvFile({ fileInfo: $1, csvContent: parseCsvContent(rawcsv$p) });
+    if ($2.tag === "Right") {
+      return $0.pure($Maybe("Just", $2._1));
+    }
+    if ($2.tag === "Left") {
+      return bindVT2.bind(vWarning3(arrayMap((x) => ({ ...messageFromIssue(x), file: fp, isWarning: false }))($2._1)))(() => $0.pure(Nothing));
+    }
+    fail();
+  });
+};
+var validateCsvFiles = (dictTraversable) => {
+  const $0 = dictTraversable.Foldable1().foldr;
+  return (xs) => (dictMonad) => {
+    const applicativeVT2 = applicativeExceptT({
+      Applicative0: () => applicativeStateT(dictMonad),
+      Bind1: () => bindStateT(dictMonad)
+    });
+    return bindExceptT({
+      Applicative0: () => applicativeStateT(dictMonad),
+      Bind1: () => bindStateT(dictMonad)
+    }).bind(dictTraversable.traverse(applicativeVT2)((x) => validateCsvFile(x)(dictMonad))(xs))((rs) => applicativeVT2.pure(mapMaybe(identity11)(fromFoldableImpl(
+      $0,
+      rs
+    ))));
+  };
+};
+var checkNonEmptyArray = (name2) => (xs) => (dictMonad) => {
+  if (xs.length > 0) {
+    return applicativeExceptT({
+      Applicative0: () => applicativeStateT(dictMonad),
+      Bind1: () => bindStateT(dictMonad)
+    }).pure(xs);
+  }
+  return vError(dictMonad)([
+    messageFromIssue($Issue("Issue", "expect " + name2 + " has at least one item"))
+  ]);
+};
+
 // output-es/Effect.Console/foreign.js
 var log2 = function(s) {
   return function() {
@@ -7692,7 +8370,7 @@ function toArrayWithKey(f) {
     return r;
   };
 }
-var keys2 = Object.keys || toArrayWithKey(function(k) {
+var keys4 = Object.keys || toArrayWithKey(function(k) {
   return function() {
     return k;
   };
@@ -7722,24 +8400,34 @@ var bindVT = /* @__PURE__ */ bindExceptT({
   Applicative0: () => applicativeStateT(monadAff),
   Bind1: () => bindStateT(monadAff)
 });
+var sequence3 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeAff)(identity2))();
+var validateCsvFiles2 = /* @__PURE__ */ validateCsvFiles(traversableArray);
 var applicativeVT = /* @__PURE__ */ applicativeExceptT({
   Applicative0: () => applicativeStateT(monadAff),
   Bind1: () => bindStateT(monadAff)
 });
-var vError2 = /* @__PURE__ */ vError(monadAff);
-var sequence4 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeAff)(identity2))();
-var $$for = /* @__PURE__ */ (() => {
+var for1 = /* @__PURE__ */ (() => {
   const traverse2 = traversableArray.traverse(applicativeVT);
   return (x) => (f) => traverse2(f)(x);
 })();
-var sequence14 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeAff)(identity2))();
+var compare1 = /* @__PURE__ */ (() => ordMaybe(ordTuple(ordString)(ordNonEmpty2(ordString))).compare)();
+var for2 = /* @__PURE__ */ (() => {
+  const traverse2 = traversableArray.traverse(applicativeVT);
+  return (x) => (f) => traverse2(f)(x);
+})();
+var vWarning2 = /* @__PURE__ */ vWarning(monadAff)(monoidArray);
+var joinWith2 = (splice) => (xs) => foldlArray((v) => (v1) => {
+  if (v.init) {
+    return { init: false, acc: v1 };
+  }
+  return { init: false, acc: v.acc + splice + v1 };
+})({ init: true, acc: "" })(xs).acc;
 var runValidationT2 = /* @__PURE__ */ runValidationT(monadAff)(monoidArray);
-var validate = (path2) => bindVT.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("reading file list..."))))(() => bindVT.bind(monadtransVT.lift(monadAff)(getFiles(path2)([
-  ".git",
-  "etl",
-  "lang",
-  "assets"
-])))((fs) => {
+var readAllFileInfoForValidation = (fs) => (dictMonad) => {
+  const applicativeVT1 = applicativeExceptT({
+    Applicative0: () => applicativeStateT(dictMonad),
+    Bind1: () => bindStateT(dictMonad)
+  });
   const ddfFiles = mapMaybe((x) => x)(arrayMap((f) => {
     const $0 = validateFileInfo(f);
     if ($0.tag === "Left") {
@@ -7750,37 +8438,58 @@ var validate = (path2) => bindVT.bind(monadtransVT.lift(monadAff)(_liftEffect(lo
     }
     fail();
   })(fs));
-  return bindVT.bind(0 < ddfFiles.length ? applicativeVT.pure() : vError2([messageFromIssue($Issue("Issue", "No csv files in this folder. Please begin with a ddf--concepts.csv file."))]))(() => bindVT.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("loading concepts and entities..."))))(() => {
-    const fileGroups = groupAllBy((a) => (b) => ordCollection.compare(a._2)(b._2))(ddfFiles);
-    return bindVT.bind(checkNonEmptyArray("concept csvs")(filterImpl(
-      (x) => {
-        if (0 < x.length) {
-          return x[0]._2.tag === "Concepts";
-        }
-        fail();
-      },
-      fileGroups
-    ))(monadAff))((conceptFiles_) => bindVT.bind(monadtransVT.lift(monadAff)(sequence4(arrayMap(createCsvFileInput)((() => {
+  return bindExceptT({
+    Applicative0: () => applicativeStateT(dictMonad),
+    Bind1: () => bindStateT(dictMonad)
+  }).bind(0 < ddfFiles.length ? applicativeVT1.pure() : vError(dictMonad)([
+    {
+      ...messageFromIssue($Issue("Issue", "No csv files in this folder. Please begin with a ddf--concepts.csv file.")),
+      isWarning: false
+    }
+  ]))(() => applicativeVT1.pure(ddfFiles));
+};
+var validate = (path2) => bindVT.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("reading file list..."))))(() => bindVT.bind(monadtransVT.lift(monadAff)(getFiles(path2)([
+  ".git",
+  "etl",
+  "lang",
+  "assets"
+])))((fs) => bindVT.bind(readAllFileInfoForValidation(fs)(monadAff))((ddfFiles) => bindVT.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
+  const fileGroups = groupAllBy((x) => (y) => ordCollection.compare(x._2)(y._2))(ddfFiles);
+  return bindVT.bind(checkNonEmptyArray("concept csvs")(filterImpl(
+    (x) => {
+      if (0 < x.length) {
+        return x[0]._2.tag === "Concepts";
+      }
+      fail();
+    },
+    fileGroups
+  ))(monadAff))((conceptFiles_) => {
+    const $0 = (() => {
       if (0 < conceptFiles_.length) {
         return conceptFiles_[0];
       }
       fail();
-    })()))))((conceptInputs) => bindVT.bind(validateCsvFiles(conceptInputs)(monadAff))((conceptCsvFiles) => bindVT.bind($$for(conceptCsvFiles)((x) => validateConcepts(x)(monadAff)))((concepts) => bindVT.bind(monadtransVT.lift(monadAff)(sequence4(arrayMap(createCsvFileInput)(arrayBind(filterImpl(
-      (x) => {
-        if (0 < x.length) {
-          return x[0]._2.tag === "Entities";
-        }
-        fail();
-      },
-      fileGroups
-    ))(toArray2)))))((entityInputs) => bindVT.bind(validateCsvFiles(entityInputs)(monadAff))((entityCsvFiles) => bindVT.bind($$for(entityCsvFiles)((x) => validateEntities(x)(monadAff)))((entities) => {
-      const $0 = parseBaseDataSet({ concepts: concat(concepts), entities: concat(entities) });
-      if ($0.tag === "Left") {
-        return vError2(arrayMap(messageFromIssue)($0._1));
-      }
-      if ($0.tag === "Right") {
-        const $1 = $0._1;
-        return bindVT.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => bindVT.bind($$for(conceptCsvFiles)((x) => validateCsvHeaders($1)(x)(monadAff)))(() => bindVT.bind($$for(entityCsvFiles)((x) => validateCsvHeaders($1)(x)(monadAff)))(() => bindVT.bind(validateConceptLength($1)(monadAff))(() => bindVT.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating datapoints..."))))(() => bindVT.bind($$for(groupAllBy((a) => (b) => compareDP(a._2)(b._2))(arrayBind(filterImpl(
+    })();
+    return bindVT.bind(monadtransVT.lift(monadAff)(sequence3(arrayMap(readCsv$p)($0))))((conceptCsvRows) => bindVT.bind(validateCsvFiles2(zipWithImpl(
+      Tuple,
+      $0,
+      arrayMap(createRawContent)(conceptCsvRows)
+    ))(monadAff))((conceptCsvFiles) => bindVT.bind(for1(conceptCsvFiles)((x) => validateConcepts(x)(monadAff)))((concepts) => {
+      const entityFiles = arrayBind(filterImpl(
+        (x) => {
+          if (0 < x.length) {
+            return x[0]._2.tag === "Entities";
+          }
+          fail();
+        },
+        fileGroups
+      ))(toArray2);
+      return bindVT.bind(monadtransVT.lift(monadAff)(sequence3(arrayMap(readCsv$p)(entityFiles))))((entityCsvRows) => bindVT.bind(validateCsvFiles2(zipWithImpl(
+        Tuple,
+        entityFiles,
+        arrayMap(createRawContent)(entityCsvRows)
+      ))(monadAff))((entityCsvFiles) => bindVT.bind(for1(entityCsvFiles)((x) => validateEntities(x)(monadAff)))((entities) => bindVT.bind(validateBaseDataSet(concat(concepts))(concat(entities))(monadAff))((ds) => {
+        const datapointFileGroups = groupAllBy((x) => (y) => compare1(x._2.tag === "DataPoints" ? $Maybe("Just", $Tuple(x._2._1.indicator, x._2._1.pkeys)) : Nothing)(y._2.tag === "DataPoints" ? $Maybe("Just", $Tuple(y._2._1.indicator, y._2._1.pkeys)) : Nothing))(arrayBind(filterImpl(
           (x) => {
             if (0 < x.length) {
               return x[0]._2.tag === "DataPoints";
@@ -7788,21 +8497,58 @@ var validate = (path2) => bindVT.bind(monadtransVT.lift(monadAff)(_liftEffect(lo
             fail();
           },
           fileGroups
-        ))(toArray2)))((files) => bindVT.bind(monadtransVT.lift(monadAff)(sequence14(arrayMap(createCsvFileInput)(files))))((csvfileinputs) => bindVT.bind(validateCsvFiles(csvfileinputs)(monadAff))((csvfiles) => {
-          if (csvfiles.length > 0) {
-            return bindVT.bind(validateDataPoints($1)(csvfiles)(monadAff))((dpl) => applicativeVT.pure());
-          }
-          return applicativeVT.pure();
-        }))))(() => applicativeVT.pure($1)))))));
-      }
-      fail();
-    })))))));
-  }));
-}));
+        ))(toArray2));
+        return bindVT.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating datapoints..."))))(() => bindVT.bind(for1(datapointFileGroups)((group3) => {
+          const $1 = (() => {
+            if (0 < group3.length) {
+              return group3[0];
+            }
+            fail();
+          })();
+          const $2 = $1._2.tag === "DataPoints" ? $Maybe("Just", $Tuple($1._2._1.indicator, $1._2._1.pkeys)) : Nothing;
+          const v = (() => {
+            if ($2.tag === "Just") {
+              return $2._1;
+            }
+            fail();
+          })();
+          const $3 = v._1;
+          const $4 = v._2;
+          return bindVT.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("indicator: " + showStringImpl($3) + ", by: " + joinWith(", ")(fromFoldableImpl(
+            foldableNonEmptyList.foldr,
+            $NonEmpty($4._1, listMap(toString)($4._2))
+          )) + ", total files: " + showIntImpl(group3.length)))))(() => bindVT.bind(for2(group3)((f) => bindVT.bind(monadtransVT.lift(monadAff)(readCsv(f._1)))((csvrows) => bindVT.bind(validateCsvFile($Tuple(
+            f,
+            createRawContent(csvrows)
+          ))(monadAff))((dpcsvfile) => applicativeVT.pure(dpcsvfile)))))((dpsCsvFiles) => bindVT.bind((() => {
+            const $5 = mapMaybe((x) => x)(dpsCsvFiles);
+            if ($5.length > 0) {
+              return bindVT.bind(validateDataPoints($5)(monadAff))((dps) => {
+                if (dps.tag === "Nothing") {
+                  return applicativeVT.pure();
+                }
+                if (dps.tag === "Just") {
+                  return validateDataPointsWithDataSet(ds)(dps._1)(monadAff);
+                }
+                fail();
+              });
+            }
+            return vWarning2([
+              messageFromIssue($Issue(
+                "Issue",
+                "No valid csv file for " + $3 + " by " + joinWith2(",")(fromFoldableImpl(foldableNonEmptyList.foldr, $4))
+              ))
+            ]);
+          })())(() => applicativeVT.pure())));
+        }))(() => applicativeVT.pure(ds.concepts)));
+      }))));
+    })));
+  });
+}))));
 var runMain = (path2) => {
   const $0 = _makeFiber(
     ffiUtil,
-    _bind(_liftEffect(log2("v0.0.7")))(() => _bind(runValidationT2(validate(path2)))((v) => {
+    _bind(_liftEffect(log2("v0.0.8dev")))(() => _bind(runValidationT2(validate(path2)))((v) => {
       const $02 = v._2;
       const $1 = v._1;
       return _bind(_liftEffect(log2(joinWith("\n")(arrayMap(showMessage)($1)))))(() => {
@@ -7834,12 +8580,16 @@ var main = () => {
 export {
   applicativeVT,
   bindVT,
-  $$for as for,
+  compare1,
+  for1,
+  for2,
+  joinWith2 as joinWith,
   main,
+  readAllFileInfoForValidation,
   runMain,
   runValidationT2 as runValidationT,
-  sequence4 as sequence,
-  sequence14 as sequence1,
-  vError2 as vError,
-  validate
+  sequence3 as sequence,
+  vWarning2 as vWarning,
+  validate,
+  validateCsvFiles2 as validateCsvFiles
 };

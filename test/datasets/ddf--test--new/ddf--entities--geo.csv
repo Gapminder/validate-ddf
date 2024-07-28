@@ -1,2 +1,4 @@
-geo,name
-bes,BES
+geo,name,is--geo
+bes,BES,TRUE
+chn,CHN,TRUE
+chn,CHN,TRUE

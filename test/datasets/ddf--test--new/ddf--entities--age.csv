@@ -1,2 +1,2 @@
-age,name
-1,1
+age,name,is--board,is--age
+1,1,TRUE,TRUE

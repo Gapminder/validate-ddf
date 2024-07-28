@@ -1,2 +1,3 @@
-country,name,is--country
+geo,name,is--country
 chn,CHN,TRUE
+usa,USA,TRUE

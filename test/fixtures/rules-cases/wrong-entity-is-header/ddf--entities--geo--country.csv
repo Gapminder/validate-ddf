@@ -1,2 +1,2 @@
 geo,name,lat,lng,is--bar,is--country,is--geo
-and,Andorra,,,false,true,false
+and,Andorra,,,true,false,true
