@@ -1,0 +1,333 @@
+-- | DataSet consists of Concepts, Entities and DataPoints.
+-- | The DataSet type in this module uses Hashmap for better performance
+-- | please check the parseConcepts/parseEntities/parseDataPoints methods
+-- | for validation rules.
+
+module Data.DDF.DataSet
+  ( DataSet(..)
+  , ConceptDB
+  , EntityDB
+  , DataPointsDB
+  , ValueParserDB
+  , ValueParser
+  , basedataset
+  , parseConcepts
+  , parseEntityDomains
+  , parseBaseDataSet
+  , parseDataPoints
+  , getConcepts
+  ) where
+
+import Data.DDF.Atoms.Value
+import Prelude
+
+import Control.Monad.ST as ST
+import Control.Monad.ST.Internal as STI
+import Data.Array as Arr
+import Data.Array.NonEmpty (NonEmptyArray)
+import Data.Array.NonEmpty as NEA
+import Data.DDF.Atoms.Identifier (Identifier)
+import Data.DDF.Atoms.Identifier as Id
+import Data.DDF.Concept (Concept(..), ConceptType(..))
+import Data.DDF.Concept as Conc
+import Data.DDF.DataPoint (DataPoints(..))
+import Data.DDF.Entity (Entity(..), getEntitySets)
+import Data.DDF.Entity as Ent
+import Data.DDF.Internal (ItemInfo, pathAndRow)
+import Data.Either (Either(..))
+import Data.Function (on)
+import Data.HashMap (HashMap)
+import Data.HashMap as HM
+import Data.HashSet (HashSet)
+import Data.HashSet as HS
+import Data.Hashable (class Hashable)
+import Data.List.NonEmpty (NonEmptyList)
+import Data.List.NonEmpty as NEL
+import Data.Map (Map)
+import Data.Map as M
+import Data.Maybe (Maybe(..), fromJust)
+import Data.Newtype (class Newtype)
+import Data.Set (Set)
+import Data.String.NonEmpty as NES
+import Data.Traversable (for, for_, sequence, sequence_, traverse, traverse_)
+import Data.Tuple (Tuple(..), fst, snd)
+import Data.Validation.Issue (Issue(..), Issues, withRowInfo)
+import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither)
+import Debug (trace)
+import Partial.Unsafe (unsafeCrashWith, unsafePartial)
+import Utils (dupsBy, unsafeLookup)
+
+type ConceptDB = HashMap String Concept
+type EntityDB = HashMap String (Array Entity)
+type DataPointsDB = HashMap (Tuple String (Set String)) DataPoints
+-- | ValueParser is a function to parse a value in this dataset.
+type ValueParser = String -> (V Issues Value)
+type ValueParserDB = HashMap String ValueParser
+
+newtype DataSet =
+  DataSet
+    { concepts :: ConceptDB
+    , entities :: EntityDB
+    , datapoints :: DataPointsDB
+    , _valueParsers :: ValueParserDB
+    }
+
+derive instance newtypeDataSet :: Newtype DataSet _
+
+instance showDataSet :: Show DataSet where
+  show (DataSet x) =
+    "concepts: \n"
+      <> show x.concepts
+      <> "\nentities: \n"
+      <> show x.entities
+
+getConcept :: DataSet -> String -> Maybe Concept
+getConcept (DataSet { concepts }) k = HM.lookup k concepts
+
+getConcepts :: DataSet -> ConceptDB
+getConcepts (DataSet x) = x.concepts
+
+getEntities :: DataSet -> String -> Maybe String -> Maybe (Array Entity)
+getEntities (DataSet { entities }) domain Nothing =
+  HM.lookup domain entities
+getEntities (DataSet { entities }) domain (Just set) =
+  case HM.lookup domain entities of
+    Nothing -> Nothing
+    Just es ->
+      -- build a map of entity name -> array of entity set names
+      let
+        entitySetsOfEntities = map (\e -> Tuple e (map Id.value $ Ent.getEntitySets e)) es
+        filtered = Arr.filter (\x -> set `Arr.elem` (snd x)) entitySetsOfEntities
+      in
+        Just $ map fst filtered
+
+getDomainForEntitySet :: DataSet -> String -> Maybe String
+getDomainForEntitySet dataset k =
+  (flip Conc.getProp) "domain" =<< theConcept
+  where
+  theConcept = getConcept dataset k
+
+type ConceptsInput = Array Concept
+type EntitiesInput = Array Entity
+
+-- | parse an array of concepts. Rules:
+-- | 1. there must be at least 1 concept
+-- | 2. concept ids should be unique
+-- | 3. entity sets' domain must be valid ids
+parseConcepts :: ConceptsInput -> V Issues ConceptDB
+parseConcepts input =
+  checkNonEmptyConcepts input
+    `andThen`
+      checkDuplicatedConcepts
+    `andThen`
+      checkConceptDomain
+    `andThen`
+      ( \good ->
+          pure $ HM.fromArrayBy (Conc.getId >>> Id.value) identity good
+      )
+
+checkNonEmptyConcepts :: ConceptsInput -> V Issues ConceptsInput
+checkNonEmptyConcepts input =
+  if Arr.null input then
+    invalid [ Issue $ "Data set must have at least one concept" ]
+  else
+    pure input
+
+makeIssue :: String -> Concept -> Issue
+makeIssue msg c =
+  let
+    (Tuple filepath row) = pathAndRow $ Conc.getInfo c
+  in
+    InvalidItem filepath row msgWithInfo
+  where
+  msgWithInfo = msg <> (Id.value $ Conc.getId c)
+
+checkDuplicatedConcepts :: ConceptsInput -> V Issues ConceptsInput
+checkDuplicatedConcepts input =
+  let
+    dups = dupsBy (compare `on` Conc.getId) input
+  in
+    if Arr.length dups == 0 then
+      pure input
+    else
+      let
+        msg = "Multiple definition found: "
+      in
+        invalid (makeIssue msg <$> dups)
+
+checkConceptDomain :: ConceptsInput -> V Issues ConceptsInput
+checkConceptDomain input =
+  let
+    allDomainConcepts = Arr.filter Conc.isEntityDomain input
+    allSetConcepts = Arr.filter Conc.isEntitySet input
+    domainNames = map (Conc.getId >>> Id.value) allDomainConcepts
+
+    check c =
+      case Conc.getProp c "domain" of
+        Just domain ->
+          if domain `Arr.elem` domainNames then
+            pure unit
+          else
+            invalid [ InvalidItem fp i msg ]
+          where
+          Tuple fp i = pathAndRow $ Conc.getInfo c
+          msg = "the domain of the entity set is not a vaild domain: " <> domain
+        Nothing ->
+          invalid [ InvalidItem fp i msg ]
+          where
+          Tuple fp i = pathAndRow $ Conc.getInfo c
+          msg = "the entity must have domain property."
+  in
+    traverse_ check allSetConcepts `andThen` (\_ -> pure input)
+
+-- FIXME: use a consistent name for Concept.getInfo and Entity.getIteminfo functions
+makeIssue' :: String -> Entity -> Issue
+makeIssue' msg e =
+  InvalidItem filepath row msgWithInfo
+  where
+  info = Ent.getItemInfo e
+  (Tuple filepath row) = pathAndRow info
+  msgWithInfo = msg <> (Id.value $ Ent.getId e)
+
+-- | parse entity domains from an array of entities. Rules:
+-- | 1. multiple definitions are allowed in different files
+-- | 2. multiple definitions are not allowed in the same file.
+parseEntityDomains :: ConceptDB -> EntitiesInput -> V Issues EntityDB
+parseEntityDomains conceptdb input =
+  checkDuplicatedEntities input
+    `andThen`
+      ( \good ->
+          let
+            domainGroups = Arr.groupAllBy (compare `on` Ent.getDomain) good
+          in
+            -- FIXME: we should double check multiple definitions of same entity
+            -- see if they have conflicts of definition.
+            pure $ HM.fromArrayBy (NEA.head >>> Ent.getDomain >>> Id.value) NEA.toArray domainGroups
+      )
+
+checkDuplicatedEntities :: EntitiesInput -> V Issues EntitiesInput
+checkDuplicatedEntities input =
+  let
+    -- FIXME: move duplicated checking per file to CsvFile Parsing
+    dups = dupsBy (compare `on` Ent.getIdAndFile) input
+  in
+    if Arr.length dups == 0 then
+      pure input
+    else
+      let
+        msg = "Multiple definition found: "
+      in
+        invalid (makeIssue' msg <$> dups)
+
+basedataset :: ConceptDB -> EntityDB -> DataSet
+basedataset cdb edb = DataSet
+  { concepts: cdb
+  , entities: edb
+  , datapoints: HM.empty
+  , _valueParsers: HM.empty
+  }
+
+--
+checkDomainAndSetExists :: ConceptDB -> EntityDB -> V Issues EntityDB
+checkDomainAndSetExists concepts entities = pure entities
+
+parseBaseDataSet :: ConceptsInput -> EntitiesInput -> V Issues DataSet
+parseBaseDataSet conceptsInput entitiesInput =
+  parseConcepts conceptsInput
+    `andThen`
+      ( \cdb ->
+          parseEntityDomains cdb entitiesInput
+            `andThen`
+              checkDomainAndSetExists cdb
+            `andThen`
+              (\edb -> pure $ basedataset cdb edb)
+      )
+    `andThen`
+      ( \dataset@(DataSet ds) ->
+          let
+            ps = map (\x -> Tuple x (makeValueParser dataset x))
+              (HM.keys $ getConcepts dataset)
+          in
+            pure $ DataSet (ds { _valueParsers = HM.fromArray ps })
+      )
+
+unsafeLookupHM :: forall k v. Hashable k => Show k => k -> HashMap k v -> v
+unsafeLookupHM k m = case HM.lookup k m of
+  Nothing -> unsafeCrashWith $ "error finding key: " <> show k
+  Just x -> x
+
+-- | unsafe function, only works if we know the key exists in the DataSet.
+makeValueParser :: DataSet -> String -> ValueParser
+makeValueParser dataset@(DataSet ds) k =
+  let
+    conc = unsafeLookupHM k ds.concepts
+  in
+    case Conc.getType conc of
+      StringC -> parseStrVal
+      MeasureC -> parseNumVal
+      BooleanC -> parseBoolVal
+      IntervalC -> parseStrVal
+      EntityDomainC ->
+        parseDomainVal k entvals
+        where
+        entities = case HM.lookup k ds.entities of
+          Nothing -> []
+          Just es -> es
+        entvals = HS.fromArray $ map (Ent.getId >>> Id.value) entities
+      EntitySetC -> case getDomainForEntitySet dataset k of
+        Nothing -> parseDomainVal k HS.empty
+        Just domain -> case getEntities dataset domain (Just k) of
+          Nothing -> parseDomainVal k HS.empty
+          Just ents ->
+            parseDomainVal k entvals
+            where
+            entvals = HS.fromArray $ map (Ent.getId >>> Id.value) ents
+      RoleC -> parseStrVal
+      CompositeC -> parseStrVal
+      TimeC -> parseTimeVal
+      (CustomC _) -> parseStrVal
+
+getValueParser :: DataSet -> String -> V Issues ValueParser
+getValueParser (DataSet ds) k =
+  case HM.lookup k ds._valueParsers of
+    Just v -> pure v
+    -- FIXME: how to add file info
+    Nothing -> invalid [ Issue $ "no such concept in dataset: " <> k ]
+
+-- | parseDataPoints based on the concepts and entities in the dataset.
+-- | I thik it's not very necessary to store it into DataSet for validation
+parseDataPoints :: DataSet -> DataPoints -> V Issues Unit
+parseDataPoints ds@(DataSet { concepts, _valueParsers }) (DataPoints dp) =
+  let
+    conceptsInDp = NEA.snoc dp.by dp.indicatorId
+  in
+    for_ conceptsInDp \c ->
+      getValueParser ds (Id.value c)
+        `andThen`
+          (\vp -> parseColumnValues vp (unsafeLookup c dp.values) (dp.itemInfo))
+
+-- | check if concept exists in the dataset
+conceptExists :: DataSet -> Identifier -> V Issues Identifier
+conceptExists (DataSet { concepts }) concept =
+  case HM.lookup (Id.value concept) concepts of
+    Nothing -> invalid [ Issue $ "concept not found in dataset: " <> (Id.value concept) ]
+    Just _ -> pure concept
+
+parseColumnValues :: ValueParser -> Array String -> Array ItemInfo -> V Issues Unit
+parseColumnValues vp vals iteminfo = traverse_ run allValues
+  where
+  -- find all unique values
+  allValues = HM.values $ HM.fromArrayBy fst identity $ Arr.zip vals iteminfo
+
+  run (Tuple v it) =
+    let
+      res = vp v
+    in
+      if isValid res then
+        pure unit
+      else
+        let
+          (Tuple fp i) = pathAndRow it
+        in
+          withRowInfo fp i (res `andThen` (\_ -> pure unit))
+

@@ -1,114 +1,126 @@
 module Data.DDF.Csv.Utils
-  ( CsvRowRec
-  , createConceptInput
+  ( createConceptInput
+  , createDataPointsInput
   , createEntityInput
-  --  , createDataPointInput
-  , createPointInput
-  ) where
+  )
+  where
 
 import Prelude
 
 import Data.Array as A
-import Data.Array.NonEmpty (NonEmptyArray)
+import Data.Array as Arr
 import Data.Array.NonEmpty as NEA
-import Data.Array.NonEmpty.Internal (NonEmptyArray(..))
-import Data.Csv (CsvRow(..))
+import Data.Array.NonEmpty.Internal (NonEmptyArray)
+import Data.Csv (CsvRow(..), getLineNo, getRow)
 import Data.DDF.Atoms.Header (Header(..))
+import Data.DDF.Atoms.Header as Hd
 import Data.DDF.Atoms.Identifier (Identifier, parseId')
 import Data.DDF.Atoms.Identifier as Id
 import Data.DDF.Concept (ConceptInput)
-import Data.DDF.Csv.CsvFile (CsvFile)
-import Data.DDF.Csv.FileInfo (FileInfo(..))
+import Data.DDF.Csv.CsvFile (CsvColumn, CsvFile, CsvContent)
+import Data.DDF.Csv.FileInfo (CollectionInfo(..), FileInfo(..))
 import Data.DDF.Csv.FileInfo as FI
-import Data.DDF.DataPoint (DataPointListInput, PointInput)
+import Data.DDF.DataPoint (DataPointsInput)
 import Data.DDF.Entity (EntityInput)
+import Data.DDF.Internal (iteminfo, pathAndRow)
 import Data.List.NonEmpty (NonEmptyList)
 import Data.List.NonEmpty as NEL
 import Data.Map (Map)
 import Data.Map as M
 import Data.Map.Extra (popV, lookupV)
 import Data.Maybe (Maybe(..), fromJust)
-import Data.String.NonEmpty (NonEmptyString)
+import Data.Set as Set
+import Data.String.NonEmpty (NonEmptyString, toString)
+import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
 import Data.Validation.Issue (Issue(..), Issues)
-import Data.Validation.Semigroup (V, invalid, andThen)
+import Data.Validation.Semigroup (V, andThen, invalid)
 import Partial.Unsafe (unsafePartial)
 import Safe.Coerce (coerce)
+import Utils (unsafeLookup)
 
--- | CsvRowRec is a valid CsvRow converted to a Map.
-type CsvRowRec = Map Header String
 
 -- Utils
 
-rowLengthMatchesHeaders :: NonEmptyArray Header -> Array String -> V Issues Unit
-rowLengthMatchesHeaders headers row =
-  if NEA.length headers /= A.length row then
-    invalid [ InvalidCSV $ "bad csv row" ]
-  else
-    pure unit
-
 -- | create ConceptInput for Concept parsing
-createConceptInput :: String -> NonEmptyArray Header -> CsvRow -> V Issues ConceptInput
-createConceptInput fp headers (CsvRow (Tuple idx row)) =
+createConceptInput 
+  :: CsvFile
+  -> V Issues (Array ConceptInput)
+createConceptInput { fileInfo, csvContent } =
   let
-    conceptInput = { conceptId: _, conceptType: _, props: _, _info: _ }
+    fp = FI.filepath fileInfo
+    { headers, index, columns } = csvContent
+    rows = Arr.zip index $ (Arr.transpose <<< NEA.toArray) columns
     headers_ = map coerce (NEA.toArray headers)
-    rowMap = M.fromFoldable $ A.zip headers_ row
-    -- rowMap = M.fromFoldable $ A.zip (NEA.toArray headers) row
-    props = rowMap #
-      ( M.delete (Id.unsafeCreate "concept")
-          >>> M.delete (Id.unsafeCreate "concept_type")
-      )
-    _info = Just $ { filepath: fp, row: idx }
   in
-    rowLengthMatchesHeaders headers row
-      `andThen`
-        ( \_ -> conceptInput
-            <$> lookupV (Id.unsafeCreate "concept") rowMap
-            <*> lookupV (Id.unsafeCreate "concept_type") rowMap
-            <*> pure props
-            <*> pure _info
-        )
+    case FI.collection fileInfo of
+      FI.Concepts -> pure $ Arr.foldr func [] rows
+        where
+        func (Tuple idx row) acc = 
+          let
+            rowMap = M.fromFoldable $ Arr.zip headers_ row
+            conceptId = unsafeLookup (Hd.unsafeCreate "concept") rowMap
+            conceptType = unsafeLookup (Hd.unsafeCreate "concept_type") rowMap
+            props = rowMap #
+              ( M.delete (Hd.unsafeCreate "concept")
+                >>> M.delete (Hd.unsafeCreate "concept_type")
+              )
+            _info = Just $ iteminfo fp idx
+          in
+            Arr.snoc acc {conceptId, conceptType, props, _info}
+      _ -> invalid [ Issue $ "can not create concept input for " <> show fileInfo ]
+
 
 -- | create EntityInput for Entity parsing
-createEntityInput :: String -> FI.Ent -> NonEmptyArray Header -> CsvRow -> V Issues EntityInput
-createEntityInput fp { domain, set } headers (CsvRow (Tuple idx row)) =
-  let
-    entityInput = { entityId: _, entityDomain: _, entitySet: _, props: _, _info: _ }
-    entityCol = case set of
-      Nothing -> Header domain
-      Just s ->
-        if (Header s) `NEA.elem` headers then
-          Header s
-        else
-          Header domain
-    propsMap = M.fromFoldable $ A.zip (NEA.toArray headers) row
-    Tuple eid props = unsafePartial $ fromJust $ M.pop entityCol propsMap
+createEntityInput 
+  :: CsvFile
+  -> V Issues (Array EntityInput)
+createEntityInput { fileInfo, csvContent } =
+  case FI.collection fileInfo of
+    FI.Entities { domain, set } ->
+      pure $ Arr.foldr go [] rows
+      where
+        { headers, index, columns } = csvContent
+        fp = FI.filepath fileInfo
+        rows = Arr.zip index $ (Arr.transpose <<< NEA.toArray) $ columns
 
-    _info = Just $ { filepath: fp, row: idx }
-  in
-    rowLengthMatchesHeaders headers row
-      `andThen`
-        ( \_ -> entityInput
-            <$> pure eid
-            <*> pure domain
-            <*> pure set
-            <*> pure props
-            <*> pure _info
-        )
+        entityCol = case set of
+          Nothing -> Header domain
+          Just s ->
+            if (Header s) `NEA.elem` headers then
+              Header s
+            else
+              Header domain
+        entityDomain = domain
+        entitySet = set
+        go (Tuple i row) acc = 
+          let
+            propsMap = M.fromFoldable $ A.zip (NEA.toArray headers) row
+            Tuple entityId props = unsafePartial $ fromJust $ M.pop entityCol propsMap
+            _info = Just $ iteminfo fp i
+          in
+            Arr.snoc acc {entityId, entityDomain, entitySet, props, _info}
+    _ -> invalid [ Issue $ "can not create entity input for " <> show fileInfo ]
 
-createPointInput
-  :: String -> Identifier -> NonEmptyList Identifier -> NonEmptyArray Header -> CsvRow -> V Issues PointInput
-createPointInput fp indicator pkeys headers (CsvRow (Tuple idx row)) =
-  let
-    createpointInput = { key: _, value: _, _info: _ }
-    rowMap = M.fromFoldable $ A.zip (NEA.toArray headers) row
+-- | create DataPointsInput for DataPoint parsing
+createDataPointsInput 
+  :: CsvFile
+  -> V Issues DataPointsInput
+createDataPointsInput { fileInfo, csvContent } =
+  case FI.collection fileInfo of
+    FI.DataPoints dp ->
+      let
+        { headers, index, columns } = csvContent
+        { indicator, pkeys, constrains } = dp
 
-    _info = Just { filepath: fp, row: idx }
-  in
-    ado
-      _ <- rowLengthMatchesHeaders headers row
-      pkeyvals <- (NEL.sequence1 $ map (\k -> lookupV (coerce k) rowMap) pkeys)
-      val <- lookupV (coerce indicator) rowMap
-      in createpointInput pkeyvals val _info
+        indicatorId = coerce indicator
+        by = NEA.fromFoldable1 $ map coerce pkeys
+
+        values = M.fromFoldable $ NEA.zip (map coerce headers) columns
+
+        fp = FI.filepath fileInfo
+        itemInfo = map (\x -> iteminfo fp x) index
+      in
+        pure { indicatorId, by, itemInfo, values }
+    _ -> invalid [ Issue $ "can not create datapoint input for " <> show fileInfo ]

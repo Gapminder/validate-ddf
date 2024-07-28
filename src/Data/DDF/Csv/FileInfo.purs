@@ -44,12 +44,12 @@ data FileInfo = FileInfo FilePath CollectionInfo String
 data CollectionInfo
   = Concepts
   | Entities Ent
-  | DataPoints DP
+  | DataPoints DP  
   | Other NonEmptyString -- TODO: add synonyms and metadata
 
 type Ent = { domain :: NonEmptyString, set :: Maybe NonEmptyString }
 
-type DP =
+type DP =  -- TODO: constrains should be a list of list, because multiple items in the constrains is allowed.
   { indicator :: NonEmptyString
   , pkeys :: NonEmptyList NonEmptyString
   , constrains :: NonEmptyList (Maybe NonEmptyString) -- length of pkeys should equal to length of constrains.
@@ -171,6 +171,7 @@ e2 = do
   void $ string "entities--"
   domain <- identifier
   void $ string "--"
+  -- TODO: support multiple entity sets in same file.
   eset <- identifier
   eof
   pure $ Entities { domain: domain, set: Just eset }

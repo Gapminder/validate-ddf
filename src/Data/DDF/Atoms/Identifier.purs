@@ -35,6 +35,9 @@ instance showId :: Show Identifier where
 value :: Identifier -> String
 value (Id x) = toString $ x
 
+value1 :: Identifier -> NonEmptyString
+value1 (Id x) = x
+
 -- | parse lower case alphanum strings
 alphaNum :: Parser Char
 alphaNum =

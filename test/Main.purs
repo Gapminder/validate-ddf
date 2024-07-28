@@ -1,50 +1,45 @@
 module Test.Main where
 
+import Debug
 import Prelude
 
-import Effect (Effect)
-import Effect.Class (liftEffect)
-import Effect.Aff (launchAff_)
-import Effect.Class.Console (log)
-import Main as M
-import Node.Path (resolve)
-import Test.Spec (pending, describe, describeOnly, it, itOnly, Spec)
-import Test.Spec.Assertions
-  ( shouldEqual
-  , shouldSatisfy
-  , shouldNotSatisfy
-  , shouldNotContain
-  , shouldContain
-  , fail
-  )
-import Test.Spec.Reporter.Console (consoleReporter)
-import Test.Spec.Runner (runSpec)
-import Data.Validation.Semigroup (isValid, andThen)
+import Data.Array as Arr
+import Data.Csv (readCsv, readCsv')
+import Data.Csv as Csv
+import Data.DDF.Atoms.Header as Hd
 import Data.DDF.Atoms.Identifier (parseId, isLongerThan64Chars)
 import Data.DDF.Atoms.Identifier as Id
 import Data.DDF.Atoms.Value (parseStrVal, parseNumVal)
-import Data.Validation.Issue (Issue(..), Issues)
-import Data.DDF.Csv.FileInfo (parseFileInfo)
-import Data.DDF.Csv.CsvFile (parseCsvFile)
--- import Data.DDF.DataPoint (parseDataPoint)
-import Data.DDF.Entity (parseEntity)
-import Data.String.CodeUnits (fromCharArray)
-import Data.List.Lazy (take, repeat)
-import Data.Array as Arr
-import Data.Foldable (for_)
 import Data.DDF.Concept (ConceptInput, parseConcept)
 import Data.DDF.Concept as Conc
-import Data.Map as Map
-import Data.Tuple (Tuple(..))
-import Data.Csv (readCsvs)
-import Data.Csv as Csv
-import Data.Maybe (Maybe(..), isJust, isNothing, fromJust)
-import Data.String.NonEmpty (fromString, unsafeFromString)
+import Data.DDF.Csv.CsvFile (parseCsvFile)
+import Data.DDF.Csv.FileInfo (parseFileInfo)
+import Data.DDF.Entity (parseEntity)
+import Data.DDF.Internal (iteminfo)
+import Data.Foldable (for_)
+import Data.List.Lazy (take, repeat)
 import Data.List.NonEmpty (NonEmptyList(..))
 import Data.List.NonEmpty as NEL
-import Utils (getFiles)
+import Data.Map as Map
+import Data.Maybe (Maybe(..), isJust, isNothing, fromJust)
+import Data.String.CodeUnits (fromCharArray)
+import Data.String.NonEmpty (fromString, unsafeFromString)
+import Data.Traversable (sequence)
+import Data.Tuple (Tuple(..))
+import Data.Validation.Issue (Issue(..), Issues)
+import Data.Validation.Semigroup (isValid, andThen)
+import Effect (Effect)
+import Effect.Aff (launchAff_)
+import Effect.Class (liftEffect)
+import Effect.Class.Console (log)
+import Main as M
+import Node.Path (resolve)
 import Partial.Unsafe (unsafePartial)
-import Debug
+import Test.Spec (pending, describe, describeOnly, it, itOnly, Spec)
+import Test.Spec.Assertions (shouldEqual, shouldSatisfy, shouldNotSatisfy, shouldNotContain, shouldContain, fail)
+import Test.Spec.Reporter.Console (consoleReporter)
+import Test.Spec.Runner (runSpec)
+import Utils (getFiles)
 
 testMain :: Effect Unit
 testMain = do
@@ -120,7 +115,7 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
             ]
           output = ado
             fileInfo <- parseFileInfo fileName
-            in parseCsvFile { fileInfo: fileInfo, csvContent: Csv.create rawCsvContent }
+            in parseCsvFile { fileInfo: fileInfo, csvContent: Csv.parseCsvContent $ Csv.createRawContent rawCsvContent }
         output `shouldSatisfy` isValid
       it "concept validation - one concept" do
         let
@@ -129,11 +124,11 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
             , conceptType: "measure"
             , props: Map.fromFoldable
                 [ ( Tuple
-                      (Id.unsafeCreate "name")
+                      (Hd.unsafeCreate "name")
                       "testing_name"
                   )
                 ]
-            , _info: Just $ { filepath: "a.csv", row: 1 }
+            , _info: Just $ iteminfo "a.csv" 1
             }
           output = parseConcept input
         output `shouldSatisfy` isValid
@@ -144,7 +139,7 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
             , entityDomain:  unsafePartial $ unsafeFromString "geo"
             , entitySet: Nothing
             , props: Map.empty
-            , _info: Just $ { filepath: "a.csv", row: 1 }
+            , _info: Just $ iteminfo "a.csv" 1
             }
           output = parseEntity input
         output `shouldSatisfy` isValid
@@ -172,11 +167,9 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
       -- IO things
       it "read csv file" do
         let filename = "test/datasets/ddf--test--new/ddf--concepts.csv"
-        output <- readCsvs [ filename ]
-        case (output Arr.!! 0) of
-          Nothing -> fail "it should not be nothing"
-          Just rawcsv ->
-            rawcsv.headers `shouldSatisfy` isJust
+        output <- sequence $ readCsv <$> [ filename ]
+        (output Arr.!! 0)
+            `shouldSatisfy` isJust
       it "list all csv files in a folder" do
         let dirname = "test/datasets/ddf--test--new/"
         files <- getFiles dirname [ "etl" ]

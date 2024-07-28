@@ -71,12 +71,12 @@ parseNonEmptyString input =
     Just str -> pure str
 
 -- | parse a domain value
-parseDomainVal :: Identifier -> HashSet String -> String -> V Issues Value
+parseDomainVal :: String -> HashSet String -> String -> V Issues Value
 parseDomainVal domainName domain input =
   let
     createIssue dn inp = Issue $ show inp
                                  <> " is not a valid value in "
-                                 <> Id.value dn
+                                 <> dn
                                  <> " domain."
   in
     case fromString input of

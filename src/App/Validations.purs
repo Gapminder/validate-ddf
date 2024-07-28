@@ -2,36 +2,42 @@
 
 module App.Validations where
 
+import Data.DDF.Atoms.Value
+import Debug
 import Debug
 import Prelude
 
 import Control.Monad.Trans.Class (lift)
-import Data.HashMap as HM
 import Data.Array as Arr
-import Data.Array.NonEmpty as NEA
 import Data.Array.NonEmpty (NonEmptyArray)
-import Data.Csv (CsvRow(..), RawCsvContent, getLineNo, getRow, readCsv)
+import Data.Array.NonEmpty as NEA
+import Data.Csv (CsvRow(..), RawCsvContent, createRawContent, getLineNo, getRow, parseCsvContent, readAndParseCsv, readCsv)
 import Data.Csv as C
+import Data.DDF.Atoms.Header (Header)
 import Data.DDF.Atoms.Identifier (Identifier)
 import Data.DDF.Atoms.Identifier as Id
-import Data.DDF.Atoms.Header (Header)
-import Data.DDF.Atoms.Value
 import Data.DDF.Concept (Concept, parseConcept, reservedConcepts, getId, getInfo)
-import Data.DDF.Csv.CsvFile (CsvFile, parseCsvFile)
-import Data.DDF.Csv.FileInfo (FileInfo, CollectionInfo(..))
+import Data.DDF.Csv.CsvFile (CsvFile, CsvFileInput, parseCsvFile)
+import Data.DDF.Csv.FileInfo (CollectionInfo, FileInfo)
 import Data.DDF.Csv.FileInfo as FI
-import Data.DDF.Csv.Utils (createConceptInput, createEntityInput, createPointInput)
-import Data.DDF.DataPoint (Point, PointInput, DataPointList, DataPointListInput, parseDataPointList, parseDataPointWithValueParser)
+import Data.DDF.Csv.Utils (createConceptInput, createDataPointsInput, createEntityInput)
+import Data.DDF.DataPoint (DataPoints(..), mergeDataPointsInput, parseDataPoints)
+import Data.DDF.DataSet (DataSet(..), parseBaseDataSet)
+import Data.DDF.DataSet as DS
+import Data.DDF.DataSet as DataSet
 import Data.DDF.Entity (Entity, parseEntity)
-import Data.DDF.BaseDataSet (BaseDataSet(..), getValueParser, getConceptIds, updateValueParserWithConstrain)
+import Data.DDF.Internal (pathAndRow)
 import Data.Either (Either(..))
+import Data.HashMap (HashMap)
+import Data.HashMap as HM
 import Data.List.NonEmpty (NonEmptyList)
 import Data.List.NonEmpty as NEL
 import Data.Maybe (Maybe(..))
+import Data.Newtype (unwrap)
 import Data.String as Str
-import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.String.NonEmpty as NES
-import Data.Traversable (sequence, for)
+import Data.String.NonEmpty.Internal (NonEmptyString(..))
+import Data.Traversable (class Traversable, for, sequence, traverse)
 import Data.Tuple (Tuple(..))
 import Data.Validation.Issue (Issue(..), Issues, withRowInfo)
 import Data.Validation.Result (Messages, hasError, messageFromIssue, setError, setFile, setLineNo)
@@ -41,14 +47,29 @@ import Effect.Aff (Aff)
 import Effect.Aff.Class (liftAff)
 import Effect.Class (liftEffect, class MonadEffect)
 import Effect.Console (log, logShow)
-import Data.Newtype (unwrap)
-import Debug
+import Node.Path (FilePath)
 
--- readCsvFile :: Pipe FileInfo (Tuple FileInfo (Array (Array String))) Aff Unit
--- readCsvFile = do
---   fi <- await
---   csvRows <- lift <<< C.readCsv $ FI.filepath fi
---   yield $ Tuple fi csvRows
+emitWarningsAndContinue :: forall m. Monad m => Issues -> ValidationT Messages m Unit
+emitWarningsAndContinue issues = do
+  vWarning msgs
+  pure unit
+  where
+  msgs = map messageFromIssue issues
+
+emitErrorsAndContinue :: forall m. Monad m => Issues -> ValidationT Messages m Unit
+emitErrorsAndContinue issues = do
+  vWarning msgs
+  pure unit
+  where
+  msgs = map (setError <<< messageFromIssue) issues
+
+
+emitErrorsAndStop :: forall x m. Monad m => Issues -> ValidationT Messages m x
+emitErrorsAndStop issues = do
+  vError msgs
+  where
+  msgs = map (setError <<< messageFromIssue) issues
+
 
 checkNonEmptyArray :: forall a. String -> Array a -> Validation Messages (NonEmptyArray a)
 checkNonEmptyArray name xs =
@@ -60,241 +81,165 @@ checkNonEmptyArray name xs =
     Just xs_ ->
       pure xs_
 
-createCsvFileInput :: FileInfo -> Aff (Tuple FileInfo (Array (Array String)))
-createCsvFileInput fi = do
-  csvRows <- readCsv $ FI.filepath fi
-  pure $ Tuple fi csvRows
+dropAndWarnBadCsvRows :: 
+  FilePath 
+  -> RawCsvContent 
+  -> Validation Messages RawCsvContent
+dropAndWarnBadCsvRows fp content = do
+  let
+    (Tuple badIdx content') = C.filterBadRows content
+    makemsg idx =
+      ( setLineNo idx
+          <<< setFile fp
+          <<< messageFromIssue
+      ) $ Issue "Bad Csv row"
+    msgs = map makemsg badIdx
+  vWarning msgs
+  pure content'
+
 
 -- | parse csv file info and csv data into a valid CsvFile
-validateCsvFile :: (Tuple FileInfo (Array (Array String))) -> Validation Messages (Array CsvFile)
-validateCsvFile (Tuple fi csvRows) = do
+validateCsvFile :: 
+  (Tuple FileInfo RawCsvContent) 
+  -> Validation Messages (Maybe CsvFile)
+validateCsvFile (Tuple fi rawcsv) = do
   let
     fp = FI.filepath fi
-    rawCsvContent = C.create csvRows
-    input =
-      { fileInfo: fi
-      , csvContent: rawCsvContent
-      }
-  case toEither $ parseCsvFile input of
-    Right validFile -> pure $ [ validFile ]
-    Left errs -> do
-      vWarning msgs -- not valid but we just keep the validation going
-      pure $ []
-      where
-      msgs = map (setFile fp <<< messageFromIssue) errs
+  -- skip bad csv rows
+  rawcsv' <- dropAndWarnBadCsvRows fp rawcsv
 
-validateCsvFiles :: (Array (Tuple FileInfo (Array (Array String)))) -> Validation Messages (Array CsvFile)
+  let 
+    csvFileInput = { fileInfo: fi, csvContent: parseCsvContent rawcsv'}
+
+  case toEither $ parseCsvFile csvFileInput of
+    Right validFile -> do
+      pure $ Just validFile
+    Left errs -> do
+      -- FIXME: should we do warning or error?
+      vWarning msgs
+      pure Nothing
+      where
+      msgs = map (setError <<< setFile fp <<< messageFromIssue) errs
+
+validateCsvFiles :: forall t. Traversable t => 
+  (t (Tuple FileInfo RawCsvContent)) 
+  -> Validation Messages (Array CsvFile)
 validateCsvFiles xs = do
   rs <- for xs (\x -> validateCsvFile x)
-  pure $ Arr.concat rs
+  pure $ Arr.mapMaybe identity $ Arr.fromFoldable rs
 
 -- | parse a CsvFile, create an array of valid concepts
 validateConcepts :: CsvFile -> Validation Messages (Array Concept)
-validateConcepts csvfile = do
+validateConcepts csvfile =
   let
-    csvContent = csvfile.csvContent
-    fileInfo = csvfile.fileInfo
-    fp = FI.filepath fileInfo
-    headers = csvContent.headers
-    rows = csvContent.rows
-
-  case FI.collection fileInfo of
-    Concepts ->
-      Arr.foldM
-        ( \acc row -> do
-            let
-              concept = createConceptInput fp headers row
-                `andThen`
-                  parseConcept
-            case toEither concept of
-              Left errs -> do
-                _ <- vWarning msgs
-                pure acc
-                where
-                msgs = map
-                  ( setLineNo (getLineNo row)
-                      <<< setFile fp
-                      <<< setError
-                      <<< messageFromIssue
-                  )
-                  errs
-              Right vconc -> pure $ Arr.cons vconc acc
-        )
-        []
-        rows
-    otherwise -> pure []
+    conceptInputs = createConceptInput csvfile
+  in
+    case toEither conceptInputs of
+      -- There is only one possible issue:
+      -- calling createConceptInput on non-concepts files
+      -- that's an error on the source code. We should stop
+      Left issues -> emitErrorsAndStop issues
+      Right inputs ->
+        Arr.foldM
+          ( \acc input -> do
+              let
+                (Tuple fp i) = case input._info of 
+                  Nothing -> (Tuple "" (-1))
+                  Just info -> pathAndRow info
+                concept = parseConcept input
+              case toEither concept of
+                Left errs -> do
+                  _ <- vWarning msgs
+                  pure acc
+                  where
+                  msgs = map
+                    ( setLineNo i
+                        <<< setFile fp
+                        <<< setError
+                        <<< messageFromIssue
+                    )
+                    errs
+                Right vconc -> pure $ Arr.snoc acc vconc
+          )
+          []
+          inputs
 
 validateEntities :: CsvFile -> Validation Messages (Array Entity)
-validateEntities csvfile = do
+validateEntities csvfile =
   let
-    csvContent = csvfile.csvContent
-    fileInfo = csvfile.fileInfo
-    fp = FI.filepath fileInfo
-    headers = csvContent.headers
-    rows = csvContent.rows
-
-  case FI.collection fileInfo of
-    Entities ent ->
-      Arr.foldM
-        ( \acc row -> do
-            let
-              entity = createEntityInput fp ent headers row
-                `andThen`
-                  parseEntity
-            case toEither entity of
-              Left errs -> do
-                _ <- vWarning msgs
-                pure acc
-                where
-                msgs = map
-                  ( setLineNo (getLineNo row)
-                      <<< setFile fp
-                      <<< setError
-                      <<< messageFromIssue
-                  )
-                  errs
-              Right vent -> pure $ Arr.cons vent acc
-        )
-        []
-        rows
-    otherwise -> pure []
-
-emitWarnings :: forall m. Monad m => Issues -> ValidationT Messages m Unit
-emitWarnings issues = do
-  vWarning msgs
-  pure unit
-  where
-  msgs = map messageFromIssue issues
-
-validateOneDataPointFile
-  :: NonEmptyArray Header
-  -> V Issues Identifier
-  -> V Issues (NonEmptyList Identifier)
-  -> V Issues (NonEmptyList ValueParser)
-  -> V Issues ValueParser
-  -> CsvFile
-  -> V Issues (Array Point)
-validateOneDataPointFile headers indicatorId pKeys keyParsers valueParser csvfile =
-  let
-    rows = csvfile.csvContent.rows
-    collection = FI.collection csvfile.fileInfo
-    fp = FI.filepath csvfile.fileInfo
-
-    updatedKparsers :: V Issues (NonEmptyList ValueParser)
-    updatedKparsers = keyParsers
-      `andThen`
-        ( \kp -> pure $
-            updateValueParserWithConstrain kp collection
-        )
-
-    func indicator pk kp vp row = createPointInput fp indicator pk headers row
-      `andThen`
-        ( \input -> case input._info of
-            Nothing -> parseDataPointWithValueParser kp vp input
-            Just info -> withRowInfo info.filepath info.row $
-              parseDataPointWithValueParser kp vp input
-        )
+    entityInputs = createEntityInput csvfile
   in
-    case
-      toEither
-        ( func
-            <$> indicatorId
-            <*> pKeys
-            <*> updatedKparsers
-            <*> valueParser
-        )
-      of
-      Right f -> sequence $ map f rows
-      Left issues -> invalid issues
-
-validateDataPoints
-  :: BaseDataSet
-  -> NonEmptyArray CsvFile
-  -> Validation Messages (Array DataPointList)
-validateDataPoints dataset csvfiles = do
-  let
-    csvfile = NEA.head csvfiles
-    csvContent = csvfile.csvContent
-    fileInfo = csvfile.fileInfo
-    fp = FI.filepath fileInfo
-    -- Assume that all csv have same headers. If the input is not like that this function will not work.
-    -- FIXME: detect above issue and create issue?
-    headers = csvContent.headers
-
-  case FI.collection fileInfo of
-    DataPoints { indicator, pkeys, constrains } -> do
-      let
-        vid = Id.parseId' indicator
-        vpkeys = NEL.sequence1 $ Id.parseId' <$> pkeys
-
-        keyParsers :: V Issues (NonEmptyList ValueParser)
-        keyParsers = vpkeys
-          `andThen` (\k -> sequence $ map (getValueParser dataset) k)
-
-        valueParser :: V Issues ValueParser
-        valueParser = vid
-          `andThen` getValueParser dataset
-      -- TODO: clean up the code
-      points <- for csvfiles
-        ( \f -> do
+    case toEither entityInputs of
+      Left issues -> emitErrorsAndStop issues
+      Right inputs -> 
+        Arr.foldM go [] inputs
+        where
+          go acc input = 
             let
-              ptsRes =
-                validateOneDataPointFile
-                  headers
-                  vid
-                  vpkeys
-                  keyParsers
-                  valueParser
-                  f
-            case toEither ptsRes of
-              Right pts -> pure pts
-              Left errs -> do
-                case errs Arr.!! 21 of
-                  Just _ ->
-                    let
-                      msgs = map (setError <<< messageFromIssue) $
-                        Arr.take 20 errs
-                      msgEnd =
-                        [ (setFile fp <<< setError <<< messageFromIssue) $
-                            Issue "more than 20 issues detected, please fix and check again."
-                        ]
-                    in
-                      do
-                        vWarning msgs
-                        vWarning msgEnd
-                        pure []
-                  Nothing -> do
-                    vWarning msgs
-                    pure []
-                    where
-                    msgs = map (setError <<< messageFromIssue) errs
-        )
-      let
-        createInput = { indicatorId: _, primaryKeys: _, datapoints: _ }
+              (Tuple fp i) = case input._info of 
+                Nothing -> (Tuple "" (-1))
+                Just info -> pathAndRow info
+            in
+              case toEither $ parseEntity input of
+                Left errs -> do
+                  _ <- vWarning msgs
+                  pure acc
+                  where
+                  msgs = map
+                    ( setLineNo i
+                        <<< setFile fp
+                        <<< setError
+                        <<< messageFromIssue
+                    )
+                    errs
+                Right vent -> pure $ Arr.snoc acc vent
 
-        res =
-          ( createInput
-              <$> vid
-              <*> vpkeys
-              <*> pure (Arr.concat $ NEA.toArray points)
-          )
-            `andThen`
-              (\input -> parseDataPointList input)
-      case toEither res of
-        Right dpl -> pure [ dpl ]
-        Left errs -> do
-          vWarning msgs
-          pure []
-          where
-          msgs = map (setError <<< messageFromIssue) errs
-    otherwise -> pure []
+
+validateBaseDataSet :: (Array Concept) -> (Array Entity) -> Validation Messages DataSet
+validateBaseDataSet conceptsInput entitiesInput = 
+  case toEither $ parseBaseDataSet conceptsInput entitiesInput of
+    Right ds -> pure ds
+    Left errs -> do
+        emitErrorsAndStop errs
+
+
+-- | take a list of csv files (They must have same indicator and primary keys)
+-- | and produce datapoint input
+validateDataPoints :: NonEmptyArray CsvFile -> Validation Messages (Maybe DataPoints)
+validateDataPoints csvfiles = do
+  let
+    dpsResult =
+      (sequence $ map createDataPointsInput csvfiles)
+        `andThen`
+          mergeDataPointsInput
+        `andThen`
+          parseDataPoints
+  case toEither dpsResult of
+    Left errs -> do
+      emitErrorsAndContinue errs
+      pure Nothing
+    Right dps ->
+      pure $ Just dps
+
+validateDataPointsWithDataSet :: DataSet -> DataPoints -> Validation Messages Unit
+validateDataPointsWithDataSet ds dps =
+  let
+    result = DataSet.parseDataPoints ds dps
+  in
+    case toEither result of
+      Left errs ->
+        emitErrorsAndContinue errs
+      Right _ -> pure unit
+
+-- Below are Validation for Warnings
+
 
 -- | Warn if Csv Headers are not in concept list
-validateCsvHeaders :: BaseDataSet -> CsvFile -> Validation Messages Unit
-validateCsvHeaders (BaseDataSet ds) { csvContent, fileInfo } = do
+validateCsvHeaders :: DataSet -> CsvFile -> Validation Messages Unit
+validateCsvHeaders (DataSet ds) { csvContent, fileInfo } = do
   let
     headers = map unwrap $ csvContent.headers
-    concepts = map unwrap $ HM.keys ds.concepts
+    concepts = HM.keys ds.concepts
     reserved = map unwrap reservedConcepts
     filepath = FI.filepath fileInfo
 
@@ -304,7 +249,7 @@ validateCsvHeaders (BaseDataSet ds) { csvContent, fileInfo } = do
           hstr = NES.toString h
           predicate = (Str.take 4 hstr == "is--")
             || (h `Arr.elem` reserved)
-            || (h `Arr.elem` concepts)
+            || (hstr `Arr.elem` concepts)
         when (not predicate)
           $ vWarning
           $
@@ -316,17 +261,19 @@ validateCsvHeaders (BaseDataSet ds) { csvContent, fileInfo } = do
   pure unit
 
 -- | Warn if concept length is longer then 64 chars
-validateConceptLength :: BaseDataSet -> Validation Messages Unit
-validateConceptLength (BaseDataSet ds) = do
+validateConceptLength :: DataSet -> Validation Messages Unit
+validateConceptLength (DataSet ds) = do
   let
     concepts = HM.values ds.concepts
     check concept =
-      case getInfo concept of
-        Just { filepath, row } -> withRowInfo filepath row
+      let
+        (Tuple filepath row) = pathAndRow $ getInfo concept
+      in
+        withRowInfo filepath row
           $ Id.isLongerThan64Chars
           $ getId concept
-        Nothing -> Id.isLongerThan64Chars $ getId concept
-    res = sequence $ map check concepts
+
+    res = traverse check concepts
 
   case toEither res of
     Left errs -> do

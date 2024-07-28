@@ -36,7 +36,12 @@ toInvaildItem :: FilePath -> Int -> Issue -> Issue
 toInvaildItem _ _ NotImplemented = NotImplemented
 toInvaildItem fp row issue = InvalidItem fp row (show issue)
 
-
+-- | run a validation with row info
 withRowInfo :: forall a. FilePath -> Int -> V Issues a -> V Issues a
 withRowInfo fp row =
   validation (\issues -> invalid $ map (toInvaildItem fp row) issues) pure
+
+-- | extract the invalid value from InvalidValue
+extractInvalidValue :: Issue -> String
+extractInvalidValue (InvalidValue str _) = str
+extractInvalidValue _ = ""

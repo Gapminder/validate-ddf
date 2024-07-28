@@ -2,28 +2,29 @@ module Data.DDF.Entity where
 
 import Prelude
 
-import Data.DDF.Internal (ItemInfo)
+import Data.Array as Arr
+import Data.Array.NonEmpty (NonEmptyArray)
+import Data.Array.NonEmpty as NEA
 import Data.DDF.Atoms.Boolean (parseBoolean)
+import Data.DDF.Atoms.Header (Header(..), headerVal)
 import Data.DDF.Atoms.Identifier (Identifier)
 import Data.DDF.Atoms.Identifier as Id
 import Data.DDF.Atoms.Value (Value, parseStrVal')
-import Data.Validation.Issue (Issue(..), Issues)
-import Data.List (List)
-import Data.List as L
+import Data.DDF.Internal (ItemInfo, iteminfo, pathAndRow)
 import Data.Map (Map)
 import Data.Map as M
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromJust, isNothing)
 import Data.Newtype (unwrap)
 import Data.String (Pattern(..))
 import Data.String as Str
 import Data.String.NonEmpty.Internal (NonEmptyString(..), stripPrefix, toString)
-import Data.Traversable (sequence)
-import Data.Tuple (Tuple(..))
+import Data.Traversable (sequence, traverse)
+import Data.Tuple (Tuple(..), fst, snd)
+import Data.Validation.Issue (Issue(..), Issues)
 import Data.Validation.Semigroup (V, invalid, isValid, andThen)
+import Debug (trace)
+import Partial.Unsafe (unsafePartial)
 import Safe.Coerce (coerce)
-import Data.DDF.Atoms.Header (Header(..), header, headerVal)
-import Data.List.NonEmpty (NonEmptyList)
-import Data.List.NonEmpty as NEL
 
 -- | Entity type.
 -- | Entity MUST have id, entity_domain.
@@ -31,7 +32,7 @@ import Data.List.NonEmpty as NEL
 newtype Entity = Entity
   { entityId :: Identifier
   , entityDomain :: Identifier
-  , entitySets :: List Identifier
+  , entitySets :: Array Identifier
   , props :: Props
   , _info :: Maybe ItemInfo
   }
@@ -44,9 +45,12 @@ instance showEntity :: Show Entity where
 
 -- | Properties type
 -- | The key MUST be vaild Ideitifier
-type Props = Map Identifier Value
+-- the Key MUST be valid identifier
+-- We will validate values in the properties (such as domain)
+-- while we parse entire dataset, so just use String here
+type Props = Map Identifier String
 
-entity :: Identifier -> Identifier -> List Identifier -> Props -> Entity
+entity :: Identifier -> Identifier -> Array Identifier -> Props -> Entity
 entity entityId entityDomain entitySets props = Entity { entityId, entityDomain, entitySets, props, _info }
   where
   _info = Nothing
@@ -54,21 +58,29 @@ entity entityId entityDomain entitySets props = Entity { entityId, entityDomain,
 getId :: Entity -> Identifier
 getId (Entity e) = e.entityId
 
+getItemInfo :: Entity -> ItemInfo
+getItemInfo (Entity e) = case e._info of
+  Nothing -> iteminfo "" (-1)
+  Just info -> info
+
 getDomain :: Entity -> Identifier
 getDomain (Entity e) = e.entityDomain
 
 getDomainAndId :: Entity -> Tuple Identifier Identifier
-getDomainAndId (Entity e) = Tuple e.entityId e.entityDomain -- FIXME: change value order
+getDomainAndId (Entity e) = Tuple e.entityDomain e.entityId -- FIXME: change value order
 
-getDomainAndSets :: Entity -> NonEmptyList Identifier
-getDomainAndSets (Entity e) = NEL.cons' e.entityDomain e.entitySets
+getDomainAndSets :: Entity -> NonEmptyArray Identifier
+getDomainAndSets (Entity e) = NEA.cons' e.entityDomain e.entitySets
+
+getEntitySets :: Entity -> Array Identifier
+getEntitySets (Entity e) = e.entitySets
 
 getIdAndFile :: Entity -> Tuple Identifier String
 getIdAndFile (Entity e) = Tuple e.entityId fp
   where
   fp = case e._info of
     Nothing -> ""
-    Just { filepath } -> filepath
+    Just x -> fst $ pathAndRow x
 
 setInfo :: Maybe ItemInfo -> Entity -> Entity
 setInfo _info (Entity e) = Entity (e { _info = _info })
@@ -97,10 +109,10 @@ validEntitySetId :: NonEmptyString -> V Issues Identifier
 validEntitySetId = pure <<< coerce
 
 -- | split entity properties input, separate is--entity_set header and others
--- FIXME: This should be done in CSVfile parsing stage.
+-- FIXME: This should be done in CSVfile parsing stage?
 splitEntAndProps
   :: Map Header String
-  -> Tuple (List (Tuple Identifier String)) (List (Tuple Identifier String))
+  -> Tuple (Array (Tuple Identifier String)) (Array (Tuple Identifier String))
 splitEntAndProps props =
   let
     isIsHeader (Tuple header _) =
@@ -115,7 +127,7 @@ splitEntAndProps props =
 
     headerToIdentifier header = Id.unsafeCreate $ toString $ headerVal header
 
-    { yes, no } = L.partition isIsHeader $ M.toUnfoldableUnordered props
+    { yes, no } = Arr.partition isIsHeader $ M.toUnfoldableUnordered props
 
     yes_ = map (\(Tuple h v) -> Tuple (isHeaderToIdentifier h) v) yes
 
@@ -123,36 +135,43 @@ splitEntAndProps props =
   in
     Tuple yes_ no_
 
-getEntitySets :: List (Tuple Identifier String) -> V Issues (List Identifier)
-getEntitySets lst = entitySetWithTureValue
+-- | try to parse all is--headers and find all sets memberships
+getEntitySetsFromHeaders :: Array (Tuple Identifier String) -> V Issues (Array Identifier)
+getEntitySetsFromHeaders lst =
+  entitySetWithTureValue
+    `andThen` (\xs -> pure $ Arr.catMaybes xs)
   where
-  entitySetWithTureValue = sequence $ map collectTrueItem lst
+  entitySetWithTureValue = traverse collectTrueItem lst
 
   collectTrueItem (Tuple header value) =
-    let
-      boolValue = parseBoolean value
+    parseBoolean value
+      `andThen`
+      (\v ->
+        if v then
+          pure $ Just header
+        else
+          pure Nothing
+      )
 
-      headerStr = toString $ unwrap header
-    in
-      if isValid boolValue then
-        pure header
-      else
-        invalid [ Issue $ "invalid boolean value for " <> headerStr <> ": " <> value ]
-
--- | compare the sets infered from filename and the sets from file header.
--- FIXME: double check the doc and move this to CsvFile parsing stage.
-compareEntSets :: List Identifier -> Maybe NonEmptyString -> V Issues (List Identifier)
-compareEntSets setsFromHeader setsFromFileName =
-  case setsFromFileName of
-    Nothing -> pure setsFromHeader
-    Just sf ->
-      case L.head setsFromHeader of
-        Nothing -> invalid [ Issue $ "there should be a header is--" <> toString sf ]
-        Just sh ->
-          if Id.value sh == toString sf then
-            pure setsFromHeader
+-- | Entity sets prased from csv headers might contains the domain. we should drop that
+-- | also we should validate: is--domain for a domain must be TRUE.
+removeIsDomainProp :: NonEmptyString -> Array (Tuple Identifier String) -> V Issues (Array (Tuple Identifier String))
+removeIsDomainProp domain xs =
+  case Arr.elemIndex domain (map (fst >>> Id.value1) xs) of
+    Nothing -> pure xs
+    Just i ->
+      let
+        val = unsafePartial $ Arr.unsafeIndex xs i
+        xs' = unsafePartial $ fromJust $ Arr.deleteAt i xs
+      in
+        parseBoolean (snd val)
+          `andThen`
+        (\v ->
+          if v then
+            pure xs'
           else
-            invalid [ Issue $ "there should be only one is--entity header: is--" <> Id.value sh ]
+            invalid [ Issue $ "is--" <> toString domain <> " must be TRUE for " <> toString domain <> " domain." ]
+        )
 
 parseEntity :: EntityInput -> V Issues Entity
 parseEntity { entityId: eid, entityDomain: edm, entitySet: es, props: props, _info } =
@@ -162,9 +181,21 @@ parseEntity { entityId: eid, entityDomain: edm, entitySet: es, props: props, _in
     let
       validEdomain = validEntityDomainId edm
       Tuple esets propsLst = splitEntAndProps props
-      validEsets = getEntitySets esets `andThen` (\xs -> compareEntSets xs es)
+      validEsets =
+        -- remove the domain from sets.
+        removeIsDomainProp edm esets
+          `andThen`
+        -- get all true values from is-- header
+        getEntitySetsFromHeaders
+        -- combine the sets from filename and sets from file headers.
+          `andThen`
+            ( \parsed ->
+                case es of
+                  Nothing -> pure parsed
+                  Just es' -> pure $ Arr.nub $ Arr.cons (coerce es') parsed
+            )
       validEid = validEntityId eid
-      propsMinusIsHeaders = map parseStrVal' $ M.fromFoldable propsLst
+      propsMinusIsHeaders = M.fromFoldable propsLst
     in
       ( entity
           <$> validEid
@@ -174,7 +205,3 @@ parseEntity { entityId: eid, entityDomain: edm, entitySet: es, props: props, _in
       )
         `andThen`
           (\e -> pure $ setInfo _info e)
-
-
--- TODO: add parseEntityWithValueParsers
---

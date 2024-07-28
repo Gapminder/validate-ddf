@@ -1,40 +1,40 @@
 module Data.Csv
   ( CsvRow(..)
   , RawCsvContent
-  , readCsv
-  , getRow
+  , createRawContent
+  , filterBadRows
   , getLineNo
-  , readCsvs
-  , create
-  ) where
+  , getRow
+  , parseCsvContent
+  , readCsv
+  , readCsv'
+  , readAndParseCsv
+  )
+  where
 
 import Prelude
 
-import Control.Promise (Promise, toAffE)
-import Data.Either (Either(..))
-import Data.Function.Uncurried (Fn1, runFn1)
-import Data.Array (length, range, zip, tail, head)
-import Data.Array.NonEmpty (fromArray, NonEmptyArray)
+import Data.Array (head, length, partition, range, replicate, tail, take, zip)
+import Data.DDF.Csv.FileInfo (FileInfo(..), filepath)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
-import Data.Traversable (sequence, traverse)
+import Data.Sequence.NonEmpty (Seq)
+import Data.Traversable (for_, sequence, traverse)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Tuple (Tuple)
-import Data.Validation.Semigroup (V(..), invalid)
+import Data.Validation.Issue (Issue(..), Issues)
+import Data.Validation.Semigroup (V, invalid)
 import Effect (Effect)
-import Effect.Class (liftEffect)
-import Effect.Aff (Aff)
+import Effect.Aff (Aff, launchAff_)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
+import Effect.Class (liftEffect)
+import Effect.Class.Console (logShow)
 import Node.Encoding (Encoding(..))
-import Node.Path (FilePath)
-import Safe.Coerce (coerce)
 import Node.FS.Aff (readTextFile)
-import Node.Encoding (Encoding(..))
-import Node.Buffer as Buf
+import Node.Path (FilePath)
 
 -- | CsvRow is a tuple of line number and row content
 newtype CsvRow =
-  CsvRow (Tuple Int (Array String)) -- Note: just use type if newtype cost performance.
+  CsvRow (Tuple Int (Array String))
 
 instance showCsvRow :: Show CsvRow where
   show (CsvRow (Tuple i x)) =
@@ -50,12 +50,25 @@ type RawCsvContent =
   , rows :: Maybe (Array CsvRow)
   }
 
+-- CsvContent: convert csv rows to columns
+
+type CsvColumn = Array String
+
+type CsvContent = 
+  { headers :: Array String
+  , index :: Array Int
+  , columns :: Array (Array String)
+  }
+
 foreign import parseCsvImpl :: String -> EffectFnAff (Array (Array String))
 
 readCsv :: FilePath -> Aff (Array (Array String)) -- NOTE: this will not handle exceptions from the js side.
 readCsv x = do
   csvContent <- readTextFile UTF8 x
   fromEffectFnAff $ parseCsvImpl csvContent
+
+readCsv' :: FileInfo -> Aff (Array (Array String))
+readCsv' = filepath >>> readCsv
 
 getRow :: CsvRow -> (Array String)
 getRow (CsvRow tpl) = snd tpl
@@ -75,14 +88,51 @@ toCsvRow xs =
   in
     map mkRow tuples
 
-create :: (Array (Array String)) -> RawCsvContent
-create recs = { headers: headers, rows: rows }
+createRawContent :: (Array (Array String)) -> RawCsvContent
+createRawContent recs = { headers: headers, rows: rows }
   where
   headers = head recs
 
   rows = toCsvRow <$> tail recs
 
-readCsvs :: (Array FilePath) -> Aff (Array RawCsvContent)
-readCsvs = traverse (\f -> create <$> (readCsv f))
 
--- TODO: add column view. i.e. convert List CsvRow to List CsvColumn
+-- | a function to filter bad rows from csv rows
+filterBadRows :: RawCsvContent -> (Tuple (Array Int) RawCsvContent)
+filterBadRows rcsv@{ headers, rows } = case headers of
+  Nothing -> Tuple [] rcsv
+  Just hs -> 
+    case rows of 
+      Nothing -> Tuple [] rcsv
+      Just rs -> Tuple (map getLineNo no) {headers: headers, rows: Just yes}
+        where
+        headerLength = length hs
+        func row = 
+          if (length $ getRow row) == headerLength then true
+          else false
+        {yes, no} = partition func rs
+
+
+foreign import rowsToColumnsImpl :: Array (Array String) -> Array (Array String)
+
+-- | parse csv content
+-- | Note that the rowsToColumnsImpl function will fill undefined values with ''
+-- | This happens when the length of data row is shorter than header row.
+-- | So you should run filterBadRows first if you want to drop all bad rows.
+parseCsvContent :: RawCsvContent -> CsvContent
+parseCsvContent { headers, rows } = case headers of
+  Nothing -> { headers: [], index: [], columns: [] }
+  Just hs ->
+    case rows of 
+      Nothing -> { headers: hs, index: [], columns: emptyCols }
+        where
+        emptyCols = replicate (length hs) []
+      Just rs -> { headers: hs, index: idxs, columns: cols }
+        where
+          idxs = map getLineNo rs
+          rowsData = map getRow rs
+          cols = rowsToColumnsImpl rowsData
+
+readAndParseCsv :: FilePath -> Aff CsvContent
+readAndParseCsv fp = do
+  rows <- readCsv fp
+  pure $ parseCsvContent $ createRawContent rows

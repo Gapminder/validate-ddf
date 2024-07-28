@@ -70,7 +70,7 @@ runValidationT (ValidationT m) = do
   Tuple res warnings <- runStateT (runExceptT m) mempty
   pure
     $ case res of
-        Left err -> Tuple (err <> warnings) Nothing
+        Left err -> Tuple (warnings <> err) Nothing
         Right a -> Tuple warnings (Just a)
 
 -- | Like 'runValidationT' but doesn't return the result
