@@ -126,7 +126,10 @@ headersMatchesData expected actual =
   else
     invalid [Issue $ "headers mismatch" ]
 
--- | only need to test one thing: duplicated rows.
+-- | checking the DatapointInputs. Rules:
+-- | 1. no duplicated primary keys. (But this checking has been done
+-- |    in csv parsing. So we will skip here)
+-- | 2. headers in data matches the indicatorId and primary key names provided
 parseDataPoints :: DataPointsInput -> V Issues DataPoints
 parseDataPoints input@{ indicatorId, by, values, itemInfo } =
   let
@@ -134,30 +137,32 @@ parseDataPoints input@{ indicatorId, by, values, itemInfo } =
     actualCols = M.keys values
   in
     headersMatchesData expectedCols actualCols
-      `andThen`
-    (\_ -> case findDupsForColumns by values of 
-      [] -> pure $ datapoints indicatorId by values itemInfo
-      dups -> invalid issues
-        where
-        items = map (unsafeIndex itemInfo) dups
-        mkissue info =
-          let
-            (Tuple fp row) = pathAndRow info
-          in
-            InvalidItem fp row "Duplicated datapoints"
-        issues = map mkissue items
-    )
+      `andThen` 
+    (\_ -> pure $ datapoints indicatorId by values itemInfo)
+    -- the checking for duplicated was done in CsvFile parsing step.
+    -- (\_ -> case findDupsForColumns by values of 
+    --   [] -> pure $ datapoints indicatorId by values itemInfo
+    --   dups -> invalid issues
+    --     where
+    --     items = map (unsafeIndex itemInfo) dups
+    --     mkissue info =
+    --       let
+    --         (Tuple fp row) = pathAndRow info
+    --       in
+    --         InvalidItem fp row "Duplicated datapoints"
+    --     issues = map mkissue items
+    -- )
   
-findDupsForColumns :: NonEmptyArray Identifier -> Map Identifier (Array String) -> Array Int
-findDupsForColumns headers values = 
-  let
-    colsToCheck = map (\h -> unsafeLookup h values) headers
-    size = Arr.length $ NEA.head colsToCheck
-    range = Arr.range 0 size
+-- findDupsForColumns :: NonEmptyArray Identifier -> Map Identifier (Array String) -> Array Int
+-- findDupsForColumns headers values =
+--   let
+--     colsToCheck = map (\h -> unsafeLookup h values) headers
+--     size = Arr.length $ NEA.head colsToCheck
+--     range = Arr.range 0 size
 
-    func a b = a <> "," <> b
-    sortingKeys = Arr.sort $ Arr.zip (NEA.foldl1 (Arr.zipWith func) colsToCheck) range
-    dups = findDupsL (compare `on` fst) $ List.fromFoldable sortingKeys
-  in
-    Arr.fromFoldable $ map snd dups
+--     func a b = a <> "," <> b
+--     sortingKeys = Arr.sort $ Arr.zip (NEA.foldl1 (Arr.zipWith func) colsToCheck) range
+--     dups = findDupsL (compare `on` fst) $ List.fromFoldable sortingKeys
+--   in
+--     Arr.fromFoldable $ map snd dups
 

@@ -274,6 +274,28 @@ noDuplicatedByKey key fileInfo input@{ headers, columns, index } =
           msg = "Duplicated " <> key <> ": " <> val
 
 
+-- | check duplicated keys in csv.
+noDuplicatedByKeys :: NonEmptyArray String -> FileInfo -> NonEmptyRawCsvContent -> V Issues NonEmptyRawCsvContent
+noDuplicatedByKeys keys fileInfo input@{ headers, columns, index } =
+  let
+    columnMap = Map.fromFoldable (NEA.zip headers columns)
+    keyHeaders = (map Hd.unsafeCreate keys)
+    dups = findDupsForColumns keyHeaders columnMap 
+  in
+    case dups of
+      [] -> pure input
+      xs -> invalid $ mkIssue <$> xs
+        where
+        fp = FI.filepath fileInfo
+        mkIssue x =
+          InvalidItem fp row msg
+          where
+          row = unsafeIndex index x
+          vals = map (\col -> unsafeIndex col x) $ map (\k -> unsafeLookup k columnMap) keyHeaders
+          valsStr = Str.joinWith "," $ NEA.toArray vals
+          msg = "Duplicated key combination: " <> valsStr
+
+
 findDupsForColumns :: NonEmptyArray Header -> Map Header (Array String) -> Array Int
 findDupsForColumns headers values =
   let
@@ -329,7 +351,8 @@ parseCsvFile { fileInfo, csvContent } =
         mkCsvFile <$> pure fileInfo <*> vc
     DataPoints dp ->
       let
-        required = [ toString dp.indicator ] <> Arr.fromFoldable (toString <$> dp.pkeys)
+        keysArr = NEA.fromFoldable1 (toString <$> dp.pkeys)
+        required = [ toString dp.indicator ] <> (NEA.toArray keysArr)
         fp = FI.filepath fileInfo
 
         vc =
@@ -342,8 +365,8 @@ parseCsvFile { fileInfo, csvContent } =
               headersExists required
             `andThen`
               constrainsAreMet fp dp
-            -- we don't test duplicated data for datapoint files here
-            -- will do that in DataPoints parsing step
+            `andThen`
+              noDuplicatedByKeys keysArr fileInfo
       in
         mkCsvFile <$> pure fileInfo <*> vc
     otherwise -> invalid [ NotImplemented ]
