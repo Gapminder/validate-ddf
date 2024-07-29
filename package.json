@@ -1,6 +1,6 @@
 {
   "name": "ddf-validation-ng",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "DDF validion tool",
   "author": "Semio Zheng <semio@gapminder.org>",
   "license": "GPL-3.0",

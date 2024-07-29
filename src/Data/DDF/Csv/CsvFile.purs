@@ -71,7 +71,7 @@ type CsvColumn = Array String
 type CsvContent =
   { headers :: NonEmptyArray Header -- must have header
   , index :: Array Int
-  , columns :: NonEmptyArray CsvColumn  -- must be same length of headers
+  , columns :: NonEmptyArray CsvColumn -- must be same length of headers
   }
 
 -- | input data
@@ -128,13 +128,13 @@ hasCols expected actual =
 
 -- | check if csv file has headers
 notEmptyCsv :: UnvalidatedCsvContent -> V Issues NonEmptyRawCsvContent'
-notEmptyCsv input = 
-  let 
+notEmptyCsv input =
+  let
     headers' = NEA.fromArray input.headers
     columns' = NEA.fromArray input.columns
   in
     case (Tuple headers' columns') of
-      (Tuple (Just hs) (Just cs)) -> 
+      (Tuple (Just hs) (Just cs)) ->
         if NEA.length hs == NEA.length cs then
           pure { headers: hs, index: input.index, columns: cs }
         else
@@ -194,8 +194,6 @@ oneOfHeaderExists expected csvcontent =
     else
       pure $ Tuple (unsafeIndex intersection 0) csvcontent
 
-
-
 -- | check if csv file has duplicated headers
 noDupCols :: NonEmptyRawCsvContent -> V Issues NonEmptyRawCsvContent
 noDupCols input =
@@ -209,9 +207,8 @@ noDupCols input =
     in
       invalid [ InvalidCSV $ "duplicated headers: " <> show dups ]
 
-
 -- | check datapoints columns constrains
-constrainsAreMet :: FilePath -> DP ->  NonEmptyRawCsvContent -> V Issues NonEmptyRawCsvContent
+constrainsAreMet :: FilePath -> DP -> NonEmptyRawCsvContent -> V Issues NonEmptyRawCsvContent
 constrainsAreMet fp { pkeys, constrains } input@{ headers, columns, index } =
   let
     constrainsMap = Map.fromFoldable $ NEL.zip pkeys constrains
@@ -251,7 +248,6 @@ checkOneColumn val col =
           -- Note: this will only return the first row of invalid value.
           Arr.fromFoldable $ Set.map (\x -> Tuple (findInvalid col x) x) res
 
-
 -- | check duplicated keys in csv.
 noDuplicatedByKey :: String -> FileInfo -> NonEmptyRawCsvContent -> V Issues NonEmptyRawCsvContent
 noDuplicatedByKey key fileInfo input@{ headers, columns, index } =
@@ -273,14 +269,13 @@ noDuplicatedByKey key fileInfo input@{ headers, columns, index } =
           row = unsafeIndex index x
           msg = "Duplicated " <> key <> ": " <> val
 
-
 -- | check duplicated keys in csv.
 noDuplicatedByKeys :: NonEmptyArray String -> FileInfo -> NonEmptyRawCsvContent -> V Issues NonEmptyRawCsvContent
 noDuplicatedByKeys keys fileInfo input@{ headers, columns, index } =
   let
     columnMap = Map.fromFoldable (NEA.zip headers columns)
     keyHeaders = (map Hd.unsafeCreate keys)
-    dups = findDupsForColumns keyHeaders columnMap 
+    dups = findDupsForColumns keyHeaders columnMap
   in
     case dups of
       [] -> pure input
@@ -295,7 +290,6 @@ noDuplicatedByKeys keys fileInfo input@{ headers, columns, index } =
           valsStr = Str.joinWith "," $ NEA.toArray vals
           msg = "Duplicated key combination: " <> valsStr
 
-
 findDupsForColumns :: NonEmptyArray Header -> Map Header (Array String) -> Array Int
 findDupsForColumns headers values =
   let
@@ -308,8 +302,6 @@ findDupsForColumns headers values =
     dups = findDupsL (compare `on` fst) $ List.fromFoldable sortingKeys
   in
     Arr.fromFoldable $ map snd dups
-
-
 
 -- | main validation entry point
 parseCsvFile :: CsvFileInput -> V Issues CsvFile
@@ -367,6 +359,21 @@ parseCsvFile { fileInfo, csvContent } =
               constrainsAreMet fp dp
             `andThen`
               noDuplicatedByKeys keysArr fileInfo
+      in
+        mkCsvFile <$> pure fileInfo <*> vc
+    Synonyms concept ->
+      let
+        required = [ "synonym", toString concept ]
+        vc =
+          notEmptyCsv csvContent
+            `andThen`
+              colsAreValidIds
+            `andThen`
+              noDupCols
+            `andThen`
+              headersExists required
+            `andThen`
+              noDuplicatedByKey "synonym" fileInfo
       in
         mkCsvFile <$> pure fileInfo <*> vc
     otherwise -> invalid [ NotImplemented ]

@@ -46,13 +46,6 @@ import Partial.Unsafe (unsafePartial)
 import Utils (getFiles)
 import Utils.GC (gc)
 
--- testrun :: FilePath -> Effect Unit
--- testrun path = launchAff_ do
---   -- list all csv files in the folder
---   fs <- getFiles path [ ".git", "etl", "lang", "assets" ]
---   liftEffect $ log "reading file list..."
---   _ <- traceM fs
---   pure unit
 
 validate :: FilePath -> ValidationT Messages Aff (HashMap String Concept)
 validate path = do
@@ -181,7 +174,7 @@ readAllFileInfoForValidation fs = do
 
 runMain :: FilePath -> Effect Unit
 runMain path = launchAff_ do
-  liftEffect $ log "v0.0.8"
+  liftEffect $ log "v0.0.9dev"
   (Tuple msgs ds) <- runValidationT $ validate path
   let
     allmsgs = joinWith "\n" $ map showMessage msgs

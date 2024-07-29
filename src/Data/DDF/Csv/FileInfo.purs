@@ -6,21 +6,21 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Data.Array as A
+import Data.Array.NonEmpty (NonEmptyArray)
 import Data.DDF.Atoms.Identifier (identifier)
-import Data.Validation.Issue (Issue(..), Issues)
 import Data.Either (Either(..))
 import Data.List (List(..))
 import Data.List.Types (NonEmptyList)
-import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Maybe (Maybe(..))
+import Data.Set as Set
 import Data.String (Pattern(..), stripSuffix)
-import Data.String.NonEmpty (NonEmptyString(..))
+import Data.String.NonEmpty (NonEmptyString(..), toString)
+import Data.String.NonEmpty as NES
 import Data.Tuple (Tuple(..), fst, snd)
+import Data.Validation.Issue (Issue(..), Issues)
 import Data.Validation.Semigroup (V, invalid, toEither)
 import Node.Path (FilePath, basename)
 import StringParser (Parser, choice, eof, runParser, sepBy1, sepEndBy1, string, try)
-import Data.Set as Set
-import Data.String.NonEmpty as NES
 
 -- | file info are information contains in file name.
 -- | it consists of 3 parts
@@ -44,7 +44,8 @@ data FileInfo = FileInfo FilePath CollectionInfo String
 data CollectionInfo
   = Concepts
   | Entities Ent
-  | DataPoints DP  
+  | DataPoints DP
+  | Synonyms NonEmptyString
   | Other NonEmptyString -- TODO: add synonyms and metadata
 
 type Ent = { domain :: NonEmptyString, set :: Maybe NonEmptyString }
@@ -61,7 +62,16 @@ instance showCollection :: Show CollectionInfo where
     Nothing -> "entity_domain: " <> show e.domain
     Just s -> "entity_domain: " <> show e.domain <> "; entnty_set: " <> show s
   show (DataPoints d) = "datapoints: " <> show d.indicator <> ", by: " <> (NES.joinWith "," d.pkeys)
+  show (Synonyms s) = "synonyms for " <> toString s
   show (Other x) = "custom collection: " <> show x
+
+showCollectionType :: CollectionInfo -> String
+showCollectionType Concepts = "concepts"
+showCollectionType (Entities _) = "entities"
+showCollectionType (DataPoints _) = "datapoints"
+showCollectionType (Synonyms _) = "synonyms"
+showCollectionType (Other x) = toString x
+
 
 -- | define Eq instance, useful to group the files
 instance eqCollection :: Eq CollectionInfo where
@@ -82,6 +92,11 @@ instance ordCollection :: Ord CollectionInfo where
     _ -> GT
   compare (DataPoints _) other = case other of
     DataPoints _ -> EQ
+    Concepts -> LT
+    Entities _ -> LT
+    _ -> GT
+  compare (Synonyms _) other = case other of
+    Synonyms _ -> EQ
     Concepts -> LT
     Entities _ -> LT
     _ -> GT
@@ -205,11 +220,22 @@ datapointFile = do
   indicator <- identifier
   void $ string "--by--"
   dims <- sepBy1 pkey (string "--")
+  eof
   let
     pkeys = map fst dims
 
     constrains = map snd dims
   pure $ DataPoints { indicator, pkeys, constrains }
+
+-- | Synonyms file parsers
+--
+synonymFile :: Parser CollectionInfo
+synonymFile = do
+  ddfFileBegin
+  void $ string "synonyms--"
+  conceptName <- identifier
+  eof
+  pure $ Synonyms conceptName
 
 getName :: String -> Maybe String
 getName = stripSuffix (Pattern ".csv")
@@ -219,7 +245,7 @@ validateFileInfo fp = case getName $ basename fp of
   Nothing -> invalid [ InvalidCSV "not a csv file" ]
   Just fn ->
     let
-      fileParser = conceptFile <|> entityFile <|> datapointFile
+      fileParser = conceptFile <|> entityFile <|> datapointFile <|> synonymFile
     in
       case runParser fileParser fn of
         Right ci -> pure $ FileInfo fp ci fn

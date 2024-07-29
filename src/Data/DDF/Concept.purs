@@ -93,7 +93,7 @@ parseConceptType x = ado
 -- FIXME: I think drill_up and domain should be reserved concepts.
 -- | reserved keywords which can not used as concept id
 reservedConcepts :: Array Identifier
-reservedConcepts = map Id.unsafeCreate [ "concept", "concept_type"]
+reservedConcepts = map Id.unsafeCreate [ "concept", "concept_type", "synonym"]
 
 -- | create concept
 concept :: Identifier -> ConceptType -> Props -> Concept
@@ -119,20 +119,20 @@ getType :: Concept -> ConceptType
 getType (Concept x) = x.conceptType
 
 isEntitySet :: Concept -> Boolean
-isEntitySet (Concept c) = 
-  case c.conceptType of 
+isEntitySet (Concept c) =
+  case c.conceptType of
     EntitySetC -> true
     _ -> false
 
 isEntityDomain :: Concept -> Boolean
-isEntityDomain (Concept c) = 
-  case c.conceptType of 
+isEntityDomain (Concept c) =
+  case c.conceptType of
     EntityDomainC -> true
     _ -> false
 
 
 getProp :: Concept -> String -> Maybe String
-getProp (Concept c) p = 
+getProp (Concept c) p =
   M.lookup (Id.unsafeCreate p) c.props
 
 -- | The unvalidated concept record, which comes from reading csvfile.
