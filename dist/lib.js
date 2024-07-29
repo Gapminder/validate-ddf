@@ -5335,6 +5335,12 @@ var genericShowConstructor = (dictGenericShowArgs) => (dictIsSymbol) => ({
 });
 
 // output-es/Data.DDF.Atoms.Header/index.js
+var unsafeCreate2 = (x) => {
+  if (x === "") {
+    return "undefined_id";
+  }
+  return x;
+};
 var is_header = (s) => {
   const $0 = string("is--")(s);
   return (() => {
@@ -5625,6 +5631,10 @@ var elem4 = /* @__PURE__ */ (() => {
   return (x) => any1(($0) => x === $0);
 })();
 var apply2 = /* @__PURE__ */ (() => applyV(semigroupArray).apply)();
+var fromFoldable11 = /* @__PURE__ */ (() => {
+  const $0 = foldable1NonEmptyList.Foldable0().foldr;
+  return (x) => fromFoldableImpl($0, x);
+})();
 var oneOfHeaderExists = (expected) => (csvcontent) => {
   const intersection = intersectBy(eqStringImpl)(expected)(arrayMap((x) => x)(fromFoldableImpl(
     foldrArray,
@@ -5673,9 +5683,9 @@ var noDupCols = (input) => {
   );
 };
 var hasCols = (dictFoldable) => (dictOrd) => {
-  const fromFoldable112 = dictFoldable.foldl((m) => (a) => insert(dictOrd)(a)()(m))(Leaf2);
+  const fromFoldable10 = dictFoldable.foldl((m) => (a) => insert(dictOrd)(a)()(m))(Leaf2);
   const compare2 = dictOrd.compare;
-  return (dictEq) => (expected) => (actual) => unsafeDifference(compare2, fromFoldable112(expected), fromFoldable112(actual)).tag === "Leaf";
+  return (dictEq) => (expected) => (actual) => unsafeDifference(compare2, fromFoldable10(expected), fromFoldable10(actual)).tag === "Leaf";
 };
 var hasCols1 = /* @__PURE__ */ hasCols(foldableArray)(ordString)(eqString);
 var headersExists = (expected) => (csvcontent) => {
@@ -5725,6 +5735,24 @@ var noDuplicatedByKey = (key) => (fileInfo) => (v) => {
       fp,
       v.index[x],
       "Duplicated " + key + ": " + unsafeLookup(showHeader)(ordHeader)(header)(columnMap)[x]
+    ))(dups)
+  );
+};
+var noDuplicatedByKeys = (keys5) => (fileInfo) => (v) => {
+  const keyHeaders = arrayMap(unsafeCreate2)(keys5);
+  const columnMap = fromFoldable3(zipWithImpl(Tuple, v.headers, v.columns));
+  const dups = findDupsForColumns(keyHeaders)(columnMap);
+  if (dups.length === 0) {
+    return applicativeV.pure(v);
+  }
+  const fp = fileInfo._1;
+  return $Either(
+    "Left",
+    arrayMap((x) => $Issue(
+      "InvalidItem",
+      fp,
+      v.index[x],
+      "Duplicated key combination: " + joinWith(",")(arrayMap((col) => col[x])(arrayMap((k) => unsafeLookup(showHeader)(ordHeader)(k)(columnMap))(keyHeaders)))
     ))(dups)
   );
 };
@@ -5906,6 +5934,10 @@ var parseCsvFile = (v) => {
     })());
   }
   if (v.fileInfo._2.tag === "DataPoints") {
+    const keysArr = fromFoldable11($NonEmpty(
+      v.fileInfo._2._1.pkeys._1,
+      listMap(toString)(v.fileInfo._2._1.pkeys._2)
+    ));
     return apply2((() => {
       const $0 = applicativeV.pure(v.fileInfo);
       if ($0.tag === "Left") {
@@ -5941,13 +5973,7 @@ var parseCsvFile = (v) => {
         }
         fail();
       })();
-      const $3 = headersExists([
-        v.fileInfo._2._1.indicator,
-        ...fromFoldableImpl(
-          foldableNonEmptyList.foldr,
-          $NonEmpty(v.fileInfo._2._1.pkeys._1, listMap(toString)(v.fileInfo._2._1.pkeys._2))
-        )
-      ]);
+      const $3 = headersExists([v.fileInfo._2._1.indicator, ...keysArr]);
       const $4 = (() => {
         if ($2.tag === "Left") {
           return $Either("Left", $2._1);
@@ -5957,11 +5983,20 @@ var parseCsvFile = (v) => {
         }
         fail();
       })();
-      if ($4.tag === "Left") {
-        return $Either("Left", $4._1);
+      const $5 = (() => {
+        if ($4.tag === "Left") {
+          return $Either("Left", $4._1);
+        }
+        if ($4.tag === "Right") {
+          return constrainsAreMet(v.fileInfo._1)(v.fileInfo._2._1)($4._1);
+        }
+        fail();
+      })();
+      if ($5.tag === "Left") {
+        return $Either("Left", $5._1);
       }
-      if ($4.tag === "Right") {
-        return constrainsAreMet(v.fileInfo._1)(v.fileInfo._2._1)($4._1);
+      if ($5.tag === "Right") {
+        return noDuplicatedByKeys(keysArr)(v.fileInfo)($5._1);
       }
       fail();
     })());
@@ -6511,7 +6546,7 @@ var validateFileInfo = (fp) => {
 var fromFoldable2 = /* @__PURE__ */ fromFoldable(ordHeader)(foldableArray);
 var pop2 = /* @__PURE__ */ pop(ordHeader);
 var fromFoldable12 = /* @__PURE__ */ fromFoldable(ordId)(foldableArray);
-var fromFoldable11 = /* @__PURE__ */ (() => {
+var fromFoldable112 = /* @__PURE__ */ (() => {
   const $0 = foldable1NonEmptyList.Foldable0().foldr;
   return (x) => fromFoldableImpl($0, x);
 })();
@@ -6564,7 +6599,7 @@ var createDataPointsInput = (v) => {
       "Right",
       {
         indicatorId: v.fileInfo._2._1.indicator,
-        by: fromFoldable11($NonEmpty(v.fileInfo._2._1.pkeys._1, listMap(unsafeCoerce)(v.fileInfo._2._1.pkeys._2))),
+        by: fromFoldable112($NonEmpty(v.fileInfo._2._1.pkeys._1, listMap(unsafeCoerce)(v.fileInfo._2._1.pkeys._2))),
         itemInfo: arrayMap((x) => $ItemInfo(fp, x))(v.csvContent.index),
         values: fromFoldable12(zipWithImpl(Tuple, arrayMap(unsafeCoerce)(v.csvContent.headers), v.csvContent.columns))
       }
@@ -6623,12 +6658,7 @@ var keys2 = /* @__PURE__ */ (() => functorMap.map((v) => {
 }))();
 
 // output-es/Data.DDF.DataPoint/index.js
-var fromFoldable5 = /* @__PURE__ */ foldrArray(Cons)(Nil);
 var eq12 = /* @__PURE__ */ (() => eqArrayImpl(eqId.eq))();
-var sort = /* @__PURE__ */ (() => {
-  const compare2 = ordTuple(ordString)(ordInt).compare;
-  return (xs) => sortBy(compare2)(xs);
-})();
 var fromFoldable32 = /* @__PURE__ */ foldlArray((m) => (a) => insert(ordId)(a)()(m))(Leaf2);
 var mergeTwoDataPointsInput = (a) => (b) => {
   if (a.indicatorId === b.indicatorId && eq12(a.by)(b.by)) {
@@ -6669,39 +6699,13 @@ var headersMatchesData = (expected) => (actual) => {
   }
   return $Either("Left", [$Issue("Issue", "headers mismatch")]);
 };
-var findDupsForColumns2 = (headers) => (values3) => {
-  const colsToCheck = arrayMap((h) => unsafeLookup(showId2)(ordId)(h)(values3))(headers);
-  return fromFoldableImpl(
-    foldableList.foldr,
-    listMap(snd)(findDupsL((x) => (y) => ordString.compare(x._1)(y._1))(fromFoldable5(sort(zipWithImpl(
-      Tuple,
-      foldl1Impl(zipWith((a) => (b) => a + "," + b), colsToCheck),
-      rangeImpl(
-        0,
-        (() => {
-          if (0 < colsToCheck.length) {
-            return colsToCheck[0].length;
-          }
-          fail();
-        })()
-      )
-    )))))
-  );
-};
 var parseDataPoints = (v) => {
   const $0 = headersMatchesData(fromFoldable32(snoc(v.by)(v.indicatorId)))(keys2(v.values));
   if ($0.tag === "Left") {
     return $Either("Left", $0._1);
   }
   if ($0.tag === "Right") {
-    const v2 = findDupsForColumns2(v.by)(v.values);
-    if (v2.length === 0) {
-      return $Either("Right", { indicatorId: v.indicatorId, by: v.by, values: v.values, itemInfo: v.itemInfo });
-    }
-    return $Either(
-      "Left",
-      arrayMap((info2) => $Issue("InvalidItem", info2._1, info2._2, "Duplicated datapoints"))(arrayMap((i) => v.itemInfo[i])(v2))
-    );
+    return $Either("Right", { indicatorId: v.indicatorId, by: v.by, values: v.values, itemInfo: v.itemInfo });
   }
   fail();
 };
@@ -7547,7 +7551,7 @@ var toUnfoldableUnordered = /* @__PURE__ */ (() => {
   return (x) => $0($MapIter("IterNode", x, IterLeaf));
 })();
 var traverse = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV2))();
-var fromFoldable6 = /* @__PURE__ */ fromFoldable(ordId)(foldableArray);
+var fromFoldable5 = /* @__PURE__ */ fromFoldable(ordId)(foldableArray);
 var apply3 = /* @__PURE__ */ (() => applyV(semigroupArray).apply)();
 var splitEntAndProps = (props) => {
   const v = partitionImpl(
@@ -7669,7 +7673,7 @@ var parseEntity = (v) => {
       }
     }
     fail();
-  })()))(applicativeV2.pure(fromFoldable6(v1._2)));
+  })()))(applicativeV2.pure(fromFoldable5(v1._2)));
   if ($0.tag === "Left") {
     return $Either("Left", $0._1);
   }
@@ -8548,7 +8552,7 @@ var validate = (path2) => bindVT.bind(monadtransVT.lift(monadAff)(_liftEffect(lo
 var runMain = (path2) => {
   const $0 = _makeFiber(
     ffiUtil,
-    _bind(_liftEffect(log2("v0.0.8dev")))(() => _bind(runValidationT2(validate(path2)))((v) => {
+    _bind(_liftEffect(log2("v0.0.8")))(() => _bind(runValidationT2(validate(path2)))((v) => {
       const $02 = v._2;
       const $1 = v._1;
       return _bind(_liftEffect(log2(joinWith("\n")(arrayMap(showMessage)($1)))))(() => {

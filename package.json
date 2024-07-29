@@ -1,6 +1,6 @@
 {
   "name": "ddf-validation-ng",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "DDF validion tool",
   "author": "Semio Zheng <semio@gapminder.org>",
   "license": "GPL-3.0",
@@ -22,7 +22,6 @@
     "src/cli.js"
   ],
   "dependencies": {
-    "arquero": "^6.0.0",
     "csv-parse": "^5.5.6"
   },
   "devDependencies": {

@@ -181,7 +181,7 @@ readAllFileInfoForValidation fs = do
 
 runMain :: FilePath -> Effect Unit
 runMain path = launchAff_ do
-  liftEffect $ log "v0.0.8dev"
+  liftEffect $ log "v0.0.8"
   (Tuple msgs ds) <- runValidationT $ validate path
   let
     allmsgs = joinWith "\n" $ map showMessage msgs
