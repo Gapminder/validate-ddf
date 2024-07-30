@@ -332,7 +332,7 @@ parseCsvFile { fileInfo, csvContent } =
         vc =
           notEmptyCsv csvContent
             `andThen`
-              colsAreValidHeaders
+              colsAreValidHeaders  -- Identifier + is--identifier headers
             `andThen`
               noDupCols
             `andThen`

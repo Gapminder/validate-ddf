@@ -9,10 +9,13 @@ import Data.Array as A
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.DDF.Atoms.Identifier (identifier)
 import Data.Either (Either(..))
+import Data.Generic.Rep (class Generic)
+import Data.Hashable (class Hashable, hash)
 import Data.List (List(..))
 import Data.List.Types (NonEmptyList)
 import Data.Maybe (Maybe(..))
 import Data.Set as Set
+import Data.Show.Generic (genericShow)
 import Data.String (Pattern(..), stripSuffix)
 import Data.String.NonEmpty (NonEmptyString(..), toString)
 import Data.String.NonEmpty as NES
@@ -28,25 +31,18 @@ import StringParser (Parser, choice, eof, runParser, sepBy1, sepEndBy1, string, 
 -- | resource name is useful in datapackage.
 data FileInfo = FileInfo FilePath CollectionInfo String
 
--- alternative:
--- data FileInfo
---   = FileInfo
---     { path :: String
---     , collection :: CollectionInfo
---     , name :: String
---     }
--- Which one is better??
-
 -- | collection info
 -- | there are 5 collections in DDF
 -- | Entities, DataPoints and Concepts
 -- | and Synonyms, Metadata.
+-- | There is also Translations for ddfcsv
+-- | So we will have 6 type of collection.
 data CollectionInfo
   = Concepts
   | Entities Ent
   | DataPoints DP
   | Synonyms NonEmptyString
-  | Other NonEmptyString -- TODO: add synonyms and metadata
+  | Other NonEmptyString -- TODO: add metadata and translation
 
 type Ent = { domain :: NonEmptyString, set :: Maybe NonEmptyString }
 
@@ -65,44 +61,43 @@ instance showCollection :: Show CollectionInfo where
   show (Synonyms s) = "synonyms for " <> toString s
   show (Other x) = "custom collection: " <> show x
 
-showCollectionType :: CollectionInfo -> String
-showCollectionType Concepts = "concepts"
-showCollectionType (Entities _) = "entities"
-showCollectionType (DataPoints _) = "datapoints"
-showCollectionType (Synonyms _) = "synonyms"
-showCollectionType (Other x) = toString x
 
+-- | some constants
+--
+data CollectionConstant =
+  CONCEPTS
+  | ENTITIES
+  | DATAPOINTS
+  | SYNONYMS
+  | OTHERS
 
--- | define Eq instance, useful to group the files
+derive instance genericCollectionConstant :: Generic CollectionConstant _
+
+instance showCollectionConstant :: Show CollectionConstant where
+  show = genericShow
+
+derive instance eqCollectionConstant :: Eq CollectionConstant
+derive instance ordCollectionConstant :: Ord CollectionConstant
+instance hashableCollectionConstant :: Hashable CollectionConstant where
+  hash x = hash $ show x
+--
+-- end
+
+-- | get the collection type.
+getCollectionType :: CollectionInfo -> CollectionConstant
+getCollectionType Concepts = CONCEPTS
+getCollectionType (Entities _) = ENTITIES
+getCollectionType (DataPoints _) = DATAPOINTS
+getCollectionType (Synonyms _) = SYNONYMS
+getCollectionType (Other _) = OTHERS
+
+-- | define Eq instance for collection info, useful to group the files
 instance eqCollection :: Eq CollectionInfo where
-  eq Concepts Concepts = true
-  eq (Entities _) (Entities _) = true
-  eq (DataPoints _) (DataPoints _) = true
-  eq (Other a) (Other b) = a == b
-  eq _ _ = false
+  eq a b = getCollectionType a == getCollectionType b
 
--- | define Ord instance, useful to sort and group the files
+-- | define Ord instance for collection info, useful to sort and group the files
 instance ordCollection :: Ord CollectionInfo where
-  compare Concepts other = case other of
-    Concepts -> EQ
-    _ -> GT
-  compare (Entities _) other = case other of
-    Concepts -> LT
-    Entities _ -> EQ
-    _ -> GT
-  compare (DataPoints _) other = case other of
-    DataPoints _ -> EQ
-    Concepts -> LT
-    Entities _ -> LT
-    _ -> GT
-  compare (Synonyms _) other = case other of
-    Synonyms _ -> EQ
-    Concepts -> LT
-    Entities _ -> LT
-    _ -> GT
-  compare (Other a) other = case other of
-    (Other b) -> compare a b
-    _ -> LT
+  compare a b = compare (getCollectionType a) (getCollectionType b)
 
 instance showFileInfo :: Show FileInfo where
   show (FileInfo fp ci _) = "file: " <> fp <> "; collection: " <> show ci
@@ -115,19 +110,13 @@ compareDP (DataPoints dp1) (DataPoints dp2)
 compareDP _ _ = EQ -- otherfiles are grouped together
 
 isConceptFile :: FileInfo -> Boolean
-isConceptFile (FileInfo _ collection _) = case collection of
-  Concepts -> true
-  _ -> false
+isConceptFile (FileInfo _ c _ ) = getCollectionType c == CONCEPTS
 
 isEntitiesFile :: FileInfo -> Boolean
-isEntitiesFile (FileInfo _ collection _) = case collection of
-  Entities _ -> true
-  _ -> false
+isEntitiesFile (FileInfo _ c _) = getCollectionType c == ENTITIES
 
 isDataPointsFile :: FileInfo -> Boolean
-isDataPointsFile (FileInfo _ collection _) = case collection of
-  DataPoints _ -> true
-  _ -> false
+isDataPointsFile (FileInfo _ c _) = getCollectionType c == DATAPOINTS
 
 filepath :: FileInfo -> FilePath
 filepath (FileInfo fp _ _) = fp
