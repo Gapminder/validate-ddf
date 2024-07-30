@@ -46,7 +46,7 @@ data CollectionInfo
 
 type Ent = { domain :: NonEmptyString, set :: Maybe NonEmptyString }
 
-type DP =  -- TODO: constrains should be a list of list, because multiple items in the constrains is allowed.
+type DP = -- TODO: constrains should be a list of list, because multiple items in the constrains is allowed.
   { indicator :: NonEmptyString
   , pkeys :: NonEmptyList NonEmptyString
   , constrains :: NonEmptyList (Maybe NonEmptyString) -- length of pkeys should equal to length of constrains.
@@ -61,11 +61,10 @@ instance showCollection :: Show CollectionInfo where
   show (Synonyms s) = "synonyms for " <> toString s
   show (Other x) = "custom collection: " <> show x
 
-
 -- | some constants
 --
-data CollectionConstant =
-  CONCEPTS
+data CollectionConstant
+  = CONCEPTS
   | ENTITIES
   | DATAPOINTS
   | SYNONYMS
@@ -80,6 +79,7 @@ derive instance eqCollectionConstant :: Eq CollectionConstant
 derive instance ordCollectionConstant :: Ord CollectionConstant
 instance hashableCollectionConstant :: Hashable CollectionConstant where
   hash x = hash $ show x
+
 --
 -- end
 
@@ -110,7 +110,7 @@ compareDP (DataPoints dp1) (DataPoints dp2)
 compareDP _ _ = EQ -- otherfiles are grouped together
 
 isConceptFile :: FileInfo -> Boolean
-isConceptFile (FileInfo _ c _ ) = getCollectionType c == CONCEPTS
+isConceptFile (FileInfo _ c _) = getCollectionType c == CONCEPTS
 
 isEntitiesFile :: FileInfo -> Boolean
 isEntitiesFile (FileInfo _ c _) = getCollectionType c == ENTITIES
@@ -234,7 +234,12 @@ validateFileInfo fp = case getName $ basename fp of
   Nothing -> invalid [ InvalidCSV "not a csv file" ]
   Just fn ->
     let
-      fileParser = conceptFile <|> entityFile <|> datapointFile <|> synonymFile
+      fileParser = choice
+        [ try conceptFile
+        , try entityFile
+        , try datapointFile
+        , try synonymFile
+        ]
     in
       case runParser fileParser fn of
         Right ci -> pure $ FileInfo fp ci fn

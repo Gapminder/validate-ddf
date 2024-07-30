@@ -8,13 +8,13 @@ module Data.Validation.ValidationT where
 import Prelude
 
 import Control.Monad.Except (class MonadTrans, ExceptT, lift, runExceptT, throwError)
-import Control.Monad.State (StateT, modify_, runStateT)
+import Control.Monad.Rec.Class (class MonadRec)
+import Control.Monad.State (StateT, get, modify_, runStateT)
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..))
-import Data.Newtype (class Newtype, over)
+import Data.Newtype (class Newtype)
 import Data.Tuple (Tuple(..))
 import Effect.Class (class MonadEffect)
-import Control.Monad.Rec.Class (class MonadRec)
 
 -- learn from https://hackage.haskell.org/package/validationt-0.3.0/
 
@@ -110,6 +110,10 @@ vError e = ValidationT $ throwError e
 -- | Does not stop further execution and appends the given warning.
 vWarning :: forall e m. Monad m => Monoid e => e -> ValidationT e m Unit
 vWarning e = ValidationT $ modify_ (\x -> x <> e)
+
+-- | get current state
+getState :: forall s m. Monad m => Monoid s => ValidationT s m s
+getState = ValidationT $ lift get
 
 -- Alias
 type Validation e a = forall m. Monad m => ValidationT e m a

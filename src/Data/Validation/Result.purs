@@ -16,7 +16,7 @@ type Message
   = { message :: String
     , file :: String
     , lineNo :: Int
---     , suggestions :: String   -- TODO: add this later
+    -- , suggestions :: String   -- TODO: add this later
     , isWarning :: Boolean
     }
 

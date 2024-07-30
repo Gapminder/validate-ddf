@@ -15,6 +15,7 @@ module Data.DDF.DataSet
   , parseEntityDomains
   , parseBaseDataSet
   , parseDataPoints
+  , parseCsvFileValues
   , getConcepts
   ) where
 
@@ -26,10 +27,15 @@ import Control.Monad.ST.Internal as STI
 import Data.Array as Arr
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as NEA
+import Data.Bifunctor (lmap)
+import Data.DDF.Atoms.Header (headerVal)
 import Data.DDF.Atoms.Identifier (Identifier)
 import Data.DDF.Atoms.Identifier as Id
+import Data.DDF.Atoms.Value as Value
 import Data.DDF.Concept (Concept(..), ConceptType(..))
 import Data.DDF.Concept as Conc
+import Data.DDF.Csv.CsvFile (CsvFile)
+import Data.DDF.Csv.FileInfo as FI
 import Data.DDF.DataPoint (DataPoints(..))
 import Data.DDF.Entity (Entity(..), getEntitySets)
 import Data.DDF.Entity as Ent
@@ -48,14 +54,17 @@ import Data.Map as M
 import Data.Maybe (Maybe(..), fromJust)
 import Data.Newtype (class Newtype)
 import Data.Set (Set)
+import Data.String.NonEmpty (toString)
 import Data.String.NonEmpty as NES
+import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.Traversable (for, for_, sequence, sequence_, traverse, traverse_)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Validation.Issue (Issue(..), Issues, withRowInfo)
-import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither)
+import Data.Validation.Issue (Issue(..), Issues, toInvaildItem, withRowInfo)
+import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither, validation)
 import Debug (trace)
+import Node.Path (FilePath)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
-import Utils (dupsBy, unsafeLookup)
+import Utils (dupsBy, unsafeIndex, unsafeLookup)
 
 type ConceptDB = HashMap String Concept
 type EntityDB = HashMap String (Array Entity)
@@ -227,7 +236,7 @@ basedataset cdb edb = DataSet
   , _valueParsers: HM.empty
   }
 
---
+-- FIXME:
 checkDomainAndSetExists :: ConceptDB -> EntityDB -> V Issues EntityDB
 checkDomainAndSetExists concepts entities = pure entities
 
@@ -247,8 +256,15 @@ parseBaseDataSet conceptsInput entitiesInput =
           let
             ps = map (\x -> Tuple x (makeValueParser dataset x))
               (HM.keys $ getConcepts dataset)
+            -- Add concept parser
+            ps' = Arr.snoc ps $
+              Tuple "concept"
+                ( Value.parseDomainVal "concept"
+                    $ HS.fromArray
+                    $ HM.keys ds.concepts
+                )
           in
-            pure $ DataSet (ds { _valueParsers = HM.fromArray ps })
+            pure $ DataSet (ds { _valueParsers = HM.fromArray ps' })
       )
 
 unsafeLookupHM :: forall k v. Hashable k => Show k => k -> HashMap k v -> v
@@ -291,7 +307,6 @@ getValueParser :: DataSet -> String -> V Issues ValueParser
 getValueParser (DataSet ds) k =
   case HM.lookup k ds._valueParsers of
     Just v -> pure v
-    -- FIXME: how to add file info
     Nothing -> invalid [ Issue $ "no such concept in dataset: " <> k ]
 
 -- | parseDataPoints based on the concepts and entities in the dataset.
@@ -302,9 +317,20 @@ parseDataPoints ds@(DataSet { concepts, _valueParsers }) (DataPoints dp) =
     conceptsInDp = NEA.snoc dp.by dp.indicatorId
   in
     for_ conceptsInDp \c ->
-      getValueParser ds (Id.value c)
-        `andThen`
-          (\vp -> parseColumnValues vp (unsafeLookup c dp.values) (dp.itemInfo))
+      let
+        res = getValueParser ds (Id.value c)
+          `andThen`
+            (\vp -> parseColumnValues vp (unsafeLookup c dp.values) (dp.itemInfo))
+      in
+        lmap
+          ( \errs ->
+              let
+                -- add filepath to all errors
+                samplefile = fst $ pathAndRow $ unsafeIndex dp.itemInfo 0
+              in
+                map (\e -> toInvaildItem samplefile 0 e) errs
+          )
+          res
 
 -- | check if concept exists in the dataset
 conceptExists :: DataSet -> Identifier -> V Issues Identifier
@@ -331,3 +357,30 @@ parseColumnValues vp vals iteminfo = traverse_ run allValues
         in
           withRowInfo fp i (res `andThen` (\_ -> pure unit))
 
+-- | For Synonyms and Translations, we only need to parse all values in the columns.
+parseCsvFileValues :: DataSet -> CsvFile -> V Issues Unit
+parseCsvFileValues ds { fileInfo, csvContent } =
+  let
+    { index, headers, columns } = csvContent
+    fp = FI.filepath fileInfo
+
+    run (Tuple concept vals) =
+      getValueParser ds (toString concept)
+        `andThen`
+          (\vp -> parseColumnValues' fp concept vp vals index)
+  in
+    traverse_ run $ NEA.zip (map headerVal headers) columns
+
+parseColumnValues' :: FilePath -> NonEmptyString -> ValueParser -> Array String -> Array Int -> V Issues Unit
+parseColumnValues' fp concept vp vals index = traverse_ run allValues
+  where
+  allValues = HM.values $ HM.fromArrayBy fst identity $ Arr.zip vals index
+
+  run (Tuple v i) =
+    let
+      res = vp v
+    in
+      if isValid res then
+        pure unit
+      else
+        withRowInfo fp i (res `andThen` (\_ -> pure unit))

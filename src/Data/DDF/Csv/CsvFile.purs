@@ -139,7 +139,9 @@ notEmptyCsv input =
           pure { headers: hs, index: input.index, columns: cs }
         else
           invalid [ InvalidCSV "header length doesn't match column length" ]
-      _ -> invalid [ InvalidCSV "Empty Csv" ]
+      (Tuple (Just hs) Nothing) ->
+        pure { headers: hs, index: input.index, columns: NEA.replicate (NEA.length hs) [] }
+      _ -> invalid [ InvalidCSV "Empty Csv. You should at least put headers in the file." ]
 
 -- | check all columns are valid identifiers
 colsAreValidIds :: NonEmptyRawCsvContent' -> V Issues NonEmptyRawCsvContent

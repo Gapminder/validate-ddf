@@ -93,7 +93,7 @@ parseConceptType x = ado
 -- FIXME: I think drill_up and domain should be reserved concepts.
 -- | reserved keywords which can not used as concept id
 reservedConcepts :: Array Identifier
-reservedConcepts = map Id.unsafeCreate [ "concept", "concept_type", "synonym"]
+reservedConcepts = map Id.unsafeCreate [ "concept", "concept_type" ]
 
 -- | create concept
 concept :: Identifier -> ConceptType -> Props -> Concept

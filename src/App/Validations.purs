@@ -81,9 +81,9 @@ checkNonEmptyArray name xs =
     Just xs_ ->
       pure xs_
 
-dropAndWarnBadCsvRows :: 
-  FilePath 
-  -> RawCsvContent 
+dropAndWarnBadCsvRows ::
+  FilePath
+  -> RawCsvContent
   -> Validation Messages RawCsvContent
 dropAndWarnBadCsvRows fp content = do
   let
@@ -99,8 +99,8 @@ dropAndWarnBadCsvRows fp content = do
 
 
 -- | parse csv file info and csv data into a valid CsvFile
-validateCsvFile :: 
-  (Tuple FileInfo RawCsvContent) 
+validateCsvFile ::
+  (Tuple FileInfo RawCsvContent)
   -> Validation Messages (Maybe CsvFile)
 validateCsvFile (Tuple fi rawcsv) = do
   let
@@ -108,7 +108,7 @@ validateCsvFile (Tuple fi rawcsv) = do
   -- skip bad csv rows
   rawcsv' <- dropAndWarnBadCsvRows fp rawcsv
 
-  let 
+  let
     csvFileInput = { fileInfo: fi, csvContent: parseCsvContent rawcsv'}
 
   case toEither $ parseCsvFile csvFileInput of
@@ -121,8 +121,8 @@ validateCsvFile (Tuple fi rawcsv) = do
       where
       msgs = map (setError <<< setFile fp <<< messageFromIssue) errs
 
-validateCsvFiles :: forall t. Traversable t => 
-  (t (Tuple FileInfo RawCsvContent)) 
+validateCsvFiles :: forall t. Traversable t =>
+  (t (Tuple FileInfo RawCsvContent))
   -> Validation Messages (Array CsvFile)
 validateCsvFiles xs = do
   rs <- for xs (\x -> validateCsvFile x)
@@ -143,7 +143,7 @@ validateConcepts csvfile =
         Arr.foldM
           ( \acc input -> do
               let
-                (Tuple fp i) = case input._info of 
+                (Tuple fp i) = case input._info of
                   Nothing -> (Tuple "" (-1))
                   Just info -> pathAndRow info
                 concept = parseConcept input
@@ -171,12 +171,12 @@ validateEntities csvfile =
   in
     case toEither entityInputs of
       Left issues -> emitErrorsAndStop issues
-      Right inputs -> 
+      Right inputs ->
         Arr.foldM go [] inputs
         where
-          go acc input = 
+          go acc input =
             let
-              (Tuple fp i) = case input._info of 
+              (Tuple fp i) = case input._info of
                 Nothing -> (Tuple "" (-1))
                 Just info -> pathAndRow info
             in
@@ -196,11 +196,11 @@ validateEntities csvfile =
 
 
 validateBaseDataSet :: (Array Concept) -> (Array Entity) -> Validation Messages DataSet
-validateBaseDataSet conceptsInput entitiesInput = 
+validateBaseDataSet conceptsInput entitiesInput =
   case toEither $ parseBaseDataSet conceptsInput entitiesInput of
     Right ds -> pure ds
     Left errs -> do
-        emitErrorsAndStop errs
+      emitErrorsAndStop errs
 
 
 -- | take a list of csv files (They must have same indicator and primary keys)
@@ -230,6 +230,18 @@ validateDataPointsWithDataSet ds dps =
       Left errs ->
         emitErrorsAndContinue errs
       Right _ -> pure unit
+
+
+validateCsvFileWithDataSet :: DataSet -> CsvFile -> Validation Messages Unit
+validateCsvFileWithDataSet ds csvfile =
+  let
+    res = DataSet.parseCsvFileValues ds csvfile
+  in
+    case toEither res of
+      Left errs ->
+        emitWarningsAndContinue errs
+      Right _ -> pure unit
+
 
 -- Below are Validation for Warnings
 

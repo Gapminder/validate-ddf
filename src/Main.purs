@@ -4,6 +4,7 @@ import App.Validations
 import Debug
 import Prelude
 
+import Control.Monad.State (get, lift)
 import Control.Monad.Trans.Class (lift)
 import Data.Array as Arr
 import Data.Array.NonEmpty (NonEmptyArray)
@@ -14,7 +15,7 @@ import Data.DDF.Atoms.Identifier (Identifier)
 import Data.DDF.Atoms.Identifier as Id
 import Data.DDF.Concept (Concept(..))
 import Data.DDF.Csv.CsvFile (CsvFile)
-import Data.DDF.Csv.FileInfo (CollectionInfo(..), FileInfo(..), getCollectionFiles, isConceptFile, isDataPointsFile, isEntitiesFile, getCollectionType)
+import Data.DDF.Csv.FileInfo (CollectionConstant, CollectionInfo(..), FileInfo(..), getCollectionFiles, getCollectionType, isConceptFile, isDataPointsFile, isEntitiesFile)
 import Data.DDF.Csv.FileInfo as FI
 import Data.DDF.Csv.Utils (createDataPointsInput)
 import Data.DDF.DataPoint (mergeDataPointsInput, parseDataPoints)
@@ -34,12 +35,12 @@ import Data.String as Str
 import Data.String.NonEmpty (toString)
 import Data.String.NonEmpty as NES
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
-import Data.Traversable (sequence, for)
+import Data.Traversable (for, sequence, traverse_)
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.Validation.Issue (Issue(..))
 import Data.Validation.Result (Messages, hasError, messageFromIssue, setError, showMessage)
 import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither)
-import Data.Validation.ValidationT (ValidationT, Validation, runValidationT, vError, vWarning)
+import Data.Validation.ValidationT (Validation, ValidationT, getState, runValidationT, vError, vWarning)
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff, launchAff_)
 import Effect.Class (liftEffect)
@@ -74,8 +75,7 @@ readAndParseCsvFiles files = do
     csvContents = map createRawContent csvRows
   validateCsvFiles $ Arr.zip files csvContents
 
-
-validate :: FilePath -> ValidationT Messages Aff (HashMap String Concept)
+validate :: FilePath -> ValidationT Messages Aff (HashMap CollectionConstant (NonEmptyArray FileInfo))
 validate path = do
   lift $ liftEffect $ log "reading file list..."
 
@@ -119,12 +119,22 @@ validate path = do
 
   -- create a base dataset from concepts and entities
   ds <- validateBaseDataSet (Arr.concat concepts) (Arr.concat entities)
+  -- if there are errors, stop here
+  msgs <- getState
+  when (hasError msgs) do
+    _ <- vError
+      [ setError <<< messageFromIssue $
+          Issue "Validation stopped because of errors."
+      ]
+    pure unit
 
   -- validate each indicators. First we will need to find all csv files for the indicator
   datapointFiles <-
     case HM.lookup FI.DATAPOINTS fileMap of
       Nothing -> pure []
-      Just xs -> pure $ NEA.toArray xs
+      Just xs -> do
+        lift $ liftEffect $ log "validating datapoints..."
+        pure $ NEA.toArray xs
 
   let
     getIndicatorAndPkey fi =
@@ -134,8 +144,6 @@ validate path = do
 
     -- If we will change this line, be sure to also double check the unsafePartial line below.
     datapointFileGroups = Arr.groupAllBy (compare `on` getIndicatorAndPkey) datapointFiles
-
-  lift $ liftEffect $ log "validating datapoints..."
 
   _ <- for datapointFileGroups \group -> do
     let
@@ -158,11 +166,17 @@ validate path = do
   synonymFileInfos <-
     case HM.lookup FI.SYNONYMS fileMap of
       Nothing -> pure []
-      Just xs -> pure $ NEA.toArray xs
+      Just xs -> do
+        lift $ liftEffect $ log "validating synonym files..."
+        pure $ NEA.toArray xs
   synonymCsvFiles <- readAndParseCsvFiles synonymFileInfos
-  -- NEXT: parse with DataSet
+  traverse_ (\c -> validateCsvFileWithDataSet ds c) synonymCsvFiles
 
-  pure $ DS.getConcepts ds
+  -- check translation files
+  --
+  lift $ liftEffect $ log "validating translation files..."
+
+  pure $ fileMap
 
 -- | validate one indicator group (indicator with same primary keys)
 validateDatapointsFileGroup :: NonEmptyString -> NonEmptyList NonEmptyString -> DataSet -> Array CsvFile -> Validation Messages Unit
@@ -196,12 +210,13 @@ runMain path = launchAff_ do
   liftEffect $ log allmsgs
   case ds of
     Just ds_ -> do
-      -- liftEffect $ logShow ds_
+      -- liftEffect $ logShow $ HM.lookup FI.SYNONYMS ds_
       if hasError msgs then
         liftEffect $ log "❌ Dataset is invalid"
       else
         liftEffect $ log "✅ Dataset is valid"
-    Nothing -> liftEffect $ log "❌ Dataset is invalid"
+    Nothing ->
+      liftEffect $ log "❌ Dataset is invalid"
 
 -- main
 main :: Effect Unit

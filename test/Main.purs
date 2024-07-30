@@ -62,6 +62,7 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
             [ "abc"
             , "a_bc_123"
             , "a"
+            , "AAA"
             ]
         for_ validIds \s -> do
           let output = parseId s
@@ -69,8 +70,7 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
         let
           inValidIds =
             [ ""
-            , "a_bC_123"
-            , "B"
+            , "c?d"
             , "a-b-c"
             ]
         for_ inValidIds \s -> do
@@ -91,6 +91,7 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
             , "ddf--datapoints--indicator--by--geo.csv"
             , "ddf--datapoints--indicator--by--geo-geo--time.csv"
             , "folder/ddf--concepts.csv"
+            , "ddf--synonyms--geo.csv"
             ]
         for_ validFiles \f -> do
           let output = parseFileInfo f
