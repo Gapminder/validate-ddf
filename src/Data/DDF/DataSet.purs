@@ -217,7 +217,6 @@ parseEntityDomains conceptdb input =
 checkDuplicatedEntities :: EntitiesInput -> V Issues EntitiesInput
 checkDuplicatedEntities input =
   let
-    -- FIXME: move duplicated checking per file to CsvFile Parsing
     dups = dupsBy (compare `on` Ent.getIdAndFile) input
   in
     if Arr.length dups == 0 then
@@ -236,13 +235,86 @@ basedataset cdb edb = DataSet
   , _valueParsers: HM.empty
   }
 
--- FIXME:
+-- | check some property fields
+-- | 1. drillup should be entity set in the same domain
+-- | 1.1 (TODO) detect cycle dependencies in drillups
+checkDrillup :: ConceptDB -> V Issues ConceptDB
+checkDrillup concepts =
+  for_ (HM.values concepts)
+    ( \c ->
+        case Conc.getProp c "drill_up" of
+          Nothing -> pure unit
+          Just drillup ->
+            let
+              Tuple fp i = pathAndRow $ Conc.getInfo c
+              domain = unsafePartial $ fromJust $ Conc.getProp c "domain"
+            in
+              withRowInfo fp i $
+                parseJsonListVal drillup
+                  `andThen`
+                    (\lst -> traverse_ (\x -> lookupSetWithInDomain concepts x domain) (Value.getListValues lst))
+    )
+    `andThen` (\_ -> pure concepts)
+
+-- | entity sets and domains for a entity should be defined in concepts
 checkDomainAndSetExists :: ConceptDB -> EntityDB -> V Issues EntityDB
-checkDomainAndSetExists concepts entities = pure entities
+checkDomainAndSetExists concepts entities =
+  let
+    run :: String -> Array Entity -> V Issues Unit
+    run domain ents =
+      lookupDomain concepts domain
+        `andThen`
+          ( \_ -> for_ ents \e ->
+              let
+                sets = Id.value <$> Ent.getEntitySets e
+                Tuple fp _ = pathAndRow $ Ent.getItemInfo e
+              in
+                traverse_ (\x -> withRowInfo fp 0 $ lookupSetWithInDomain concepts x domain) sets
+          )
+  in
+    (sequence $ HM.toArrayBy run entities)
+      `andThen` (\_ -> pure entities)
+
+lookupDomain :: ConceptDB -> String -> V Issues Unit
+lookupDomain concepts x = case HM.lookup x concepts of
+  Nothing -> invalid
+    [ Issue $
+        "domain " <> x <> " is not defined in concepts, but there is a entity domain file for it."
+    ]
+  Just v -> case Conc.getType v of
+    Conc.EntityDomainC -> pure unit
+    _ -> invalid [ Issue $ "concept " <> x <> " is not an entity domain in dataset." ]
+
+-- lookupSet :: ConceptDB -> String -> V Issues Unit
+-- lookupSet concepts x = case HM.lookup x concepts of
+--   Nothing -> invalid [ Issue $ "entity set " <> x <> " is not defined in concepts." ]
+--   Just v -> case Conc.getType v of
+--     Conc.EntitySetC -> pure unit
+--     _ -> invalid [ Issue $ "concept " <> x <> " is not an entity set in dataset." ]
+
+lookupSetWithInDomain :: ConceptDB -> String -> String -> V Issues Unit
+lookupSetWithInDomain concepts set domain =
+  lookupDomain concepts domain
+    `andThen`
+      ( \_ -> case HM.lookup set concepts of
+          Nothing -> invalid [ Issue $ "entity set " <> set <> " is not defined in concepts." ]
+          Just v -> case Conc.getType v of
+            Conc.EntitySetC -> case Conc.getProp v "domain" of
+              Nothing -> invalid [ Issue $ "entity set " <> set <> " doesn't belong to any domain." ]
+              Just d ->
+                if d == domain then
+                  pure unit
+                else
+                  invalid [ Issue $ "entity set " <> set <> " doesn't belong to " <> domain <> " domain." ]
+            _ -> invalid [ Issue $ "concept " <> set <> " is not an entity set in dataset." ]
+
+      )
 
 parseBaseDataSet :: ConceptsInput -> EntitiesInput -> V Issues DataSet
 parseBaseDataSet conceptsInput entitiesInput =
   parseConcepts conceptsInput
+    `andThen`
+      checkDrillup
     `andThen`
       ( \cdb ->
           parseEntityDomains cdb entitiesInput

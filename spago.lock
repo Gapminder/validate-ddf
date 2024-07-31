@@ -45,6 +45,7 @@ workspace:
         - typelevel
         - unordered-collections
         - validation
+        - yoga-json
       test_dependencies: []
       build_plan:
         - aff
@@ -83,6 +84,7 @@ workspace:
         - identity
         - integers
         - invariant
+        - js-bigints
         - js-date
         - lazy
         - lcg
@@ -132,6 +134,9 @@ workspace:
         - unordered-collections
         - unsafe-coerce
         - validation
+        - variant
+        - yoga-json
+        - yoga-tree
   package_set:
     address:
       registry: 51.2.0
@@ -1033,6 +1038,14 @@ packages:
     dependencies:
       - control
       - prelude
+  js-bigints:
+    type: registry
+    version: 2.2.1
+    integrity: sha256-hKWZo9NxtsAaHmNXr6B8GY4c0olQbYLXPVGWm4TF2Ss=
+    dependencies:
+      - integers
+      - maybe
+      - prelude
   js-date:
     type: registry
     version: 8.0.0
@@ -1611,3 +1624,64 @@ packages:
       - foldable-traversable
       - newtype
       - prelude
+  variant:
+    type: registry
+    version: 8.0.0
+    integrity: sha256-SR//zQDg2dnbB8ZHslcxieUkCeNlbMToapvmh9onTtw=
+    dependencies:
+      - enums
+      - lists
+      - maybe
+      - partial
+      - prelude
+      - record
+      - tuples
+      - unsafe-coerce
+  yoga-json:
+    type: registry
+    version: 5.1.0
+    integrity: sha256-ei/fyvrh8fGgcqGrdRQ7+r6dwSYcfEGOFf5yKc1g7oE=
+    dependencies:
+      - arrays
+      - bifunctors
+      - control
+      - datetime
+      - effect
+      - either
+      - exceptions
+      - foldable-traversable
+      - foreign
+      - foreign-object
+      - free
+      - identity
+      - integers
+      - js-bigints
+      - js-date
+      - lists
+      - maybe
+      - newtype
+      - nullable
+      - numbers
+      - ordered-collections
+      - partial
+      - prelude
+      - record
+      - strings
+      - transformers
+      - tuples
+      - typelevel-prelude
+      - unsafe-coerce
+      - variant
+      - yoga-tree
+  yoga-tree:
+    type: registry
+    version: 1.0.0
+    integrity: sha256-wBjfEYrX1ffTHa/mE9B26C6td0FFfjYNnysTJ9/N8Hc=
+    dependencies:
+      - arrays
+      - control
+      - foldable-traversable
+      - free
+      - maybe
+      - prelude
+      - tailrec

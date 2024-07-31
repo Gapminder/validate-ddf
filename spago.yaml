@@ -42,6 +42,7 @@ package:
     - typelevel
     - unordered-collections
     - validation
+    - yoga-json
   name: ddf-validation-ng
 workspace:
   packageSet:

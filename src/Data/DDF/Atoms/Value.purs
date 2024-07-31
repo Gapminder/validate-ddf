@@ -2,21 +2,29 @@ module Data.DDF.Atoms.Value where
 
 import Prelude
 
+import Data.Array as Arr
 import Data.DDF.Atoms.Identifier (Identifier)
 import Data.DDF.Atoms.Identifier as Id
-import Data.List (List)
-import Data.Map (Map)
-import Data.Validation.Semigroup (V, invalid)
-import Data.Validation.Issue (Issue(..), Issues)
-import Data.String.NonEmpty (NonEmptyString, fromString)
-import Data.Maybe (Maybe(..), isJust)
+import Data.Either (Either(..))
+import Data.Generic.Rep (class Generic)
 import Data.HashSet (HashSet)
 import Data.HashSet as HS
-import Data.Array as Arr
-import Data.Number as Num
-import Data.String as Str
 import Data.Int as Int
+import Data.List (List)
+import Data.Map (Map)
+import Data.Maybe (Maybe(..), isJust)
+import Data.Number as Num
+import Data.Show.Generic (genericShow)
+import Data.String as Str
+import Data.String.NonEmpty (NonEmptyString, fromString)
+import Data.String.NonEmpty.Internal (NonEmptyString(..))
+import Data.Validation.Issue (Issue(..), Issues)
+import Data.Validation.Semigroup (V, invalid)
+import Foreign (MultipleErrors)
 import Partial.Unsafe (unsafeCrashWith)
+import Yoga.JSON as JSON
+import Yoga.JSON.Error (renderHumanError)
+
 
 -- | types of values, which appear in table cells.
 data Value
@@ -24,18 +32,15 @@ data Value
   | StrVal String -- normal string
   | NumVal Number -- numbers
   | BoolVal Boolean -- boolean
-  | TimeVal String -- bounded by a format
-  | ListVal String -- a list of other values.
-  | JsonVal String -- json string
+  | TimeVal String -- string in time format
+  | ListVal (Array String) -- a list of strings
+  | JsonListVal (Array String) -- a list of strings, encoded in json
+  | JsonVal String -- random json string
+
+derive instance genericValue :: Generic Value _
 
 instance showValue :: Show Value where
-  show (DomainVal x) = show x
-  show (StrVal x) = show x
-  show (NumVal x) = show x
-  show (BoolVal x) = show x
-  show (TimeVal x) = show x
-  show (ListVal x) = show x
-  show (JsonVal x) = show x
+  show = genericShow
 
 derive instance eqValue :: Eq Value
 
@@ -60,8 +65,14 @@ isEmpty (StrVal x) = Str.null x
 isEmpty (NumVal _) = true
 isEmpty (BoolVal _) = true
 isEmpty (TimeVal x) = Str.null x
-isEmpty (ListVal x) = Str.null x
+isEmpty (ListVal x) = Arr.null x
+isEmpty (JsonListVal x) = Arr.null x
 isEmpty (JsonVal x) = Str.null x
+
+getListValues :: Value -> Array String
+getListValues (ListVal x) = x
+getListValues (JsonListVal x) = x
+getListValues _ = []
 
 -- | check if string is empty
 parseNonEmptyString :: String -> V Issues NonEmptyString
@@ -134,3 +145,20 @@ parseTimeVal input =
     invalid [ Issue $ (show input) <> " is not a valid time value." ]
   where
     inputlen = Str.length input
+
+-- | parse a json list (mostly for drill ups), which is a list of string in Json format.
+parseJsonListVal :: ValueParser
+parseJsonListVal input =
+  if Str.null input then  -- empty string is valid too.
+    pure $ JsonListVal []
+  else
+    let
+      output :: Either MultipleErrors (Array String)
+      output = JSON.readJSON input
+    in
+      case output of
+        Left errs ->
+          invalid $ Arr.fromFoldable issues
+          where
+          issues = Issue <<< renderHumanError <$> errs
+        Right s -> pure $ JsonListVal s
