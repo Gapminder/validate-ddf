@@ -23,7 +23,7 @@ import Data.DDF.Atoms.Header (Header, headerVal, parseEntityHeader, parseGeneral
 import Data.DDF.Atoms.Header as Hd
 import Data.DDF.Atoms.Identifier (Identifier)
 import Data.DDF.Atoms.Identifier as Id
-import Data.DDF.Csv.FileInfo (CollectionInfo(..), FileInfo(..), DP)
+import Data.DDF.Csv.FileInfo (CollectionInfo(..), DP, FileInfo(..), parseFileInfo)
 import Data.DDF.Csv.FileInfo as FI
 import Data.DDF.Csv.FileInfo as FileInfo
 import Data.Either (Either(..), fromLeft, fromRight, isLeft)
@@ -306,12 +306,16 @@ findDupsForColumns headers values =
     Arr.fromFoldable $ map snd dups
 
 -- | main validation entry point
+-- | 1. check if the primary key column exists
+-- | 2. check if all columns are valid headers
+-- | 3. check if columns have duplicates
+-- | 4. check if csv content has duplicated rows by key columns.
 parseCsvFile :: CsvFileInput -> V Issues CsvFile
 parseCsvFile { fileInfo, csvContent } =
   case FileInfo.collection fileInfo of
     Concepts ->
       let
-        required = [ "concept", "concept_type" ]
+        required = [ "concept" ]
 
         vc =
           notEmptyCsv csvContent
@@ -334,7 +338,7 @@ parseCsvFile { fileInfo, csvContent } =
         vc =
           notEmptyCsv csvContent
             `andThen`
-              colsAreValidHeaders  -- Identifier + is--identifier headers
+              colsAreValidHeaders -- Identifier + is--identifier headers
             `andThen`
               noDupCols
             `andThen`
@@ -378,4 +382,13 @@ parseCsvFile { fileInfo, csvContent } =
               noDuplicatedByKey "synonym" fileInfo
       in
         mkCsvFile <$> pure fileInfo <*> vc
+    Translations target ->
+      parseFileInfo "./" target.path
+        `andThen`
+          -- validate base on the inner fileinfo.
+          ( \fi -> case FI.collection fi of
+              -- invalid: translation of translation
+              Translations _ -> invalid [ Issue $ FI.filepath fileInfo <> ": translation of translation is not allowed" ]
+              _ -> parseCsvFile { fileInfo: fi, csvContent: csvContent }
+          )
     otherwise -> invalid [ NotImplemented ]

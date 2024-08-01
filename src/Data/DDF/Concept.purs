@@ -18,10 +18,10 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.String as Str
 import Data.String.NonEmpty (NonEmptyString, toString)
+import Data.Tuple (Tuple(..))
 import Data.Validation.Issue (Issues, Issue(..))
 import Data.Validation.Semigroup (V, andThen, invalid)
 import Safe.Coerce (coerce)
-
 
 -- | Each Concept MUST have an Id and concept type.
 newtype Concept = Concept
@@ -130,7 +130,6 @@ isEntityDomain (Concept c) =
     EntityDomainC -> true
     _ -> false
 
-
 getProp :: Concept -> String -> Maybe String
 getProp (Concept c) p =
   M.lookup (Id.unsafeCreate p) c.props
@@ -138,7 +137,6 @@ getProp (Concept c) p =
 -- | The unvalidated concept record, which comes from reading csvfile.
 type ConceptInput =
   { conceptId :: String
-  , conceptType :: String
   , props :: Map Header String
   , _info :: Maybe ItemInfo
   }
@@ -147,19 +145,24 @@ type ConceptInput =
 parseConcept :: ConceptInput -> V Issues Concept
 parseConcept input =
   let
-    conceptId = notReserved input.conceptId
-      `andThen` Id.parseId
-    conceptType = parseConceptType input.conceptType
     -- FIXME: double check the Header -> Identifier convertion.
     props = mapKeys coerce input.props :: Map Identifier String
-
   in
-    (concept <$> conceptId <*> conceptType <*> pure props)
+    hasFieldAndPopValue "concept_type" props
+      `andThen`
+        ( \(Tuple conceptTypeStr props') ->
+            concept
+              <$>
+                ( notReserved input.conceptId
+                    `andThen` Id.parseId
+                )
+              <*> parseConceptType conceptTypeStr
+              <*> pure props'
+        )
       `andThen`
         checkMandatoryField
       `andThen`
         (\c -> pure $ setInfo input._info c)
-
 
 -- | some concept type require a column exists
 -- | for example if concept type is entity_set, then it
@@ -178,6 +181,12 @@ hasFieldAndGetValue field input =
   case M.lookup (Id.unsafeCreate field) input of
     Nothing -> invalid [ Issue $ "field " <> field <> " MUST exist for concept" ]
     Just v -> pure v
+
+hasFieldAndPopValue :: String -> Props -> V Issues (Tuple String Props)
+hasFieldAndPopValue field input =
+  case M.pop (Id.unsafeCreate field) input of
+    Nothing -> invalid [ Issue $ "field " <> field <> " MUST exist for concept" ]
+    Just x -> pure x
 
 nonEmptyField :: String -> String -> V Issues String
 nonEmptyField field input =
@@ -204,7 +213,7 @@ notReserved conceptId =
   else
     pure conceptId
   where
-    reservedConcepts_ = map Id.value reservedConcepts
+  reservedConcepts_ = map Id.value reservedConcepts
 
 -- TODO:
 -- parseConceptWithValueParsers :: create valid concept, then parse property columns.

@@ -16,13 +16,15 @@ import Data.List.Types (NonEmptyList)
 import Data.Maybe (Maybe(..))
 import Data.Set as Set
 import Data.Show.Generic (genericShow)
-import Data.String (Pattern(..), stripSuffix)
+import Data.String (Pattern(..), split, stripSuffix)
 import Data.String.NonEmpty (NonEmptyString(..), toString)
 import Data.String.NonEmpty as NES
+import Data.String.Utils as Str
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.Validation.Issue (Issue(..), Issues)
-import Data.Validation.Semigroup (V, invalid, toEither)
+import Data.Validation.Semigroup (V, andThen, invalid, toEither)
 import Node.Path (FilePath, basename)
+import Node.Path as Path
 import StringParser (Parser, choice, eof, runParser, sepBy1, sepEndBy1, string, try)
 
 -- | file info are information contains in file name.
@@ -42,7 +44,8 @@ data CollectionInfo
   | Entities Ent
   | DataPoints DP
   | Synonyms NonEmptyString
-  | Other NonEmptyString -- TODO: add metadata and translation
+  | Translations Target
+  | Other NonEmptyString -- TODO: add metadata
 
 type Ent = { domain :: NonEmptyString, set :: Maybe NonEmptyString }
 
@@ -52,6 +55,11 @@ type DP = -- TODO: constrains should be a list of list, because multiple items i
   , constrains :: NonEmptyList (Maybe NonEmptyString) -- length of pkeys should equal to length of constrains.
   }
 
+type Target =
+  { path :: FilePath
+  , language :: String
+  }
+
 instance showCollection :: Show CollectionInfo where
   show Concepts = "concepts"
   show (Entities e) = case e.set of
@@ -59,6 +67,7 @@ instance showCollection :: Show CollectionInfo where
     Just s -> "entity_domain: " <> show e.domain <> "; entnty_set: " <> show s
   show (DataPoints d) = "datapoints: " <> show d.indicator <> ", by: " <> (NES.joinWith "," d.pkeys)
   show (Synonyms s) = "synonyms for " <> toString s
+  show (Translations t) = "translation for " <> _.path t <> " in " <> _.language t
   show (Other x) = "custom collection: " <> show x
 
 -- | some constants
@@ -68,6 +77,7 @@ data CollectionConstant
   | ENTITIES
   | DATAPOINTS
   | SYNONYMS
+  | TRANSLATIONS
   | OTHERS
 
 derive instance genericCollectionConstant :: Generic CollectionConstant _
@@ -89,6 +99,7 @@ getCollectionType Concepts = CONCEPTS
 getCollectionType (Entities _) = ENTITIES
 getCollectionType (DataPoints _) = DATAPOINTS
 getCollectionType (Synonyms _) = SYNONYMS
+getCollectionType (Translations _) = TRANSLATIONS
 getCollectionType (Other _) = OTHERS
 
 -- | define Eq instance for collection info, useful to group the files
@@ -229,24 +240,61 @@ synonymFile = do
 getName :: String -> Maybe String
 getName = stripSuffix (Pattern ".csv")
 
-validateFileInfo :: FilePath -> V Issues FileInfo
-validateFileInfo fp = case getName $ basename fp of
+-- | Translation files parsers
+-- | we only need to analysis the target file so we don't do string parsing here.
+translationFile :: FilePath -> FilePath -> V Issues CollectionInfo
+translationFile root fp =
+  if isTranslationFile root fp then
+    let
+      -- isTranslationFile will check if fp startswith root
+      -- so we can get the relative path from root to fp without issue.
+      relpath = Path.relative root fp
+      segments = split (Pattern Path.sep) relpath
+    in
+      case A.take 3 segments of
+        [ "lang", language, _ ] ->
+          let
+            targetpath = Path.relative (Path.concat [ root, "lang", language ]) fp
+          in
+            pure $ Translations { path: targetpath, language: language }
+        _ -> invalid
+          [ InvalidCSV $
+              "not enough segments to extract target language apd target path for translation file " <> fp
+          ]
+  else
+    invalid [ InvalidCSV "not a translation file" ]
+
+isTranslationFile :: FilePath -> FilePath -> Boolean
+isTranslationFile root fp =
+  Str.startsWith langpath fp'
+  where
+  root' = Path.normalize root
+  fp' = Path.normalize fp
+  langpath = Path.concat [ root', "lang" ]
+
+validateFileInfo :: FilePath -> FilePath -> V Issues FileInfo
+validateFileInfo root fp = case getName $ basename fp of
   Nothing -> invalid [ InvalidCSV "not a csv file" ]
   Just fn ->
-    let
-      fileParser = choice
-        [ try conceptFile
-        , try entityFile
-        , try datapointFile
-        , try synonymFile
-        ]
-    in
-      case runParser fileParser fn of
-        Right ci -> pure $ FileInfo fp ci fn
-        Left err -> invalid [ InvalidCSV $ "error parsing file: " <> err.error ]
+    if isTranslationFile root fp then
+      translationFile root fp
+        `andThen`
+        (\ci -> pure $ FileInfo fp ci fn)
+    else
+      let
+        fileParser = choice
+          [ try conceptFile
+          , try entityFile
+          , try datapointFile
+          , try synonymFile
+          ]
+      in
+        case runParser fileParser fn of
+          Right ci -> pure $ FileInfo fp ci fn
+          Left err -> invalid [ InvalidCSV $ "error parsing file: " <> err.error ]
 
-parseFileInfo :: FilePath -> V Issues FileInfo
+parseFileInfo :: FilePath -> FilePath -> V Issues FileInfo
 parseFileInfo = validateFileInfo
 
-fromFilePath :: FilePath -> Either Issues FileInfo
-fromFilePath = toEither <<< validateFileInfo
+fromFilePath :: FilePath -> FilePath -> Either Issues FileInfo
+fromFilePath root fp = toEither $ validateFileInfo root fp

@@ -52,12 +52,12 @@ import Utils (getFiles)
 import Utils.GC (gc)
 
 -- | read all files
-readAllFileInfoForValidation :: Array FilePath -> Validation Messages (Array FileInfo)
-readAllFileInfoForValidation fs = do
+readAllFileInfoForValidation :: FilePath -> Array FilePath -> Validation Messages (Array FileInfo)
+readAllFileInfoForValidation root fs = do
   let
     -- parse filenames
     -- just yield the right ones, ignore lefts
-    ddfFiles = Arr.catMaybes $ map (\f -> hush $ FI.fromFilePath f) fs
+    ddfFiles = Arr.catMaybes $ map (\f -> hush $ FI.fromFilePath root f) fs
 
   when (isNothing $ Arr.head ddfFiles)
     $ vError
@@ -80,10 +80,10 @@ validate path = do
   lift $ liftEffect $ log "reading file list..."
 
   let
-    ignored = [ ".git", "etl", "lang", "assets" ]
+    ignored = [ ".git", "etl", "assets" ]
   fs <- lift $ getFiles path ignored
 
-  ddfFiles <- readAllFileInfoForValidation fs
+  ddfFiles <- readAllFileInfoForValidation path fs
 
   lift $ liftEffect $ log "validating concepts and entities..."
 
@@ -174,8 +174,16 @@ validate path = do
 
   -- check translation files
   --
-  lift $ liftEffect $ log "validating translation files..."
+  translationFileInfos <-
+    case HM.lookup FI.TRANSLATIONS fileMap of
+      Nothing -> pure []
+      Just xs -> do
+        lift $ liftEffect $ log "validating translation files..."
+        pure $ NEA.toArray xs
+  translationCsvFiles <- readAndParseCsvFiles translationFileInfos
+  traverse_ (\c -> validateCsvFileWithDataSet ds c) translationCsvFiles
 
+  -- return result
   pure $ fileMap
 
 -- | validate one indicator group (indicator with same primary keys)

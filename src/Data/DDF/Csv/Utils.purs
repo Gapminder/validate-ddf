@@ -44,7 +44,7 @@ import Utils (unsafeLookup)
 -- Utils
 
 -- | create ConceptInput for Concept parsing
-createConceptInput 
+createConceptInput
   :: CsvFile
   -> V Issues (Array ConceptInput)
 createConceptInput { fileInfo, csvContent } =
@@ -57,23 +57,20 @@ createConceptInput { fileInfo, csvContent } =
     case FI.collection fileInfo of
       FI.Concepts -> pure $ Arr.foldr func [] rows
         where
-        func (Tuple idx row) acc = 
+        func (Tuple idx row) acc =
           let
             rowMap = M.fromFoldable $ Arr.zip headers_ row
+            -- we have validated the key column "concept" exist in csv parsing
             conceptId = unsafeLookup (Hd.unsafeCreate "concept") rowMap
-            conceptType = unsafeLookup (Hd.unsafeCreate "concept_type") rowMap
-            props = rowMap #
-              ( M.delete (Hd.unsafeCreate "concept")
-                >>> M.delete (Hd.unsafeCreate "concept_type")
-              )
+            props = M.delete (Hd.unsafeCreate "concept") rowMap
             _info = Just $ iteminfo fp idx
           in
-            Arr.snoc acc {conceptId, conceptType, props, _info}
+            Arr.snoc acc {conceptId, props, _info}
       _ -> invalid [ Issue $ "can not create concept input for " <> show fileInfo ]
 
 
 -- | create EntityInput for Entity parsing
-createEntityInput 
+createEntityInput
   :: CsvFile
   -> V Issues (Array EntityInput)
 createEntityInput { fileInfo, csvContent } =
@@ -94,7 +91,7 @@ createEntityInput { fileInfo, csvContent } =
               Header domain
         entityDomain = domain
         entitySet = set
-        go (Tuple i row) acc = 
+        go (Tuple i row) acc =
           let
             propsMap = M.fromFoldable $ A.zip (NEA.toArray headers) row
             Tuple entityId props = unsafePartial $ fromJust $ M.pop entityCol propsMap
@@ -104,7 +101,7 @@ createEntityInput { fileInfo, csvContent } =
     _ -> invalid [ Issue $ "can not create entity input for " <> show fileInfo ]
 
 -- | create DataPointsInput for DataPoint parsing
-createDataPointsInput 
+createDataPointsInput
   :: CsvFile
   -> V Issues DataPointsInput
 createDataPointsInput { fileInfo, csvContent } =

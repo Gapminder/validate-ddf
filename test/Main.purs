@@ -92,9 +92,12 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
             , "ddf--datapoints--indicator--by--geo-geo--time.csv"
             , "folder/ddf--concepts.csv"
             , "ddf--synonyms--geo.csv"
+            , "lang/en-US/ddf--concepts.csv"
             ]
         for_ validFiles \f -> do
-          let output = parseFileInfo f
+          let
+            root = "./"
+            output = parseFileInfo root f
           output `shouldSatisfy` isValid
         let
           invalidFiles =
@@ -103,9 +106,12 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
             , ".gitignore"
             , "ddf--concepts--main.csv"
             , "ddf--datapoints--indicator--geo.csv"
+            , "lang/test.csv"
             ]
         for_ invalidFiles \f -> do
-          let output = parseFileInfo f
+          let
+            root = "./"
+            output = parseFileInfo root f
           output `shouldNotSatisfy` isValid
       it "filenames vs headers" do
         let
@@ -115,18 +121,21 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
             , [ "geo", "entity_domain", "Geo" ]
             ]
           output = ado
-            fileInfo <- parseFileInfo fileName
+            fileInfo <- parseFileInfo "./" fileName
             in parseCsvFile { fileInfo: fileInfo, csvContent: Csv.parseCsvContent $ Csv.createRawContent rawCsvContent }
         output `shouldSatisfy` isValid
       it "concept validation - one concept" do
         let
           input =
             { conceptId: "testing"
-            , conceptType: "measure"
             , props: Map.fromFoldable
                 [ ( Tuple
                       (Hd.unsafeCreate "name")
                       "testing_name"
+                  )
+                , ( Tuple
+                      (Hd.unsafeCreate "concept_type")
+                      "measure"
                   )
                 ]
             , _info: Just $ iteminfo "a.csv" 1
