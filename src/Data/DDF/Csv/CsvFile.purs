@@ -49,7 +49,7 @@ import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.String.Utils (startsWith)
 import Data.Traversable (class Foldable, sequence, traverse)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Validation.Issue (Issue(..), Issues)
+import Data.Validation.Issue (Issue(..), Issues, updateFilePath)
 import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither)
 import Data.Validation.ValidationT (Validation, vError, vWarning)
 import Debug (trace, traceTime)
@@ -391,4 +391,6 @@ parseCsvFile { fileInfo, csvContent } =
               Translations _ -> invalid [ Issue $ FI.filepath fileInfo <> ": translation of translation is not allowed" ]
               _ -> parseCsvFile { fileInfo: fi, csvContent: csvContent }
           )
+        `andThen` -- we will use the parsed csv content and the original fileinfo
+          (\{ csvContent: vc } -> pure $ mkCsvFile fileInfo vc)
     otherwise -> invalid [ NotImplemented ]

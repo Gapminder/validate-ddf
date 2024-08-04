@@ -46,7 +46,7 @@ export function rowsToColumnsImpl(rows) {
       else {
         columns[j].push(rows[i][j]);
       }
-      
+
     }
   }
 

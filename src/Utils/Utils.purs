@@ -43,7 +43,7 @@ getFiles x excl = do
     isCsvFile path = extname (basename path) == ".csv"
 
     go f st acc
-      | (isFile st && isCsvFile f) = pure $ Arr.cons f acc
+      | (isFile st && isCsvFile f) = pure $ Arr.snoc acc f
       | (isDirectory st) = do
           dirfs <- getFiles f []
           pure $ acc <> dirfs

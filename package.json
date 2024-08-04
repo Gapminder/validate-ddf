@@ -22,7 +22,8 @@
     "src/cli.js"
   ],
   "dependencies": {
-    "csv-parse": "^5.5.6"
+    "csv-parse": "^5.5.6",
+    "json-stable-stringify": "^1.1.1"
   },
   "devDependencies": {
     "esbuild": "^0.14.54",

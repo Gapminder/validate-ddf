@@ -1,8 +1,13 @@
-concept,concept_type,name,domain
-name,string,Name,
-geo,entity_domain,geo,
-country,entity_set,country,kkk
-age,entity_domain,Age,
-indicator,measure,Indicator,
-indicator2,measure,Indicator2,
-time,time,Time,
+concept,concept_type,name,domain,drill_up
+name,string,Name,,
+geo,entity_domain,geo,,
+country,entity_set,country,geo,
+city,entity_set,city,geo,"[""country""]"
+board,entity_set,board,age,
+age,entity_domain,Age,,
+indicator,measure,Indicator,,
+indicator2,measure,Indicator2,,
+time,time,Time,,
+synonym,string,Synonym,,
+domain,string,Domain,,
+drill_up,string,drill up,,

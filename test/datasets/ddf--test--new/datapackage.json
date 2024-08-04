@@ -8,9 +8,9 @@
     "description": "Test DDF",
     "author": "Gapminder",
     "license": "CC-BY-4.0",
+    "created": "2024-07-31T07:57:59.971377+00:00",
     "translations": [],
     "version": "0.0.1",
-    "created": "2022-10-02T02:59:10.856944+00:00",
     "resources": [
         {
             "name": "ddf--concepts",
@@ -25,9 +25,139 @@
                     },
                     {
                         "name": "name"
+                    },
+                    {
+                        "name": "domain"
+                    },
+                    {
+                        "name": "drill_up"
                     }
                 ],
                 "primaryKey": "concept"
+            }
+        },
+        {
+            "name": "ddf--datapoints--indicator--by--geo--time",
+            "path": "ddf--datapoints--indicator--by--geo--time.csv",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "geo"
+                    },
+                    {
+                        "name": "time"
+                    },
+                    {
+                        "name": "indicator"
+                    }
+                ],
+                "primaryKey": [
+                    "geo",
+                    "time"
+                ]
+            }
+        },
+        {
+            "name": "ddf--datapoints--indicator--by--geo-swe--time",
+            "path": "ddf--datapoints--indicator--by--geo-swe--time.csv",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "geo",
+                        "constraints": {
+                            "enum": [
+                                "swe"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "time"
+                    },
+                    {
+                        "name": "indicator"
+                    }
+                ],
+                "primaryKey": [
+                    "geo",
+                    "time"
+                ]
+            }
+        },
+        {
+            "name": "ddf--datapoints--indicator2--by--geo-chn--time",
+            "path": "ddf--datapoints--indicator2--by--geo-chn--time.csv",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "geo",
+                        "constraints": {
+                            "enum": [
+                                "chn"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "time"
+                    },
+                    {
+                        "name": "indicator2"
+                    }
+                ],
+                "primaryKey": [
+                    "geo",
+                    "time"
+                ]
+            }
+        },
+        {
+            "name": "ddf--entities--age",
+            "path": "ddf--entities--age.csv",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "age"
+                    },
+                    {
+                        "name": "name"
+                    },
+                    {
+                        "name": "is--board"
+                    }
+                ],
+                "primaryKey": "age"
+            }
+        },
+        {
+            "name": "ddf--entities--geo--country",
+            "path": "ddf--entities--geo--country.csv",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "geo"
+                    },
+                    {
+                        "name": "name"
+                    },
+                    {
+                        "name": "is--country"
+                    }
+                ],
+                "primaryKey": "geo"
+            }
+        },
+        {
+            "name": "ddf--entities--geo",
+            "path": "ddf--entities--geo.csv",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "geo"
+                    },
+                    {
+                        "name": "name"
+                    }
+                ],
+                "primaryKey": [ "geo" ]
             }
         }
     ],
@@ -46,14 +176,150 @@
                 "primaryKey": [
                     "concept"
                 ],
+                "value": "domain",
+                "resources": [
+                    "ddf--concepts"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "concept"
+                ],
+                "value": "drill_up",
+                "resources": [
+                    "ddf--concepts"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "concept"
+                ],
                 "value": "name",
                 "resources": [
                     "ddf--concepts"
                 ]
             }
         ],
-        "entities": [],
-        "datapoints": [],
+        "entities": [
+            {
+                "primaryKey": [
+                    "age"
+                ],
+                "value": "is--board",
+                "resources": [
+                    "ddf--entities--age"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "board"
+                ],
+                "value": "is--board",
+                "resources": [
+                    "ddf--entities--age"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "country"
+                ],
+                "value": "is--country",
+                "resources": [
+                    "ddf--entities--geo--country"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "geo"
+                ],
+                "value": "is--country",
+                "resources": [
+                    "ddf--entities--geo--country"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "age"
+                ],
+                "value": "name",
+                "resources": [
+                    "ddf--entities--age"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "board"
+                ],
+                "value": "name",
+                "resources": [
+                    "ddf--entities--age"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "country"
+                ],
+                "value": "name",
+                "resources": [
+                    "ddf--entities--geo",
+                    "ddf--entities--geo--country"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "geo"
+                ],
+                "value": "name",
+                "resources": [
+                    "ddf--entities--geo",
+                    "ddf--entities--geo--country"
+                ]
+            }
+        ],
+        "datapoints": [
+            {
+                "primaryKey": [
+                    "country",
+                    "time"
+                ],
+                "value": "indicator",
+                "resources": [
+                    "ddf--datapoints--indicator--by--geo--time",
+                    "ddf--datapoints--indicator--by--geo-swe--time"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "geo",
+                    "time"
+                ],
+                "value": "indicator",
+                "resources": [
+                    "ddf--datapoints--indicator--by--geo--time",
+                    "ddf--datapoints--indicator--by--geo-swe--time"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "country",
+                    "time"
+                ],
+                "value": "indicator2",
+                "resources": [
+                    "ddf--datapoints--indicator2--by--geo-chn--time"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "geo",
+                    "time"
+                ],
+                "value": "indicator2",
+                "resources": [
+                    "ddf--datapoints--indicator2--by--geo-chn--time"
+                ]
+            }
+        ],
         "synonyms": []
     }
 }

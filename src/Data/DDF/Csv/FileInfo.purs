@@ -31,7 +31,13 @@ import StringParser (Parser, choice, eof, runParser, sepBy1, sepEndBy1, string, 
 -- | it consists of 3 parts
 -- | the full file path, the collection info object and resource name
 -- | resource name is useful in datapackage.
-data FileInfo = FileInfo FilePath CollectionInfo String
+type FileInfo =
+  { filepath :: String
+  , collectionInfo :: CollectionInfo
+  }
+
+makeFileInfo :: String -> CollectionInfo -> FileInfo
+makeFileInfo filepath collectionInfo = { filepath, collectionInfo }
 
 -- | collection info
 -- | there are 5 collections in DDF
@@ -110,9 +116,6 @@ instance eqCollection :: Eq CollectionInfo where
 instance ordCollection :: Ord CollectionInfo where
   compare a b = compare (getCollectionType a) (getCollectionType b)
 
-instance showFileInfo :: Show FileInfo where
-  show (FileInfo fp ci _) = "file: " <> fp <> "; collection: " <> show ci
-
 -- | compare the collection of datapoints, for sorting and grouping indicator files.
 compareDP :: CollectionInfo -> CollectionInfo -> Ordering
 compareDP (DataPoints dp1) (DataPoints dp2)
@@ -121,22 +124,19 @@ compareDP (DataPoints dp1) (DataPoints dp2)
 compareDP _ _ = EQ -- otherfiles are grouped together
 
 isConceptFile :: FileInfo -> Boolean
-isConceptFile (FileInfo _ c _) = getCollectionType c == CONCEPTS
+isConceptFile { collectionInfo } = getCollectionType collectionInfo == CONCEPTS
 
 isEntitiesFile :: FileInfo -> Boolean
-isEntitiesFile (FileInfo _ c _) = getCollectionType c == ENTITIES
+isEntitiesFile { collectionInfo } = getCollectionType collectionInfo == ENTITIES
 
 isDataPointsFile :: FileInfo -> Boolean
-isDataPointsFile (FileInfo _ c _) = getCollectionType c == DATAPOINTS
+isDataPointsFile { collectionInfo } = getCollectionType collectionInfo == DATAPOINTS
 
 filepath :: FileInfo -> FilePath
-filepath (FileInfo fp _ _) = fp
+filepath = _.filepath
 
 collection :: FileInfo -> CollectionInfo
-collection (FileInfo _ c _) = c
-
-resourceName :: FileInfo -> String
-resourceName (FileInfo _ _ n) = n
+collection = _.collectionInfo
 
 -- | filter a collection from array of fileinfos
 getCollectionFiles :: String -> Array FileInfo -> Array FileInfo
@@ -279,7 +279,7 @@ validateFileInfo root fp = case getName $ basename fp of
     if isTranslationFile root fp then
       translationFile root fp
         `andThen`
-        (\ci -> pure $ FileInfo fp ci fn)
+          (\ci -> pure $ makeFileInfo fp ci)
     else
       let
         fileParser = choice
@@ -290,7 +290,7 @@ validateFileInfo root fp = case getName $ basename fp of
           ]
       in
         case runParser fileParser fn of
-          Right ci -> pure $ FileInfo fp ci fn
+          Right ci -> pure $ makeFileInfo fp ci
           Left err -> invalid [ InvalidCSV $ "error parsing file: " <> err.error ]
 
 parseFileInfo :: FilePath -> FilePath -> V Issues FileInfo

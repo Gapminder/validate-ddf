@@ -54,7 +54,7 @@ type RawCsvContent =
 
 type CsvColumn = Array String
 
-type CsvContent = 
+type CsvContent =
   { headers :: Array String
   , index :: Array Int
   , columns :: Array (Array String)
@@ -62,6 +62,7 @@ type CsvContent =
 
 foreign import parseCsvImpl :: String -> EffectFnAff (Array (Array String))
 
+-- | Read entire csv
 readCsv :: FilePath -> Aff (Array (Array String)) -- NOTE: this will not handle exceptions from the js side.
 readCsv x = do
   csvContent <- readTextFile UTF8 x
@@ -100,13 +101,13 @@ createRawContent recs = { headers: headers, rows: rows }
 filterBadRows :: RawCsvContent -> (Tuple (Array Int) RawCsvContent)
 filterBadRows rcsv@{ headers, rows } = case headers of
   Nothing -> Tuple [] rcsv
-  Just hs -> 
-    case rows of 
+  Just hs ->
+    case rows of
       Nothing -> Tuple [] rcsv
       Just rs -> Tuple (map getLineNo no) {headers: headers, rows: Just yes}
         where
         headerLength = length hs
-        func row = 
+        func row =
           if (length $ getRow row) == headerLength then true
           else false
         {yes, no} = partition func rs
@@ -122,7 +123,7 @@ parseCsvContent :: RawCsvContent -> CsvContent
 parseCsvContent { headers, rows } = case headers of
   Nothing -> { headers: [], index: [], columns: [] }
   Just hs ->
-    case rows of 
+    case rows of
       Nothing -> { headers: hs, index: [], columns: emptyCols }
         where
         emptyCols = replicate (length hs) []

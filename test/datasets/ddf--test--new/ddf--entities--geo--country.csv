@@ -1,3 +1,4 @@
-geo,name,is--country
+country,name,is--country
 chn,CHN,TRUE
 usa,USA,TRUE
+swe,SWE,TRUE

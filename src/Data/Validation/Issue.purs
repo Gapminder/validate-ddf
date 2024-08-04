@@ -41,6 +41,15 @@ withRowInfo :: forall a. FilePath -> Int -> V Issues a -> V Issues a
 withRowInfo fp row =
   validation (\issues -> invalid $ map (toInvaildItem fp row) issues) pure
 
+-- | update the file of an invalid item
+updateFilePath :: forall a. FilePath -> V Issues a -> V Issues a
+updateFilePath fp =
+  let
+    update (InvalidItem _ i msg) = InvalidItem fp i msg
+    update other = other
+  in
+    validation (\issues -> invalid $ map update issues) pure
+
 -- | extract the invalid value from InvalidValue
 extractInvalidValue :: Issue -> String
 extractInvalidValue (InvalidValue str _) = str

@@ -6,6 +6,7 @@ import Prelude
 
 import Control.Monad.State (get, lift)
 import Control.Monad.Trans.Class (lift)
+import Data.Argonaut (encodeJson, stringifyWithIndent)
 import Data.Array as Arr
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as NEA
@@ -28,6 +29,8 @@ import Data.Function (on)
 import Data.HashMap (HashMap)
 import Data.HashMap as HM
 import Data.JSON.DataPackage (datapackageExists)
+import Data.JSON.DataPackage as DataPackage
+import Data.JSON.StableStringify (stableStringify)
 import Data.List.Types (NonEmptyList)
 import Data.Maybe (Maybe(..), fromJust, fromMaybe, isNothing)
 import Data.String (joinWith)
@@ -35,7 +38,7 @@ import Data.String as Str
 import Data.String.NonEmpty (toString)
 import Data.String.NonEmpty as NES
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
-import Data.Traversable (for, sequence, traverse_)
+import Data.Traversable (for, for_, sequence, traverse_)
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.Validation.Issue (Issue(..))
 import Data.Validation.Result (Messages, hasError, messageFromIssue, setError, showMessage)
@@ -50,6 +53,7 @@ import Node.Process (argv)
 import Partial.Unsafe (unsafePartial)
 import Utils (getFiles)
 import Utils.GC (gc)
+import Yoga.JSON as JSON
 
 -- | read all files
 readAllFileInfoForValidation :: FilePath -> Array FilePath -> Validation Messages (Array FileInfo)
@@ -80,7 +84,7 @@ validate path = do
   lift $ liftEffect $ log "reading file list..."
 
   let
-    ignored = [ ".git", "etl", "assets" ]
+    ignored = [ ".git", "etl", "assets", "langsplit"]
   fs <- lift $ getFiles path ignored
 
   ddfFiles <- readAllFileInfoForValidation path fs
@@ -119,6 +123,11 @@ validate path = do
 
   -- create a base dataset from concepts and entities
   ds <- validateBaseDataSet (Arr.concat concepts) (Arr.concat entities)
+  -- also generate datapackage resources
+  let
+    resources = DataPackage.createResources path $ conceptCsvFiles <> entityCsvFiles
+  -- lift $ liftEffect $ log $ stableStringify 2 $ JSON.write resources
+
   -- if there are errors, stop here
   msgs <- getState
   when (hasError msgs) do
@@ -211,7 +220,7 @@ validateDatapointsFileGroup indicator pkeys ds csvfiles =
 --
 runMain :: FilePath -> Effect Unit
 runMain path = launchAff_ do
-  liftEffect $ log "v0.0.9dev"
+  liftEffect $ log "v0.0.9"
   (Tuple msgs ds) <- runValidationT $ validate path
   let
     allmsgs = joinWith "\n" $ map showMessage msgs
