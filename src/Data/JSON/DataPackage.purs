@@ -2,31 +2,38 @@ module Data.JSON.DataPackage where
 
 import Prelude
 
-import Data.Argonaut.Parser (jsonParser)
+import Control.Monad.Except (runExcept)
 import Data.Array as Arr
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as NEA
 import Data.DDF.Csv.CsvFile (CsvFile)
 import Data.DDF.Csv.FileInfo as FI
 import Data.DDF.DataSet (DataSet(..))
+import Data.Either (Either(..))
 import Data.HashMap (HashMap)
 import Data.HashMap as HM
 import Data.List (List)
 import Data.List.NonEmpty as NEL
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
+import Data.String (joinWith)
 import Data.String as Str
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.String.NonEmpty.Internal as NES
 import Data.Tuple (Tuple(..), snd)
-import Data.Validation.Issue (Issues, Issue(..))
+import Data.Validation.Issue (Issue(..), Issues)
 import Data.Validation.Semigroup (V, invalid)
 import Effect (Effect)
-import Node.FS.Sync (exists, readFile)
+import Foreign (Foreign)
+import Foreign.Index (readProp)
+import Node.Encoding as Encoding
+import Node.FS.Sync (exists, readFile, readTextFile)
 import Node.Path (FilePath)
 import Node.Path as PATH
 import Node.Path as Path
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
+import Yoga.JSON as JSON
+import Yoga.JSON.Error (renderHumanError)
 
 type DataPackage = Record
   ( resources :: Array Resource
@@ -164,7 +171,7 @@ createResources root xs = snd $ Arr.foldl go (Tuple HM.empty []) xs
     in
       (Tuple seenNames' res')
 
--- NEXT: add ddfSchema generation.
+-- TODO: add ddfSchema generation.
 -- 1. create mapping domain id -> domain entity -> all sets
 -- 2. create a mapping primary key and value -> resource list
 -- 2.1 for each row, find the sets for all entity columns. and produce available primary keys combinations.
@@ -174,3 +181,31 @@ createResources root xs = snd $ Arr.foldl go (Tuple HM.empty []) xs
 -- I think I have to read all csv files again. So it sould be Aff (Tuple String ...) for output
 createDdfSchema :: FilePath -> DataSet -> Array Resource -> Tuple String (Array DdfSchema)
 createDdfSchema root ds resources = Tuple "wip" []
+
+-- NEXT: try to read datapackage.json, and only read the resources part.
+-- And then we can do all validations we need.
+readDataPackage :: FilePath -> Effect (Either String (Array Resource))
+readDataPackage fp = do
+  content <- readTextFile Encoding.UTF8 fp
+  let
+    resources = do
+      json <- JSON.parseJSON content
+      prop <- readProp "resources" json
+      JSON.read' prop
+
+  case runExcept resources of
+    Left e -> pure $ Left $ joinWith "\n" $ Arr.fromFoldable $ map renderHumanError e
+    Right x -> pure $ Right x
+
+
+-- | compare 2 set of resources
+-- it's not easy to report line number in json.
+-- things to consider
+-- when to check datapackage (base on mode!)
+-- how to compare resources?
+compareResources :: Array Resource -> Array Resource -> V Issues Unit
+compareResources res1 res2 = pure unit
+
+
+-- step1: validate missing files: consturct a tuple of same length array of resource
+-- step2: zip 2 resource, compare each item's primary key and fields.
