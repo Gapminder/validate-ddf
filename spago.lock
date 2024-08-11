@@ -26,6 +26,7 @@ workspace:
         - node-process
         - nonempty
         - numbers
+        - optparse
         - ordered-collections
         - partial
         - pipes
@@ -73,6 +74,7 @@ workspace:
         - enums
         - exceptions
         - exists
+        - exitcodes
         - foldable-traversable
         - foreign
         - foreign-object
@@ -102,6 +104,8 @@ workspace:
         - now
         - nullable
         - numbers
+        - open-memoize
+        - optparse
         - ordered-collections
         - orders
         - parallel
@@ -903,6 +907,12 @@ packages:
     integrity: sha256-A0JQHpTfo1dNOj9U5/Fd3xndlRSE0g2IQWOGor2yXn8=
     dependencies:
       - unsafe-coerce
+  exitcodes:
+    type: registry
+    version: 4.0.0
+    integrity: sha256-4wxViTbyOoyKJ/WaRGI6+hZmgMKI5Miv16lSwefiLSM=
+    dependencies:
+      - enums
   foldable-traversable:
     type: registry
     version: 6.0.0
@@ -1229,6 +1239,58 @@ packages:
     dependencies:
       - functions
       - maybe
+  open-memoize:
+    type: registry
+    version: 6.1.0
+    integrity: sha256-ws/Cix/wgUKvrbPPxTqDSGCPpkTIvP1adTYLHAquBC4=
+    dependencies:
+      - console
+      - effect
+      - either
+      - integers
+      - lazy
+      - lists
+      - maybe
+      - partial
+      - prelude
+      - psci-support
+      - strings
+      - tuples
+  optparse:
+    type: registry
+    version: 5.0.1
+    integrity: sha256-cEzEkNW4q0gZlXl4z0zn+H2vs6l2UAp7NPHCsois73k=
+    dependencies:
+      - aff
+      - arrays
+      - bifunctors
+      - console
+      - control
+      - effect
+      - either
+      - enums
+      - exists
+      - exitcodes
+      - foldable-traversable
+      - free
+      - gen
+      - integers
+      - lazy
+      - lists
+      - maybe
+      - newtype
+      - node-buffer
+      - node-process
+      - node-streams
+      - nonempty
+      - numbers
+      - open-memoize
+      - partial
+      - prelude
+      - strings
+      - tailrec
+      - transformers
+      - tuples
   ordered-collections:
     type: registry
     version: 3.2.0

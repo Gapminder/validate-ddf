@@ -23,6 +23,7 @@ package:
     - node-process
     - nonempty
     - numbers
+    - optparse
     - ordered-collections
     - partial
     - pipes

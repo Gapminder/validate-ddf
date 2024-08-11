@@ -8,7 +8,7 @@
     "description": "Test DDF",
     "author": "Gapminder",
     "license": "CC-BY-4.0",
-    "created": "2024-07-31T07:57:59.971377+00:00",
+    "created": "2024-08-04T17:05:25.384991+00:00",
     "translations": [],
     "version": "0.0.1",
     "resources": [
@@ -33,7 +33,9 @@
                         "name": "drill_up"
                     }
                 ],
-                "primaryKey": "concept"
+                "primaryKey": [
+                    "concept"
+                ]
             }
         },
         {
@@ -124,7 +126,9 @@
                         "name": "is--board"
                     }
                 ],
-                "primaryKey": "age"
+                "primaryKey": [
+                    "age"
+                ]
             }
         },
         {
@@ -133,7 +137,7 @@
             "schema": {
                 "fields": [
                     {
-                        "name": "geo"
+                        "name": "country"
                     },
                     {
                         "name": "name"
@@ -142,7 +146,9 @@
                         "name": "is--country"
                     }
                 ],
-                "primaryKey": "geo"
+                "primaryKey": [
+                    "country"
+                ]
             }
         },
         {
@@ -157,7 +163,26 @@
                         "name": "name"
                     }
                 ],
-                "primaryKey": [ "geo" ]
+                "primaryKey": [
+                    "geo"
+                ]
+            }
+        },
+        {
+            "name": "ddf--entities--geo-1",
+            "path": "extra geos/ddf--entities--geo.csv",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "geo"
+                    },
+                    {
+                        "name": "name"
+                    }
+                ],
+                "primaryKey": [
+                    "geo"
+                ]
             }
         }
     ],
@@ -212,25 +237,7 @@
             },
             {
                 "primaryKey": [
-                    "board"
-                ],
-                "value": "is--board",
-                "resources": [
-                    "ddf--entities--age"
-                ]
-            },
-            {
-                "primaryKey": [
                     "country"
-                ],
-                "value": "is--country",
-                "resources": [
-                    "ddf--entities--geo--country"
-                ]
-            },
-            {
-                "primaryKey": [
-                    "geo"
                 ],
                 "value": "is--country",
                 "resources": [
@@ -248,20 +255,10 @@
             },
             {
                 "primaryKey": [
-                    "board"
-                ],
-                "value": "name",
-                "resources": [
-                    "ddf--entities--age"
-                ]
-            },
-            {
-                "primaryKey": [
                     "country"
                 ],
                 "value": "name",
                 "resources": [
-                    "ddf--entities--geo",
                     "ddf--entities--geo--country"
                 ]
             },
@@ -272,22 +269,11 @@
                 "value": "name",
                 "resources": [
                     "ddf--entities--geo",
-                    "ddf--entities--geo--country"
+                    "ddf--entities--geo-1"
                 ]
             }
         ],
         "datapoints": [
-            {
-                "primaryKey": [
-                    "country",
-                    "time"
-                ],
-                "value": "indicator",
-                "resources": [
-                    "ddf--datapoints--indicator--by--geo--time",
-                    "ddf--datapoints--indicator--by--geo-swe--time"
-                ]
-            },
             {
                 "primaryKey": [
                     "geo",
@@ -297,16 +283,6 @@
                 "resources": [
                     "ddf--datapoints--indicator--by--geo--time",
                     "ddf--datapoints--indicator--by--geo-swe--time"
-                ]
-            },
-            {
-                "primaryKey": [
-                    "country",
-                    "time"
-                ],
-                "value": "indicator2",
-                "resources": [
-                    "ddf--datapoints--indicator2--by--geo-chn--time"
                 ]
             },
             {

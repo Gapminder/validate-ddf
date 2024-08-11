@@ -4,8 +4,12 @@ import App.Validations
 import Debug
 import Prelude
 
+import App.Cli (CliOptions)
+import App.Cli as Cli
 import Control.Monad.State (get, lift)
 import Control.Monad.Trans.Class (lift)
+import Control.Promise (Promise)
+import Control.Promise as Promise
 import Data.Argonaut (encodeJson, stringifyWithIndent)
 import Data.Array as Arr
 import Data.Array.NonEmpty (NonEmptyArray)
@@ -48,8 +52,10 @@ import Effect (Effect)
 import Effect.Aff (Aff, launchAff, launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Console (log, logShow)
+import Foreign (Foreign)
 import Node.Path (FilePath)
-import Node.Process (argv)
+import Node.Process (argv, setExitCode)
+import Options.Applicative (execParser)
 import Partial.Unsafe (unsafePartial)
 import Utils (getFiles)
 import Utils.GC (gc)
@@ -84,7 +90,7 @@ validate path = do
   lift $ liftEffect $ log "reading file list..."
 
   let
-    ignored = [ ".git", "etl", "assets", "langsplit"]
+    ignored = [ ".git", "etl", "assets", "langsplit" ]
   fs <- lift $ getFiles path ignored
 
   ddfFiles <- readAllFileInfoForValidation path fs
@@ -159,12 +165,12 @@ validate path = do
       -- we have veritified on last step so we can use the fromJust function.
       (Tuple indicator pkeys) = unsafePartial $ fromJust $ getIndicatorAndPkey $ NEA.head group
 
-    lift $ liftEffect $ log $ "indicator: "
-      <> show (toString indicator)
-      <> ", by: "
-      <> (Str.joinWith ", " $ Arr.fromFoldable (map toString pkeys))
-      <> ", total files: "
-      <> show (NEA.length group)
+    -- lift $ liftEffect $ log $ "indicator: "
+    --   <> show (toString indicator)
+    --   <> ", by: "
+    --   <> (Str.joinWith ", " $ Arr.fromFoldable (map toString pkeys))
+    --   <> ", total files: "
+    --   <> show (NEA.length group)
 
     -- read all csv files for the group
     dpscsvFiles <- readAndParseCsvFiles $ NEA.toArray group
@@ -195,6 +201,12 @@ validate path = do
   -- return result
   pure $ fileMap
 
+-- | js promise for the validation
+validate' :: FilePath -> Effect (Promise Foreign)
+validate' fp = Promise.fromAff do
+  (Tuple msgs _) <- runValidationT $ validate fp
+  pure $ JSON.write msgs
+
 -- | validate one indicator group (indicator with same primary keys)
 validateDatapointsFileGroup :: NonEmptyString -> NonEmptyList NonEmptyString -> DataSet -> Array CsvFile -> Validation Messages Unit
 validateDatapointsFileGroup indicator pkeys ds csvfiles =
@@ -217,14 +229,21 @@ validateDatapointsFileGroup indicator pkeys ds csvfiles =
               Just dps' -> validateDataPointsWithDataSet ds dps'
         )
 
---
-runMain :: FilePath -> Effect Unit
-runMain path = launchAff_ do
-  liftEffect $ log "v0.0.9"
+-- | a function that accepts cli options and run the validation
+runMain :: CliOptions -> Effect Unit
+runMain opts = launchAff_ do
+  let
+    path = _.targetPath opts
+    noWarning = _.noWarning opts
+
+  liftEffect $ log "v0.1.0"
   (Tuple msgs ds) <- runValidationT $ validate path
   let
-    allmsgs = joinWith "\n" $ map showMessage msgs
-  liftEffect $ log allmsgs
+    msgsToShow =
+      if noWarning then Arr.filter (\x -> not $ _.isWarning x) msgs
+      else msgs
+    msgsStr = joinWith "\n" $ map showMessage msgsToShow
+  liftEffect $ log msgsStr
   case ds of
     Just ds_ -> do
       -- liftEffect $ logShow $ HM.lookup FI.SYNONYMS ds_
@@ -234,12 +253,9 @@ runMain path = launchAff_ do
         liftEffect $ log "✅ Dataset is valid"
     Nothing ->
       liftEffect $ log "❌ Dataset is invalid"
+  when (hasError msgs) do
+    liftEffect $ setExitCode 1
 
--- main
+-- | main function to run under terminals
 main :: Effect Unit
-main = do
-  -- get path
-  path <- argv
-  case path Arr.!! 2 of
-    Nothing -> runMain "./"
-    Just fp -> runMain fp
+main = runMain =<< execParser Cli.opts

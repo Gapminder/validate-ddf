@@ -44,7 +44,7 @@ import Utils (getFiles)
 testMain :: Effect Unit
 testMain = do
   path <- resolve [] "test/datasets/ddf--test--new"
-  M.runMain (path)
+  M.runMain { targetPath: path, noWarning: false, mode: "filenames", generateDP: true }
 
 main :: Effect Unit
 main = launchAff_ $ runSpec [ consoleReporter ] do
@@ -146,7 +146,7 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
         let
           input =
             { entityId: "swe"
-            , entityDomain:  unsafePartial $ unsafeFromString "geo"
+            , entityDomain: unsafePartial $ unsafeFromString "geo"
             , entitySet: Nothing
             , props: Map.empty
             , _info: Just $ iteminfo "a.csv" 1
@@ -179,7 +179,7 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
         let filename = "test/datasets/ddf--test--new/ddf--concepts.csv"
         output <- sequence $ readCsv <$> [ filename ]
         (output Arr.!! 0)
-            `shouldSatisfy` isJust
+          `shouldSatisfy` isJust
       it "list all csv files in a folder" do
         let dirname = "test/datasets/ddf--test--new/"
         files <- getFiles dirname [ "etl" ]
