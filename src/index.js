@@ -1,7 +1,7 @@
-import { runMain } from "../dist/lib.js";
+import { validate$p } from "../dist/lib.js";
 
 function validate(fp = "./") {
-  runMain(fp)();
+  return validate$p(fp)();
 }
 
 export {
