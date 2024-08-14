@@ -1,37 +1,27 @@
--- | Validation Pipeline
+module App.Validation.Common where
 
-module App.Validations where
-
-import Data.DDF.Atoms.Value
-import Debug
-import Debug
 import Prelude
 
 import Control.Monad.Trans.Class (lift)
 import Data.Array as Arr
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as NEA
-import Data.Csv (CsvRow(..), RawCsvContent, createRawContent, getLineNo, getRow, parseCsvContent, readAndParseCsv, readCsv)
+import Data.Csv (RawCsvContent, createRawContent, parseCsvContent, readCsv')
 import Data.Csv as C
-import Data.DDF.Atoms.Header (Header)
-import Data.DDF.Atoms.Identifier (Identifier)
 import Data.DDF.Atoms.Identifier as Id
-import Data.DDF.Concept (Concept, parseConcept, reservedConcepts, getId, getInfo)
-import Data.DDF.Csv.CsvFile (CsvFile, CsvFileInput, parseCsvFile)
-import Data.DDF.Csv.FileInfo (CollectionInfo, FileInfo)
+import Data.DDF.Concept (Concept(..), getId, getInfo, parseConcept, reservedConcepts)
+import Data.DDF.Csv.CsvFile (CsvFile, parseCsvFile)
+import Data.DDF.Csv.FileInfo (FileInfo)
 import Data.DDF.Csv.FileInfo as FI
 import Data.DDF.Csv.Utils (createConceptInput, createDataPointsInput, createEntityInput)
 import Data.DDF.DataPoint (DataPoints(..), mergeDataPointsInput, parseDataPoints)
 import Data.DDF.DataSet (DataSet(..), parseBaseDataSet)
-import Data.DDF.DataSet as DS
 import Data.DDF.DataSet as DataSet
-import Data.DDF.Entity (Entity, parseEntity)
+import Data.DDF.Entity (Entity(..), parseEntity)
 import Data.DDF.Internal (pathAndRow)
 import Data.Either (Either(..))
-import Data.HashMap (HashMap)
 import Data.HashMap as HM
-import Data.List.NonEmpty (NonEmptyList)
-import Data.List.NonEmpty as NEL
+import Data.List.Types (NonEmptyList)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Data.String as Str
@@ -40,15 +30,13 @@ import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.Traversable (class Traversable, for, sequence, traverse)
 import Data.Tuple (Tuple(..))
 import Data.Validation.Issue (Issue(..), Issues, withRowInfo)
-import Data.Validation.Result (Messages, hasError, messageFromIssue, setError, setFile, setLineNo)
-import Data.Validation.Semigroup (V, isValid, andThen, toEither, invalid, validation)
-import Data.Validation.ValidationT (Validation, ValidationT(..), runValidationT, vError, vWarning)
+import Data.Validation.Result (Messages, messageFromIssue, setError, setFile, setLineNo)
+import Data.Validation.Semigroup (andThen, toEither)
+import Data.Validation.ValidationT (ValidationT, Validation, vError, vWarning)
 import Effect.Aff (Aff)
-import Effect.Aff.Class (liftAff)
-import Effect.Class (liftEffect, class MonadEffect)
-import Effect.Console (log, logShow)
 import Node.Path (FilePath)
 
+-- | emit warnings and continue the validation
 emitWarningsAndContinue :: forall m. Monad m => Issues -> ValidationT Messages m Unit
 emitWarningsAndContinue issues = do
   vWarning msgs
@@ -56,6 +44,7 @@ emitWarningsAndContinue issues = do
   where
   msgs = map messageFromIssue issues
 
+-- | emit errors and continue the validation
 emitErrorsAndContinue :: forall m. Monad m => Issues -> ValidationT Messages m Unit
 emitErrorsAndContinue issues = do
   vWarning msgs
@@ -64,6 +53,7 @@ emitErrorsAndContinue issues = do
   msgs = map (setError <<< messageFromIssue) issues
 
 
+-- | emit errors and stop the validation
 emitErrorsAndStop :: forall x m. Monad m => Issues -> ValidationT Messages m x
 emitErrorsAndStop issues = do
   vError msgs
@@ -71,16 +61,15 @@ emitErrorsAndStop issues = do
   msgs = map (setError <<< messageFromIssue) issues
 
 
-checkNonEmptyArray :: forall a. String -> Array a -> Validation Messages (NonEmptyArray a)
-checkNonEmptyArray name xs =
-  case NEA.fromArray xs of
-    Nothing ->
-      vError msgs
-      where
-      msgs = [ messageFromIssue $ Issue $ "expect " <> name <> " has at least one item" ]
-    Just xs_ ->
-      pure xs_
+-- | read csv data from file
+readAndParseCsvFiles :: Array FileInfo -> ValidationT Messages Aff (Array CsvFile)
+readAndParseCsvFiles files = do
+  csvRows <- lift $ sequence $ readCsv' <$> files
+  let
+    csvContents = map createRawContent csvRows
+  validateCsvFiles $ Arr.zip files csvContents
 
+-- | validte csv content, drop bad csv rows
 dropAndWarnBadCsvRows ::
   FilePath
   -> RawCsvContent
@@ -96,7 +85,6 @@ dropAndWarnBadCsvRows fp content = do
     msgs = map makemsg badIdx
   vWarning msgs
   pure content'
-
 
 -- | parse csv file info and csv data into a valid CsvFile
 validateCsvFile ::
@@ -202,6 +190,27 @@ validateBaseDataSet conceptsInput entitiesInput =
     Left errs -> do
       emitErrorsAndStop errs
 
+-- | validate one indicator group (indicator with same primary keys)
+validateDatapointsFileGroup :: NonEmptyString -> NonEmptyList NonEmptyString -> DataSet -> Array CsvFile -> Validation Messages Unit
+validateDatapointsFileGroup indicator pkeys ds csvfiles =
+  case NEA.fromArray csvfiles of
+    Nothing -> do
+      vWarning $
+        [ messageFromIssue
+            $ Issue
+            $ "No valid csv file for "
+                <> (NES.toString indicator)
+                <> " by "
+                <> (NES.joinWith "," (Arr.fromFoldable pkeys))
+        ]
+    Just dpfs -> do
+      -- validate all datapoints, first without dataset info, then with dataset info.
+      validateDataPoints dpfs >>=
+        ( \dps ->
+            case dps of
+              Nothing -> pure unit
+              Just dps' -> validateDataPointsWithDataSet ds dps'
+        )
 
 -- | take a list of csv files (They must have same indicator and primary keys)
 -- | and produce datapoint input
@@ -293,3 +302,5 @@ validateConceptLength (DataSet ds) = do
       where
       msgs = map messageFromIssue errs
     Right _ -> pure unit
+
+

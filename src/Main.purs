@@ -1,233 +1,34 @@
 module Main where
 
-import App.Validations
-import Debug
 import Prelude
 
-import App.Cli (CliOptions)
+import App.Cli (CliOptions, ValidationMode(..))
 import App.Cli as Cli
-import Control.Monad.State (get, lift)
-import Control.Monad.Trans.Class (lift)
+import App.Validation.DataPackageBased as VDP
+import App.Validation.FileNameBased as VFN
 import Control.Promise (Promise)
 import Control.Promise as Promise
-import Data.Argonaut (encodeJson, stringifyWithIndent)
 import Data.Array as Arr
-import Data.Array.NonEmpty (NonEmptyArray)
-import Data.Array.NonEmpty as NEA
-import Data.Csv (createRawContent, readCsv, readCsv')
-import Data.DDF.Atoms.Header (headerVal)
-import Data.DDF.Atoms.Identifier (Identifier)
-import Data.DDF.Atoms.Identifier as Id
-import Data.DDF.Concept (Concept(..))
-import Data.DDF.Csv.CsvFile (CsvFile)
-import Data.DDF.Csv.FileInfo (CollectionConstant, CollectionInfo(..), FileInfo(..), getCollectionFiles, getCollectionType, isConceptFile, isDataPointsFile, isEntitiesFile)
-import Data.DDF.Csv.FileInfo as FI
-import Data.DDF.Csv.Utils (createDataPointsInput)
-import Data.DDF.DataPoint (mergeDataPointsInput, parseDataPoints)
-import Data.DDF.DataSet (DataSet(..), parseBaseDataSet)
-import Data.DDF.DataSet as DS
-import Data.DDF.DataSet as DataSet
-import Data.DDF.DataSet as DatatSet
-import Data.Either (Either(..), hush)
-import Data.Function (on)
-import Data.HashMap (HashMap)
-import Data.HashMap as HM
-import Data.JSON.DataPackage (datapackageExists)
-import Data.JSON.DataPackage as DataPackage
-import Data.JSON.StableStringify (stableStringify)
-import Data.List.Types (NonEmptyList)
-import Data.Maybe (Maybe(..), fromJust, fromMaybe, isNothing)
+import Data.Maybe (Maybe(..))
 import Data.String (joinWith)
-import Data.String as Str
-import Data.String.NonEmpty (toString)
-import Data.String.NonEmpty as NES
-import Data.String.NonEmpty.Internal (NonEmptyString(..))
-import Data.Traversable (for, for_, sequence, traverse_)
-import Data.Tuple (Tuple(..), fst, snd)
-import Data.Validation.Issue (Issue(..))
-import Data.Validation.Result (Messages, hasError, messageFromIssue, setError, showMessage)
-import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither)
-import Data.Validation.ValidationT (Validation, ValidationT, getState, runValidationT, vError, vWarning)
+import Data.Tuple (Tuple(..))
+import Data.Validation.Result (hasError, showMessage)
+import Data.Validation.ValidationT (runValidationT)
 import Effect (Effect)
-import Effect.Aff (Aff, launchAff, launchAff_)
+import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
-import Effect.Console (log, logShow)
+import Effect.Console (log)
 import Foreign (Foreign)
 import Node.Path (FilePath)
-import Node.Process (argv, setExitCode)
+import Node.Process (setExitCode)
 import Options.Applicative (execParser)
-import Partial.Unsafe (unsafePartial)
-import Utils (getFiles)
-import Utils.GC (gc)
 import Yoga.JSON as JSON
-
--- | read all files
-readAllFileInfoForValidation :: FilePath -> Array FilePath -> Validation Messages (Array FileInfo)
-readAllFileInfoForValidation root fs = do
-  let
-    -- parse filenames
-    -- just yield the right ones, ignore lefts
-    ddfFiles = Arr.catMaybes $ map (\f -> hush $ FI.fromFilePath root f) fs
-
-  when (isNothing $ Arr.head ddfFiles)
-    $ vError
-        [ (setError <<< messageFromIssue)
-            $ Issue "No csv files in this folder. Please begin with a ddf--concepts.csv file."
-        ]
-
-  pure ddfFiles
-
--- | read csv data from file
-readAndParseCsvFiles :: Array FileInfo -> ValidationT Messages Aff (Array CsvFile)
-readAndParseCsvFiles files = do
-  csvRows <- lift $ sequence $ readCsv' <$> files
-  let
-    csvContents = map createRawContent csvRows
-  validateCsvFiles $ Arr.zip files csvContents
-
-validate :: FilePath -> ValidationT Messages Aff (HashMap CollectionConstant (NonEmptyArray FileInfo))
-validate path = do
-  lift $ liftEffect $ log "reading file list..."
-
-  let
-    ignored = [ ".git", "etl", "assets", "langsplit" ]
-  fs <- lift $ getFiles path ignored
-
-  ddfFiles <- readAllFileInfoForValidation path fs
-
-  lift $ liftEffect $ log "validating concepts and entities..."
-
-  let
-    -- group files by their collection. e.g concept files / entity files
-    groupfunc = compare `on` FI.collection
-    fileGroups = Arr.groupAllBy groupfunc ddfFiles
-    fileMap =
-      HM.fromArrayBy
-        (getCollectionType <<< FI.collection <<< NEA.head)
-        identity
-        fileGroups
-
-  -- filter concept files
-  -- we must have concept files in a dataset.
-  conceptFileInfos <-
-    case HM.lookup FI.CONCEPTS fileMap of
-      Nothing ->
-        emitErrorsAndStop [ Issue "No concepts file in folder. Please add ddf--concepts.csv" ]
-      Just xs -> pure $ NEA.toArray xs
-  -- validate csv files, create valid concepts
-  conceptCsvFiles <- readAndParseCsvFiles conceptFileInfos
-  concepts <- for conceptCsvFiles (\x -> validateConcepts x)
-
-  -- filter entity files
-  entityFileInfos <-
-    case HM.lookup FI.ENTITIES fileMap of
-      Nothing -> pure []
-      Just xs -> pure $ NEA.toArray xs
-  -- validate csv files, create valid entities
-  entityCsvFiles <- readAndParseCsvFiles entityFileInfos
-  entities <- for entityCsvFiles (\x -> validateEntities x)
-
-  -- create a base dataset from concepts and entities
-  ds <- validateBaseDataSet (Arr.concat concepts) (Arr.concat entities)
-  -- also generate datapackage resources
-  let
-    resources = DataPackage.createResources path $ conceptCsvFiles <> entityCsvFiles
-  -- lift $ liftEffect $ log $ stableStringify 2 $ JSON.write resources
-
-  -- if there are errors, stop here
-  msgs <- getState
-  when (hasError msgs) do
-    _ <- vError
-      [ setError <<< messageFromIssue $
-          Issue "Validation stopped because of errors."
-      ]
-    pure unit
-
-  -- validate each indicators. First we will need to find all csv files for the indicator
-  datapointFiles <-
-    case HM.lookup FI.DATAPOINTS fileMap of
-      Nothing -> pure []
-      Just xs -> do
-        lift $ liftEffect $ log "validating datapoints..."
-        pure $ NEA.toArray xs
-
-  let
-    getIndicatorAndPkey fi =
-      case FI.collection fi of
-        (DataPoints dp) -> Just $ Tuple dp.indicator dp.pkeys
-        otherwise -> Nothing
-
-    -- If we will change this line, be sure to also double check the unsafePartial line below.
-    datapointFileGroups = Arr.groupAllBy (compare `on` getIndicatorAndPkey) datapointFiles
-
-  _ <- for datapointFileGroups \group -> do
-    let
-      -- we have veritified on last step so we can use the fromJust function.
-      (Tuple indicator pkeys) = unsafePartial $ fromJust $ getIndicatorAndPkey $ NEA.head group
-
-    -- lift $ liftEffect $ log $ "indicator: "
-    --   <> show (toString indicator)
-    --   <> ", by: "
-    --   <> (Str.joinWith ", " $ Arr.fromFoldable (map toString pkeys))
-    --   <> ", total files: "
-    --   <> show (NEA.length group)
-
-    -- read all csv files for the group
-    dpscsvFiles <- readAndParseCsvFiles $ NEA.toArray group
-    validateDatapointsFileGroup indicator pkeys ds dpscsvFiles
-
-  -- check synonym files
-  --
-  synonymFileInfos <-
-    case HM.lookup FI.SYNONYMS fileMap of
-      Nothing -> pure []
-      Just xs -> do
-        lift $ liftEffect $ log "validating synonym files..."
-        pure $ NEA.toArray xs
-  synonymCsvFiles <- readAndParseCsvFiles synonymFileInfos
-  traverse_ (\c -> validateCsvFileWithDataSet ds c) synonymCsvFiles
-
-  -- check translation files
-  --
-  translationFileInfos <-
-    case HM.lookup FI.TRANSLATIONS fileMap of
-      Nothing -> pure []
-      Just xs -> do
-        lift $ liftEffect $ log "validating translation files..."
-        pure $ NEA.toArray xs
-  translationCsvFiles <- readAndParseCsvFiles translationFileInfos
-  traverse_ (\c -> validateCsvFileWithDataSet ds c) translationCsvFiles
-
-  -- return result
-  pure $ fileMap
 
 -- | js promise for the validation
 validate' :: FilePath -> Effect (Promise Foreign)
 validate' fp = Promise.fromAff do
-  (Tuple msgs _) <- runValidationT $ validate fp
+  (Tuple msgs _) <- runValidationT $ VFN.validate fp
   pure $ JSON.write msgs
-
--- | validate one indicator group (indicator with same primary keys)
-validateDatapointsFileGroup :: NonEmptyString -> NonEmptyList NonEmptyString -> DataSet -> Array CsvFile -> Validation Messages Unit
-validateDatapointsFileGroup indicator pkeys ds csvfiles =
-  case NEA.fromArray csvfiles of
-    Nothing -> do
-      vWarning $
-        [ messageFromIssue
-            $ Issue
-            $ "No valid csv file for "
-                <> (toString indicator)
-                <> " by "
-                <> (NES.joinWith "," (Arr.fromFoldable pkeys))
-        ]
-    Just dpfs -> do
-      -- validate all datapoints, first without dataset info, then with dataset info.
-      validateDataPoints dpfs >>=
-        ( \dps ->
-            case dps of
-              Nothing -> pure unit
-              Just dps' -> validateDataPointsWithDataSet ds dps'
-        )
 
 -- | a function that accepts cli options and run the validation
 runMain :: CliOptions -> Effect Unit
@@ -235,26 +36,23 @@ runMain opts = launchAff_ do
   let
     path = _.targetPath opts
     noWarning = _.noWarning opts
+    mode = _.mode opts
 
   liftEffect $ log "v0.1.0"
-  (Tuple msgs ds) <- runValidationT $ validate path
+  (Tuple msgs _) <- case mode of
+    FileNameBased -> runValidationT $ VFN.validate path
+    DataPackageBased -> runValidationT $ VDP.validate path
   let
     msgsToShow =
       if noWarning then Arr.filter (\x -> not $ _.isWarning x) msgs
       else msgs
     msgsStr = joinWith "\n" $ map showMessage msgsToShow
   liftEffect $ log msgsStr
-  case ds of
-    Just ds_ -> do
-      -- liftEffect $ logShow $ HM.lookup FI.SYNONYMS ds_
-      if hasError msgs then
-        liftEffect $ log "❌ Dataset is invalid"
-      else
-        liftEffect $ log "✅ Dataset is valid"
-    Nothing ->
-      liftEffect $ log "❌ Dataset is invalid"
-  when (hasError msgs) do
+  if hasError msgs then do
+    liftEffect $ log "❌ Dataset is invalid"
     liftEffect $ setExitCode 1
+  else
+    liftEffect $ log "✅ Dataset is valid"
 
 -- | main function to run under terminals
 main :: Effect Unit

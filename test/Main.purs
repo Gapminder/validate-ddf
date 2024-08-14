@@ -40,11 +40,12 @@ import Test.Spec.Assertions (shouldEqual, shouldSatisfy, shouldNotSatisfy, shoul
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (runSpec)
 import Utils (getFiles)
+import App.Cli (ValidationMode(..))
 
 testMain :: Effect Unit
 testMain = do
   path <- resolve [] "test/datasets/ddf--test--new"
-  M.runMain { targetPath: path, noWarning: false, mode: "filenames", generateDP: true }
+  M.runMain { targetPath: path, noWarning: false, mode: FileNameBased, generateDP: true }
 
 main :: Effect Unit
 main = launchAff_ $ runSpec [ consoleReporter ] do

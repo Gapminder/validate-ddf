@@ -1,10 +1,13 @@
 module App.Cli
   ( opts
   , CliOptions
+  , ValidationMode(..)
   ) where
 
 import Options.Applicative
 import Prelude
+
+import Data.Either (Either(..))
 import Node.Path (FilePath)
 
 -- Note optparse exports a Parser data type and it's different from the Parser from string-parsers
@@ -13,11 +16,18 @@ import Node.Path (FilePath)
 type CliOptions =
   { targetPath :: FilePath
   , noWarning :: Boolean
-  , mode :: String
+  , mode :: ValidationMode
   , generateDP :: Boolean
   }
 
-data ValidationMode = FileNames | DataPackage
+data ValidationMode = FileNameBased | DataPackageBased
+
+parseValidationMode :: ReadM ValidationMode
+parseValidationMode = eitherReader $ \s ->
+  case s of
+    "filenames" -> Right FileNameBased
+    "datapackage" -> Right DataPackageBased
+    _ -> Left "mode should be either filenames or datapackage"
 
 cliOptions :: Parser CliOptions
 cliOptions = ado
@@ -30,10 +40,10 @@ cliOptions = ado
         <> value "./"
         <> help "The dataset path to validate"
     )
-  mode <- option str -- TODO: use ValidationMode
+  mode <- option parseValidationMode
     ( long "mode"
         <> short 'm'
-        <> value "filenames"
+        <> value FileNameBased
         <> help "configure how validator find files (filenames or datapackage, default filenames)"
     )
   generateDP <- flag false true
