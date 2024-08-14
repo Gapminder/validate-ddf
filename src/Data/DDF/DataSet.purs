@@ -17,6 +17,7 @@ module Data.DDF.DataSet
   , parseDataPoints
   , parseCsvFileValues
   , getConcepts
+  , queryDomainAndSet
   ) where
 
 import Data.DDF.Atoms.Value
@@ -110,11 +111,41 @@ getEntities (DataSet { entities }) domain (Just set) =
       in
         Just $ map fst filtered
 
+-- FIXME: I should use NonEmptyStrings here and the above functions
 getDomainForEntitySet :: DataSet -> String -> Maybe String
 getDomainForEntitySet dataset k =
   (flip Conc.getProp) "domain" =<< theConcept
   where
   theConcept = getConcept dataset k
+
+
+-- | given a concept and a value, return which domain/set the value belongs to
+-- | if the concept is string/time type, then it will return the concept name itself
+-- | if the concept is measure, it will be nothing.
+queryDomainAndSet :: DataSet -> NonEmptyString -> NonEmptyString -> Maybe (NonEmptyArray NonEmptyString)
+queryDomainAndSet dataset conceptname value = do
+  let
+    conceptname' = NES.toString conceptname
+
+  theConcept <- getConcept dataset conceptname'
+
+  case Conc.getType theConcept of
+    Conc.EntityDomainC -> do
+      domain <- getEntities dataset conceptname' Nothing
+      let
+        filtered = Arr.filter (\x -> (Id.value1 $ Ent.getId x) == value) domain
+        allSets = map (\x -> map Id.value1 $ Ent.getEntitySets x) filtered
+      Just $ NEA.snoc' (Arr.concat allSets) conceptname
+    Conc.EntitySetC -> do
+      domainName <- getDomainForEntitySet dataset conceptname'
+      domain <- getEntities dataset domainName (Just conceptname')
+      let
+        filtered = Arr.filter (\x -> (Id.value1 $ Ent.getId x) == value) domain
+        allSets = map (\x -> map Id.value1 $ Ent.getEntitySets x) filtered
+      Just $ NEA.snoc' (Arr.concat allSets) $ unsafePartial $ NES.unsafeFromString domainName
+    Conc.TimeC -> Just $ NEA.singleton conceptname
+    _ -> Nothing
+
 
 type ConceptsInput = Array Concept
 type EntitiesInput = Array Entity
@@ -384,25 +415,14 @@ getValueParser (DataSet ds) k =
 -- | parseDataPoints based on the concepts and entities in the dataset.
 -- | I thik it's not very necessary to store it into DataSet for validation
 parseDataPoints :: DataSet -> DataPoints -> V Issues Unit
-parseDataPoints ds@(DataSet { concepts, _valueParsers }) (DataPoints dp) =
+parseDataPoints ds (DataPoints dp) =
   let
     conceptsInDp = NEA.snoc dp.by dp.indicatorId
   in
     for_ conceptsInDp \c ->
-      let
-        res = getValueParser ds (Id.value c)
-          `andThen`
-            (\vp -> parseColumnValues vp (unsafeLookup c dp.values) (dp.itemInfo))
-      in
-        lmap
-          ( \errs ->
-              let
-                -- add filepath to all errors
-                samplefile = fst $ pathAndRow $ unsafeIndex dp.itemInfo 0
-              in
-                map (\e -> toInvaildItem samplefile 0 e) errs
-          )
-          res
+      getValueParser ds (Id.value c)
+        `andThen`
+          (\vp -> parseColumnValues vp (unsafeLookup c dp.values) (dp.itemInfo))
 
 -- | check if concept exists in the dataset
 conceptExists :: DataSet -> Identifier -> V Issues Identifier
@@ -412,22 +432,16 @@ conceptExists (DataSet { concepts }) concept =
     Just _ -> pure concept
 
 parseColumnValues :: ValueParser -> Array String -> Array ItemInfo -> V Issues Unit
-parseColumnValues vp vals iteminfo = traverse_ run allValues
+parseColumnValues parser vals iteminfo = traverse_ run allValues
   where
   -- find all unique values
   allValues = HM.values $ HM.fromArrayBy fst identity $ Arr.zip vals iteminfo
 
   run (Tuple v it) =
     let
-      res = vp v
+      (Tuple fp i) = pathAndRow it
     in
-      if isValid res then
-        pure unit
-      else
-        let
-          (Tuple fp i) = pathAndRow it
-        in
-          withRowInfo fp i (res `andThen` (\_ -> pure unit))
+      withRowInfo fp i (parser v `andThen` (\_ -> pure unit))
 
 -- | For Synonyms and Translations, we only need to parse all values in the columns.
 parseCsvFileValues :: DataSet -> CsvFile -> V Issues Unit
@@ -444,15 +458,9 @@ parseCsvFileValues ds { fileInfo, csvContent } =
     traverse_ run $ NEA.zip (map headerVal headers) columns
 
 parseColumnValues' :: FilePath -> NonEmptyString -> ValueParser -> Array String -> Array Int -> V Issues Unit
-parseColumnValues' fp concept vp vals index = traverse_ run allValues
+parseColumnValues' fp concept parser vals index = traverse_ run allValues
   where
   allValues = HM.values $ HM.fromArrayBy fst identity $ Arr.zip vals index
 
   run (Tuple v i) =
-    let
-      res = vp v
-    in
-      if isValid res then
-        pure unit
-      else
-        withRowInfo fp i (res `andThen` (\_ -> pure unit))
+    withRowInfo fp i (parser v `andThen` (\_ -> pure unit))

@@ -9,6 +9,8 @@ module Data.DDF.Csv.CsvFile
   , CsvColumn
   , UnvalidatedCsvContent
   , parseCsvFile
+  , getPrimaryKey
+  , getPrimaryKeyAndValues
   ) where
 
 import Prelude
@@ -112,6 +114,34 @@ getCsvContent { csvContent } = csvContent
 
 getFileInfo :: CsvFile -> FileInfo
 getFileInfo { fileInfo } = fileInfo
+
+getPrimaryKey :: CsvFile -> NonEmptyArray NonEmptyString
+getPrimaryKey { fileInfo, csvContent } =
+  case FI.collection fileInfo of
+    FI.Concepts -> NEA.singleton $ unsafePartial $ NES.unsafeFromString "concept"
+    FI.Entities { domain, set } -> case set of
+      Nothing -> NEA.singleton domain
+      Just s ->
+        if s `NEA.elem` headers' then
+          NEA.singleton s
+        else
+          NEA.singleton domain
+    FI.DataPoints dp -> NEA.fromFoldable1 dp.pkeys
+    FI.Synonyms x -> NEA.snoc' [ (unsafePartial $ NES.unsafeFromString "concept") ] $ x
+    FI.Translations _ -> unsafeCrashWith "do not gererate resources for translation files."
+    FI.Other x -> NEA.singleton x
+  where
+  { headers } = csvContent
+  headers' = map unwrap headers
+
+getPrimaryKeyAndValues :: CsvFile -> Tuple (NonEmptyArray NonEmptyString) (Array NonEmptyString)
+getPrimaryKeyAndValues csvfile@{ csvContent } =
+  let
+    pkeys = getPrimaryKey csvfile
+    headers = map unwrap $ _.headers csvContent
+    values = NEA.difference headers pkeys
+  in
+    Tuple pkeys values
 
 -- below are functions to parse from CsvFileInput -> CsvFile
 --

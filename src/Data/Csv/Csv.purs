@@ -136,4 +136,7 @@ parseCsvContent { headers, rows } = case headers of
 readAndParseCsv :: FilePath -> Aff CsvContent
 readAndParseCsv fp = do
   rows <- readCsv fp
-  pure $ parseCsvContent $ createRawContent rows
+  let
+    rawContent = createRawContent rows
+    Tuple _ rawContent' = filterBadRows rawContent
+  pure $ parseCsvContent rawContent'
