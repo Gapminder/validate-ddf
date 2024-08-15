@@ -109,7 +109,7 @@ createDataPointsInput { fileInfo, csvContent } =
     FI.DataPoints dp ->
       let
         { headers, index, columns } = csvContent
-        { indicator, pkeys, constrains } = dp
+        { indicator, pkeys, constraints } = dp
 
         indicatorId = coerce indicator
         by = NEA.fromFoldable1 $ map coerce pkeys

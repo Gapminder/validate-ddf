@@ -55,10 +55,10 @@ data CollectionInfo
 
 type Ent = { domain :: NonEmptyString, set :: Maybe NonEmptyString }
 
-type DP = -- TODO: constrains should be a list of list, because multiple items in the constrains is allowed.
+type DP = -- TODO: constraints should be a list of list, because multiple items in the constraints is allowed.
   { indicator :: NonEmptyString
   , pkeys :: NonEmptyList NonEmptyString
-  , constrains :: NonEmptyList (Maybe NonEmptyString) -- length of pkeys should equal to length of constrains.
+  , constraints :: NonEmptyList (Maybe NonEmptyString) -- length of pkeys should equal to length of constraints.
   }
 
 type Target =
@@ -199,10 +199,10 @@ entityFile = choice [ try e2, try e1 ]
 pkeyWithConstrain :: Parser (Tuple NonEmptyString (Maybe NonEmptyString))
 pkeyWithConstrain = do
   key <- identifier
-  -- TODO: support multiple constrains
+  -- TODO: support multiple constraints
   void $ string "-"
-  constrain <- identifier
-  pure $ Tuple key (Just constrain)
+  constraint <- identifier
+  pure $ Tuple key (Just constraint)
 
 pkeyNoConstrain :: Parser (Tuple NonEmptyString (Maybe NonEmptyString))
 pkeyNoConstrain = do
@@ -224,8 +224,8 @@ datapointFile = do
   let
     pkeys = map fst dims
 
-    constrains = map snd dims
-  pure $ DataPoints { indicator, pkeys, constrains }
+    constraints = map snd dims
+  pure $ DataPoints { indicator, pkeys, constraints }
 
 -- | Synonyms file parsers
 --

@@ -182,11 +182,8 @@ parseEntity { entityId: eid, entityDomain: edm, entitySet: es, props: props, _in
       validEdomain = validEntityDomainId edm
       Tuple esets propsLst = splitEntAndProps props
       validEsets =
-        -- remove the domain from sets.
-        removeIsDomainProp edm esets
-          `andThen`
         -- get all true values from is-- header
-        getEntitySetsFromHeaders
+        getEntitySetsFromHeaders esets
         -- combine the sets from filename and sets from file headers.
           `andThen`
             ( \parsed ->

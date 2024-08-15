@@ -226,6 +226,17 @@ oneOfHeaderExists expected csvcontent =
     else
       pure $ Tuple (unsafeIndex intersection 0) csvcontent
 
+-- | for entity domain, we should not have a is--`domainName` column.
+noIsDomainHeader :: NonEmptyString -> NonEmptyRawCsvContent -> V Issues (NonEmptyRawCsvContent)
+noIsDomainHeader domainName csvcontent =
+  let
+    header = NES.prependString "is--" domainName
+    { headers } = csvcontent
+  in
+    if header `NEA.elem` (map unwrap headers)
+    then invalid [ InvalidCSV $ "unexpected header: " <> toString header <> " for " <> toString domainName <> " domain."]
+    else pure csvcontent
+
 -- | check if csv file has duplicated headers
 noDupCols :: NonEmptyRawCsvContent -> V Issues NonEmptyRawCsvContent
 noDupCols input =
@@ -239,11 +250,11 @@ noDupCols input =
     in
       invalid [ InvalidCSV $ "duplicated headers: " <> show dups ]
 
--- | check datapoints columns constrains
+-- | check datapoints columns constraints
 constrainsAreMet :: FilePath -> DP -> NonEmptyRawCsvContent -> V Issues NonEmptyRawCsvContent
-constrainsAreMet fp { pkeys, constrains } input@{ headers, columns, index } =
+constrainsAreMet fp { pkeys, constraints } input@{ headers, columns, index } =
   let
-    constrainsMap = Map.fromFoldable $ NEL.zip pkeys constrains
+    constrainsMap = Map.fromFoldable $ NEL.zip pkeys constraints
     columnMap = Map.fromFoldable $ NEA.zip (map headerVal headers) columns
     -- only keep pkeys columns
     columnMap' = Map.filterKeys (\k -> k `NEL.elem` pkeys) columnMap
@@ -257,7 +268,7 @@ constrainsAreMet fp { pkeys, constrains } input@{ headers, columns, index } =
           mkissue (Tuple i x) =
             let
               row = unsafeIndex index i
-              msg = "constrain violation: " <> x
+              msg = "constraint violation: " <> x
             in
               InvalidItem fp row msg
         in
@@ -371,6 +382,8 @@ parseCsvFile { fileInfo, csvContent } =
               colsAreValidHeaders -- Identifier + is--identifier headers
             `andThen`
               noDupCols
+            `andThen`
+              noIsDomainHeader domain
             `andThen`
               oneOfHeaderExists required
             `andThen`

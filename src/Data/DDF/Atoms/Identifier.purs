@@ -51,6 +51,7 @@ alphaNumAnd_ =
     <?> "expect alphanumeric and underscore _"
 
 -- | parse identifier strings.
+-- | note this parser doesn't parse whole string, it's used in parsing ddf filenames
 identifier :: Parser NonEmptyString
 identifier = do
   chars <- many1 alphaNumAnd_
