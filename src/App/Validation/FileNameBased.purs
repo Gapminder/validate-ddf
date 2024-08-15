@@ -118,83 +118,78 @@ validate path = do
 
   -- if there are errors, stop here
   msgs <- getState
-  when (hasError msgs) do
-    _ <- vError
-      [ setError <<< messageFromIssue $
-          Issue "Validation stopped because of errors."
-      ]
-    pure unit
+  if (hasError msgs) then
+    pure ds
+  else do
+    -- validate each indicators. First we will need to find all csv files for the indicator
+    datapointFiles <-
+      case HM.lookup FI.DATAPOINTS fileMap of
+        Nothing -> pure []
+        Just xs -> do
+          lift $ liftEffect $ log "validating datapoints..."
+          pure $ NEA.toArray xs
 
-  -- validate each indicators. First we will need to find all csv files for the indicator
-  datapointFiles <-
-    case HM.lookup FI.DATAPOINTS fileMap of
-      Nothing -> pure []
-      Just xs -> do
-        lift $ liftEffect $ log "validating datapoints..."
-        pure $ NEA.toArray xs
-
-  let
-    getIndicatorAndPkey fi =
-      case FI.collection fi of
-        (DataPoints dp) -> Just $ Tuple dp.indicator dp.pkeys
-        otherwise -> Nothing
-
-    -- If we will change this line, be sure to also double check the unsafePartial line below.
-    datapointFileGroups = Arr.groupAllBy (compare `on` getIndicatorAndPkey) datapointFiles
-
-  datapointResources_ <- for datapointFileGroups \group -> do
     let
-      -- we have veritified on last step so we can use the fromJust function.
-      (Tuple indicator pkeys) = unsafePartial $ fromJust $ getIndicatorAndPkey $ NEA.head group
+      getIndicatorAndPkey fi =
+        case FI.collection fi of
+          (DataPoints dp) -> Just $ Tuple dp.indicator dp.pkeys
+          otherwise -> Nothing
 
-    -- lift $ liftEffect $ log $ "indicator: "
-    --   <> show (toString indicator)
-    --   <> ", by: "
-    --   <> (Str.joinWith ", " $ Arr.fromFoldable (map toString pkeys))
-    --   <> ", total files: "
-    --   <> show (NEA.length group)
+      -- If we will change this line, be sure to also double check the unsafePartial line below.
+      datapointFileGroups = Arr.groupAllBy (compare `on` getIndicatorAndPkey) datapointFiles
 
-    -- read all csv files for the group
-    dpscsvFiles <- readAndParseCsvFiles $ NEA.toArray group
-    validateDatapointsFileGroup indicator pkeys ds dpscsvFiles
-    pure $ DataPackage.createResources path dpscsvFiles
-  let
-    datapointResources = Arr.concat datapointResources_
+    datapointResources_ <- for datapointFileGroups \group -> do
+      let
+        -- we have veritified on last step so we can use the fromJust function.
+        (Tuple indicator pkeys) = unsafePartial $ fromJust $ getIndicatorAndPkey $ NEA.head group
 
-  -- check synonym files
-  --
-  synonymFileInfos <-
-    case HM.lookup FI.SYNONYMS fileMap of
-      Nothing -> pure []
-      Just xs -> do
-        lift $ liftEffect $ log "validating synonym files..."
-        pure $ NEA.toArray xs
-  synonymCsvFiles <- readAndParseCsvFiles synonymFileInfos
-  traverse_ (\c -> validateCsvFileWithDataSet ds c) synonymCsvFiles
-  -- generate resources for datapackage
-  let
-    synonymResources = DataPackage.createResources path synonymCsvFiles
+      -- lift $ liftEffect $ log $ "indicator: "
+      --   <> show (toString indicator)
+      --   <> ", by: "
+      --   <> (Str.joinWith ", " $ Arr.fromFoldable (map toString pkeys))
+      --   <> ", total files: "
+      --   <> show (NEA.length group)
 
-  -- check translation files
-  --
-  translationFileInfos <-
-    case HM.lookup FI.TRANSLATIONS fileMap of
-      Nothing -> pure []
-      Just xs -> do
-        lift $ liftEffect $ log "validating translation files..."
-        pure $ NEA.toArray xs
-  translationCsvFiles <- readAndParseCsvFiles translationFileInfos
-  traverse_ (\c -> validateCsvFileWithDataSet ds c) translationCsvFiles
-  -- we don't generate datapackage resources for translations
+      -- read all csv files for the group
+      dpscsvFiles <- readAndParseCsvFiles $ NEA.toArray group
+      validateDatapointsFileGroup indicator pkeys ds dpscsvFiles
+      pure $ DataPackage.createResources path dpscsvFiles
+    let
+      datapointResources = Arr.concat datapointResources_
 
-  -- check datapackage.json
-  --
-  let
-    actualResources = conceptResources <> entityResources <> datapointResources <> synonymResources
-  expectedResources <- readDataPackageResources path
-  case toEither $ DataPackage.compareResources expectedResources actualResources of
-    Left issues -> emitWarningsAndContinue issues
-    Right _ -> pure unit
+    -- check synonym files
+    --
+    synonymFileInfos <-
+      case HM.lookup FI.SYNONYMS fileMap of
+        Nothing -> pure []
+        Just xs -> do
+          lift $ liftEffect $ log "validating synonym files..."
+          pure $ NEA.toArray xs
+    synonymCsvFiles <- readAndParseCsvFiles synonymFileInfos
+    traverse_ (\c -> validateCsvFileWithDataSet ds c) synonymCsvFiles
+    -- generate resources for datapackage
+    let
+      synonymResources = DataPackage.createResources path synonymCsvFiles
 
-  pure ds
+    -- check translation files
+    --
+    translationFileInfos <-
+      case HM.lookup FI.TRANSLATIONS fileMap of
+        Nothing -> pure []
+        Just xs -> do
+          lift $ liftEffect $ log "validating translation files..."
+          pure $ NEA.toArray xs
+    translationCsvFiles <- readAndParseCsvFiles translationFileInfos
+    traverse_ (\c -> validateCsvFileWithDataSet ds c) translationCsvFiles
+    -- we don't generate datapackage resources for translations
+
+    -- check datapackage.json
+    --
+    let
+      actualResources = conceptResources <> entityResources <> datapointResources <> synonymResources
+    expectedResources <- readDataPackageResources path
+    case toEither $ DataPackage.compareResources expectedResources actualResources of
+      Left issues -> emitWarningsAndContinue issues
+      Right _ -> pure unit
+    pure ds
 

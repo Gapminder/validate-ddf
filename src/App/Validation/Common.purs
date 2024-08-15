@@ -34,6 +34,8 @@ import Data.Validation.Result (Messages, messageFromIssue, setError, setFile, se
 import Data.Validation.Semigroup (andThen, toEither)
 import Data.Validation.ValidationT (ValidationT, Validation, vError, vWarning)
 import Effect.Aff (Aff)
+import Effect.Class (liftEffect)
+import Node.FS.Sync as PATH
 import Node.Path (FilePath)
 
 -- | emit warnings and continue the validation
@@ -60,6 +62,15 @@ emitErrorsAndStop issues = do
   where
   msgs = map (setError <<< messageFromIssue) issues
 
+
+-- | validate if file exists
+validateFileExists :: FileInfo -> ValidationT Messages Aff (Maybe FileInfo)
+validateFileExists fi@{ filepath } = do
+  pathExists <- liftEffect $ PATH.exists filepath
+  if pathExists then pure $ Just fi
+  else do
+    emitWarningsAndContinue $ [ Issue $ filepath <> " does not exist, skipping" ]
+    pure Nothing
 
 -- | read csv data from file
 readAndParseCsvFiles :: Array FileInfo -> ValidationT Messages Aff (Array CsvFile)
