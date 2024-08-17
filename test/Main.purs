@@ -3,19 +3,22 @@ module Test.Main where
 import Debug
 import Prelude
 
+import App.Cli (ValidationMode(..))
+import App.Validation.FileNameBased as VFN
 import Data.Array as Arr
 import Data.Csv (readCsv, readCsv')
 import Data.Csv as Csv
 import Data.DDF.Atoms.Header as Hd
 import Data.DDF.Atoms.Identifier (parseId, isLongerThan64Chars)
 import Data.DDF.Atoms.Identifier as Id
-import Data.DDF.Atoms.Value (parseStrVal, parseNumVal)
+import Data.DDF.Atoms.Value (parseNumVal, parseStrVal, parseTimeVal)
 import Data.DDF.Concept (ConceptInput, parseConcept)
 import Data.DDF.Concept as Conc
 import Data.DDF.Csv.CsvFile (parseCsvFile)
 import Data.DDF.Csv.FileInfo (parseFileInfo)
 import Data.DDF.Entity (parseEntity)
 import Data.DDF.Internal (iteminfo)
+import Data.Either (isLeft, isRight)
 import Data.Foldable (for_)
 import Data.List.Lazy (take, repeat)
 import Data.List.NonEmpty (NonEmptyList(..))
@@ -28,6 +31,7 @@ import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
 import Data.Validation.Issue (Issue(..), Issues)
 import Data.Validation.Semigroup (isValid, andThen)
+import Data.Validation.ValidationT (runValidationT, runValidationTEither)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
@@ -36,11 +40,10 @@ import Main as M
 import Node.Path (resolve)
 import Partial.Unsafe (unsafePartial)
 import Test.Spec (pending, describe, describeOnly, it, itOnly, Spec)
-import Test.Spec.Assertions (shouldEqual, shouldSatisfy, shouldNotSatisfy, shouldNotContain, shouldContain, fail)
+import Test.Spec.Assertions (fail, shouldContain, shouldEqual, shouldNotContain, shouldNotSatisfy, shouldSatisfy)
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (runSpec)
 import Utils (getFiles)
-import App.Cli (ValidationMode(..))
 
 testMain :: Effect Unit
 testMain = do
@@ -50,14 +53,21 @@ testMain = do
 main :: Effect Unit
 main = launchAff_ $ runSpec [ consoleReporter ] do
   describe "ddf-validation" do
-    describeOnly "new things - low level" do
-      it "value - numbers" do
+    describe "low level" do
+      it "value - parse numbers" do
         let
           invalidNums = [ "xx", "x1", "?4?" ]
         for_ invalidNums \s -> do
           let output = parseNumVal s
           output `shouldNotSatisfy` isValid
-      it "identifier - lowercase numeric" do
+      it "value - parse time - 3-4 digits" do
+        let
+          validTimes = [ "2023", "999" ]
+        for_ validTimes \s -> do
+          let output = parseTimeVal s
+          output `shouldSatisfy` isValid
+      pending "value - parse time - more complex time"
+      it "identifier - v" do
         let
           validIds =
             [ "abc"
@@ -154,27 +164,6 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
             }
           output = parseEntity input
         output `shouldSatisfy` isValid
-      pending "datapoint validation - one datapoint"
-      -- let
-      --   input =
-      --     { indicatorId: unsafeFromString "testing"
-      --     , primaryKeys: fromJust $
-      --         NEL.fromFoldable
-      --           [ unsafeFromString "geo"
-      --           , unsafeFromString "time"
-      --           ]
-      --     , primaryKeyValues: fromJust $
-      --         NEL.fromFoldable
-      --           [ "chn"
-      --           , "1990"
-      --           ]
-      --     , value: "1"
-      --     , _info: Just $ { filepath: "a.csv", row: 1 }
-      --     }
-      --   output = parseDataPoint $ input
-      -- output `shouldSatisfy` isValid
-      pending "ddf validation - duplicated concepts"
-
       -- IO things
       it "read csv file" do
         let filename = "test/datasets/ddf--test--new/ddf--concepts.csv"
@@ -187,21 +176,76 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
         files `shouldContain` (dirname <> "ddf--concepts.csv")
     -- many of below rules are from old ddf-validation code,
     -- TODO: needs cleanup
-    describe "DDF Rules Checking" do
+    describeOnly "DDF Rules Checking" do
+      -- good datasets
+      it "good datasets" do
+        let
+          goodDatasets =
+            [ "test/fixtures/good-folder-dp"
+            , "test/fixtures/rules-cases/non-unique-entity-value-2"
+            , "test/fixtures/rules-cases/non-unique-entity-value-3"
+            , "test/fixtures/good-folder-unpop-wpp_population"
+            , "test/fixtures/rules-cases/unexisting-constraint-value-2"
+            , "test/fixtures/rules-cases/entity-value-as-entity-name"
+            ]
+        for_ goodDatasets \p -> do
+          res <- runValidationTEither $ VFN.validate p
+          res `shouldSatisfy` isRight
+
+      -- below are bad datasets
+      -- TODO check if correct error was raised
       -- general
-      pending "synonym key duplication"
-      pending "inconsistent synonym key"
-      pending "identifier"
+      it "synonym key duplication" do
+        let dirname = "test/fixtures/rules-cases/duplicated-synonym-key"
+        res <- runValidationTEither $ VFN.validate dirname
+        res `shouldSatisfy` isLeft
+      it "inconsistent synonym key" do
+        let dirname = "test/fixtures/rules-cases/inconsistent-synonym-key"
+        res <- runValidationTEither $ VFN.validate dirname
+        res `shouldSatisfy` isLeft
+      it "identifier" do
+        let dirname = "test/fixtures/rules-cases/incorrect-identifier"
+        res <- runValidationTEither $ VFN.validate dirname
+        res `shouldSatisfy` isLeft
       pending "json field"
       pending "unexpected data"
       -- entity
-      pending "concept looks like boolean"
-      pending "empty entity id"
-      -- pending "entity value as entity name"  -- only for old WS
+      it "empty entity id" do
+        let
+          dirnames =
+            [ "test/fixtures/rules-cases/empty-entity-id"
+            ]
+        for_ dirnames \dirname -> do
+          res <- runValidationTEither $ VFN.validate dirname
+          res `shouldSatisfy` isLeft
       pending "incorrect boolean entity"
-      pending "non unique entity value"
-      pending "wrong entity is-- header"
-      pending "wrong entity is-- header value"
+      --  FIXME: "test/fixtures/rules-cases/incorrect-boolean-entity" boolean value raised warnings, not errors
+      -- maybe warnings are good enough?
+      it "non unique entity value" do
+        let
+          dirnames =
+            [ "test/fixtures/rules-cases/non-unique-entity-value"
+            ]
+        for_ dirnames \dirname -> do
+          res <- runValidationTEither $ VFN.validate dirname
+          res `shouldSatisfy` isLeft
+      it "wrong entity is-- header" do
+        let
+          dirnames =
+            [ "test/fixtures/rules-cases/wrong-entity-is-header"
+            , "test/fixtures/rules-cases/wrong-entity-is-header-2"
+            ]
+        for_ dirnames \dirname -> do
+          res <- runValidationTEither $ VFN.validate dirname
+          res `shouldSatisfy` isLeft
+      it "wrong entity is-- header value" do
+        let
+          dirnames =
+            [ "test/fixtures/rules-cases/empty-entity-id"
+            ]
+        for_ dirnames \dirname -> do
+          res <- runValidationTEither $ VFN.validate dirname
+          res `shouldSatisfy` isLeft
       pending "unexisting constraint value"
       -- datapoint
       pending "constraints violation"

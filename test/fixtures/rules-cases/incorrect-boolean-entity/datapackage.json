@@ -1,20 +1,15 @@
 {
-  "name": "incorrect-boolean-entity",
-  "title": "incorrect-boolean-entity",
-  "description": "",
-  "version": "0.0.1",
   "language": {
-    "id": "en",
-    "name": "English"
+    "name": "English",
+    "id": "en-US"
   },
-  "translations": [],
-  "license": "",
-  "author": "",
+  "created": "2024-08-17T14:17:02.718Z",
   "resources": [
     {
-      "path": "ddf--concepts.csv",
-      "name": "ddf--concepts",
       "schema": {
+        "primaryKey": [
+          "concept"
+        ],
         "fields": [
           {
             "name": "concept"
@@ -55,14 +50,16 @@
           {
             "name": "tags"
           }
-        ],
-        "primaryKey": "concept"
-      }
+        ]
+      },
+      "path": "ddf--concepts.csv",
+      "name": "ddf--concepts"
     },
     {
-      "path": "ddf--entities--geo--country.csv",
-      "name": "geo--country",
       "schema": {
+        "primaryKey": [
+          "country"
+        ],
         "fields": [
           {
             "name": "country"
@@ -163,701 +160,702 @@
           {
             "name": "longitude"
           }
-        ],
-        "primaryKey": "country"
-      }
+        ]
+      },
+      "path": "ddf--entities--geo--country.csv",
+      "name": "ddf--entities--geo--country"
     }
   ],
   "ddfSchema": {
-    "datapoints": [],
+    "synonyms": [],
     "entities": [
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "alt_5",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "alternative_1",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "alternative_2",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "alternative_3",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "alternative_4_cdiac",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "arb1",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "arb2",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "arb3",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "arb4",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "arb5",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "arb6",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "g77_and_oecd_countries",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "gapminder_list",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "god_id",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "gwid",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "income_groups",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "is--country",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "iso3166_1_alpha2",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "iso3166_1_alpha3",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "iso3166_1_numeric",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "iso3166_2",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "landlocked",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "latitude",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "longitude",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "main_religion_2008",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "name",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "pandg",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "un_state",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "unicode_region_subtag",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "upper_case_name",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
         "value": "world_4region",
         "resources": [
-          "geo--country"
-        ]
-      },
-      {
+          "ddf--entities--geo--country"
+        ],
         "primaryKey": [
           "country"
-        ],
-        "value": "world_6region",
-        "resources": [
-          "geo--country"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
+        "value": "world_6region",
+        "resources": [
+          "ddf--entities--geo--country"
         ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
         "value": "alt_5",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "alternative_1",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "alternative_2",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "alternative_3",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "alternative_4_cdiac",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "arb1",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "arb2",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "arb3",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "arb4",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "arb5",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "arb6",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "g77_and_oecd_countries",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "gapminder_list",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "god_id",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "gwid",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "income_groups",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "is--country",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "iso3166_1_alpha2",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "iso3166_1_alpha3",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "iso3166_1_numeric",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "iso3166_2",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "landlocked",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "latitude",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "longitude",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "main_religion_2008",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "name",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "pandg",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "un_state",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "unicode_region_subtag",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "upper_case_name",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "world_4region",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       },
       {
-        "primaryKey": [
-          "geo"
-        ],
         "value": "world_6region",
         "resources": [
-          "geo--country"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       }
     ],
+    "datapoints": [],
     "concepts": [
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "color",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "concept_type",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "description",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "domain",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "drill_up",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "indicator_url",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "interpolation",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "name",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "name_catalog",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "name_short",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "scales",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "tags",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       }
-    ],
-    "synonyms": []
+    ]
   }
 }

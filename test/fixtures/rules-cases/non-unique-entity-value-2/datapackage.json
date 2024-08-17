@@ -1,20 +1,15 @@
 {
-  "name": "ddf-test-2",
-  "title": "ddf-test-2",
-  "description": "",
-  "version": "0.0.1",
   "language": {
-    "id": "en",
-    "name": "English"
+    "name": "English",
+    "id": "en-US"
   },
-  "translations": [],
-  "license": "",
-  "author": "",
+  "created": "2024-08-17T13:28:52.453Z",
   "resources": [
     {
-      "path": "ddf--concepts.csv",
-      "name": "ddf--concepts",
       "schema": {
+        "primaryKey": [
+          "concept"
+        ],
         "fields": [
           {
             "name": "concept"
@@ -25,35 +20,16 @@
           {
             "name": "domain"
           }
-        ],
-        "primaryKey": "concept"
-      }
-    },
-    {
-      "path": "ddf--datapoints--population--by--geo--time.csv",
-      "name": "population--by--geo--time",
-      "schema": {
-        "fields": [
-          {
-            "name": "geo"
-          },
-          {
-            "name": "time"
-          },
-          {
-            "name": "population"
-          }
-        ],
-        "primaryKey": [
-          "geo",
-          "time"
         ]
-      }
+      },
+      "path": "ddf--concepts.csv",
+      "name": "ddf--concepts"
     },
     {
-      "path": "ddf--entities--geo--city.csv",
-      "name": "geo--city",
       "schema": {
+        "primaryKey": [
+          "geo"
+        ],
         "fields": [
           {
             "name": "geo"
@@ -67,14 +43,16 @@
           {
             "name": "is--country"
           }
-        ],
-        "primaryKey": "geo"
-      }
+        ]
+      },
+      "path": "ddf--entities--geo--city.csv",
+      "name": "ddf--entities--geo--city"
     },
     {
-      "path": "ddf--entities--geo--continent.csv",
-      "name": "geo--continent",
       "schema": {
+        "primaryKey": [
+          "continent"
+        ],
         "fields": [
           {
             "name": "continent"
@@ -82,14 +60,16 @@
           {
             "name": "name"
           }
-        ],
-        "primaryKey": "continent"
-      }
+        ]
+      },
+      "path": "ddf--entities--geo--continent.csv",
+      "name": "ddf--entities--geo--continent"
     },
     {
-      "path": "ddf--entities--geo--country.csv",
-      "name": "geo--country",
       "schema": {
+        "primaryKey": [
+          "geo"
+        ],
         "fields": [
           {
             "name": "geo"
@@ -103,14 +83,16 @@
           {
             "name": "is--continent"
           }
-        ],
-        "primaryKey": "geo"
-      }
+        ]
+      },
+      "path": "ddf--entities--geo--country.csv",
+      "name": "ddf--entities--geo--country"
     },
     {
-      "path": "ddf--entities--geo.csv",
-      "name": "geo",
       "schema": {
+        "primaryKey": [
+          "geo"
+        ],
         "fields": [
           {
             "name": "geo"
@@ -118,211 +100,234 @@
           {
             "name": "name"
           }
-        ],
-        "primaryKey": "geo"
-      }
-    }
-  ],
-  "ddfSchema": {
-    "datapoints": [
-      {
+        ]
+      },
+      "path": "ddf--entities--geo.csv",
+      "name": "ddf--entities--geo"
+    },
+    {
+      "schema": {
         "primaryKey": [
           "geo",
           "time"
         ],
-        "value": "population",
+        "fields": [
+          {
+            "name": "geo"
+          },
+          {
+            "name": "time"
+          },
+          {
+            "name": "population"
+          }
+        ]
+      },
+      "path": "ddf--datapoints--population--by--geo--time.csv",
+      "name": "ddf--datapoints--population--by--geo--time"
+    }
+  ],
+  "ddfSchema": {
+    "synonyms": [],
+    "entities": [
+      {
+        "value": "is--city",
         "resources": [
-          "population--by--geo--time"
+          "ddf--entities--geo--city"
+        ],
+        "primaryKey": [
+          "city"
         ]
       },
       {
-        "primaryKey": [
-          "city",
-          "time"
-        ],
-        "value": "population",
+        "value": "is--continent",
         "resources": [
-          "population--by--geo--time"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "city"
         ]
       },
       {
-        "primaryKey": [
-          "country",
-          "time"
-        ],
-        "value": "population",
+        "value": "is--country",
         "resources": [
-          "population--by--geo--time"
+          "ddf--entities--geo--city",
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "city"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo--city",
+          "ddf--entities--geo--country",
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "city"
+        ]
+      },
+      {
+        "value": "is--continent",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "continent"
+        ]
+      },
+      {
+        "value": "is--country",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "continent"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo--continent",
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "continent"
+        ]
+      },
+      {
+        "value": "is--city",
+        "resources": [
+          "ddf--entities--geo--city"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "is--continent",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "is--country",
+        "resources": [
+          "ddf--entities--geo--city",
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo--city",
+          "ddf--entities--geo--country",
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "is--city",
+        "resources": [
+          "ddf--entities--geo--city"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "is--continent",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "is--country",
+        "resources": [
+          "ddf--entities--geo--city",
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo--city",
+          "ddf--entities--geo--continent",
+          "ddf--entities--geo--country",
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       }
     ],
-    "entities": [
+    "datapoints": [
       {
-        "primaryKey": [
-          "geo"
-        ],
-        "value": "name",
+        "value": "population",
         "resources": [
-          "geo--city",
-          "geo--continent",
-          "geo--country",
-          "geo"
+          "ddf--datapoints--population--by--geo--time"
+        ],
+        "primaryKey": [
+          "city",
+          "time"
         ]
       },
       {
-        "primaryKey": [
-          "city"
-        ],
-        "value": "name",
+        "value": "population",
         "resources": [
-          "geo--city",
-          "geo--country",
-          "geo"
+          "ddf--datapoints--population--by--geo--time"
+        ],
+        "primaryKey": [
+          "country",
+          "time"
         ]
       },
       {
-        "primaryKey": [
-          "country"
-        ],
-        "value": "name",
+        "value": "population",
         "resources": [
-          "geo--city",
-          "geo--country",
-          "geo"
-        ]
-      },
-      {
-        "primaryKey": [
-          "geo"
+          "ddf--datapoints--population--by--geo--time"
         ],
-        "value": "is--city",
-        "resources": [
-          "geo--city"
-        ]
-      },
-      {
         "primaryKey": [
-          "city"
-        ],
-        "value": "is--city",
-        "resources": [
-          "geo--city"
-        ]
-      },
-      {
-        "primaryKey": [
-          "country"
-        ],
-        "value": "is--city",
-        "resources": [
-          "geo--city"
-        ]
-      },
-      {
-        "primaryKey": [
-          "geo"
-        ],
-        "value": "is--country",
-        "resources": [
-          "geo--city",
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "city"
-        ],
-        "value": "is--country",
-        "resources": [
-          "geo--city",
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "country"
-        ],
-        "value": "is--country",
-        "resources": [
-          "geo--city",
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "continent"
-        ],
-        "value": "name",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "continent"
-        ],
-        "value": "is--country",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "geo"
-        ],
-        "value": "is--continent",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "country"
-        ],
-        "value": "is--continent",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "continent"
-        ],
-        "value": "is--continent",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "city"
-        ],
-        "value": "is--continent",
-        "resources": [
-          "geo--country"
+          "geo",
+          "time"
         ]
       }
     ],
     "concepts": [
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "concept_type",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "domain",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       }
-    ],
-    "synonyms": []
+    ]
   }
 }

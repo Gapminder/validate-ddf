@@ -1,4 +1,4 @@
-geo,name,lat,lng,is--country,is--geo
-and,Andorra,,,true,false
-,Andorra2,,,true,false
-,,,,,
+geo,name,lat,lng,is--country
+and,Andorra,,,true
+,Andorra2,,,true
+,,,,
