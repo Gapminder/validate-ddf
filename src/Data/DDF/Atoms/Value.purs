@@ -123,8 +123,10 @@ parseStrVal' = StrVal
 parseBoolVal :: String -> V Issues Value
 parseBoolVal "TRUE" = pure $ BoolVal true
 parseBoolVal "true" = pure $ BoolVal true
+parseBoolVal "True" = pure $ BoolVal true
 parseBoolVal "FALSE" = pure $ BoolVal false
 parseBoolVal "false" = pure $ BoolVal false
+parseBoolVal "False" = pure $ BoolVal false
 parseBoolVal x = invalid [ Issue $ "not a boolean value: " <> show x ]
 
 -- Num.fromString use parseFloat() from js which allows whitespace prefix and other chars at

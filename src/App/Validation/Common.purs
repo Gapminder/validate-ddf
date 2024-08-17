@@ -54,14 +54,12 @@ emitErrorsAndContinue issues = do
   where
   msgs = map (setError <<< messageFromIssue) issues
 
-
 -- | emit errors and stop the validation
 emitErrorsAndStop :: forall x m. Monad m => Issues -> ValidationT Messages m x
 emitErrorsAndStop issues = do
   vError msgs
   where
   msgs = map (setError <<< messageFromIssue) issues
-
 
 -- | validate if file exists
 validateFileExists :: FileInfo -> ValidationT Messages Aff (Maybe FileInfo)
@@ -81,8 +79,8 @@ readAndParseCsvFiles files = do
   validateCsvFiles $ Arr.zip files csvContents
 
 -- | validte csv content, drop bad csv rows
-dropAndWarnBadCsvRows ::
-  FilePath
+dropAndWarnBadCsvRows
+  :: FilePath
   -> RawCsvContent
   -> Validation Messages RawCsvContent
 dropAndWarnBadCsvRows fp content = do
@@ -98,8 +96,8 @@ dropAndWarnBadCsvRows fp content = do
   pure content'
 
 -- | parse csv file info and csv data into a valid CsvFile
-validateCsvFile ::
-  (Tuple FileInfo RawCsvContent)
+validateCsvFile
+  :: (Tuple FileInfo RawCsvContent)
   -> Validation Messages (Maybe CsvFile)
 validateCsvFile (Tuple fi rawcsv) = do
   let
@@ -108,7 +106,7 @@ validateCsvFile (Tuple fi rawcsv) = do
   rawcsv' <- dropAndWarnBadCsvRows fp rawcsv
 
   let
-    csvFileInput = { fileInfo: fi, csvContent: parseCsvContent rawcsv'}
+    csvFileInput = { fileInfo: fi, csvContent: parseCsvContent rawcsv' }
 
   case toEither $ parseCsvFile csvFileInput of
     Right validFile -> do
@@ -120,8 +118,10 @@ validateCsvFile (Tuple fi rawcsv) = do
       where
       msgs = map (setError <<< setFile fp <<< messageFromIssue) errs
 
-validateCsvFiles :: forall t. Traversable t =>
-  (t (Tuple FileInfo RawCsvContent))
+validateCsvFiles
+  :: forall t
+   . Traversable t
+  => (t (Tuple FileInfo RawCsvContent))
   -> Validation Messages (Array CsvFile)
 validateCsvFiles xs = do
   rs <- for xs (\x -> validateCsvFile x)
@@ -173,26 +173,25 @@ validateEntities csvfile =
       Right inputs ->
         Arr.foldM go [] inputs
         where
-          go acc input =
-            let
-              (Tuple fp i) = case input._info of
-                Nothing -> (Tuple "" (-1))
-                Just info -> pathAndRow info
-            in
-              case toEither $ parseEntity input of
-                Left errs -> do
-                  _ <- vWarning msgs
-                  pure acc
-                  where
-                  msgs = map
-                    ( setLineNo i
-                        <<< setFile fp
-                        <<< setError
-                        <<< messageFromIssue
-                    )
-                    errs
-                Right vent -> pure $ Arr.snoc acc vent
-
+        go acc input =
+          let
+            (Tuple fp i) = case input._info of
+              Nothing -> (Tuple "" (-1))
+              Just info -> pathAndRow info
+          in
+            case toEither $ parseEntity input of
+              Left errs -> do
+                _ <- vWarning msgs
+                pure acc
+                where
+                msgs = map
+                  ( setLineNo i
+                      <<< setFile fp
+                      <<< setError
+                      <<< messageFromIssue
+                  )
+                  errs
+              Right vent -> pure $ Arr.snoc acc vent
 
 validateBaseDataSet :: (Array Concept) -> (Array Entity) -> Validation Messages DataSet
 validateBaseDataSet conceptsInput entitiesInput =
@@ -251,7 +250,6 @@ validateDataPointsWithDataSet ds dps =
         emitErrorsAndContinue errs
       Right _ -> pure unit
 
-
 validateCsvFileWithDataSet :: DataSet -> CsvFile -> Validation Messages Unit
 validateCsvFileWithDataSet ds csvfile =
   let
@@ -262,13 +260,11 @@ validateCsvFileWithDataSet ds csvfile =
         emitWarningsAndContinue errs
       Right _ -> pure unit
 
-
 -- Below are Validation for Warnings
 
-
--- | Warn if Csv Headers are not in concept list
+-- | check Csv Headers are not in concept list
 validateCsvHeaders :: DataSet -> CsvFile -> Validation Messages Unit
-validateCsvHeaders (DataSet ds) { csvContent, fileInfo } = do
+validateCsvHeaders dataset@(DataSet ds) { csvContent, fileInfo } = do
   let
     headers = map unwrap $ csvContent.headers
     concepts = HM.keys ds.concepts
@@ -279,16 +275,39 @@ validateCsvHeaders (DataSet ds) { csvContent, fileInfo } = do
     ( \h -> do
         let
           hstr = NES.toString h
-          predicate = (Str.take 4 hstr == "is--")
-            || (h `Arr.elem` reserved)
-            || (hstr `Arr.elem` concepts)
-        when (not predicate)
-          $ vWarning
-          $
-            [ setFile filepath <<< messageFromIssue
-                $ Issue
-                $ hstr <> " is not in concept list but it's in the header."
-            ]
+        if Str.take 4 hstr == "is--" then
+          case FI.collection fileInfo of
+            FI.Entities { domain } -> do -- need to check if the concept is a entity set of the domain
+              let
+                set = Str.drop 4 hstr
+                domainInDataset = DataSet.getDomainForEntitySet dataset set
+              case domainInDataset of
+                Nothing -> vWarning $
+                  [ setFile filepath <<< setError <<< messageFromIssue
+                      $ Issue
+                      $ set <> " is not a valid concept."
+                  ]
+                Just x -> when (NES.toString domain /= x)
+                  $ vWarning
+                  $
+                    [ setFile filepath <<< setError <<< messageFromIssue
+                        $ Issue
+                        $ set <> " is not a entity_set in " <> NES.toString domain <> " domain."
+                    ]
+            -- it is not valid to have is-- header in other files.
+            -- but it's already validated in other steps so no need to emit error here.
+            _ -> pure unit
+        else do
+          let
+            predicate = (h `Arr.elem` reserved)
+              || (hstr `Arr.elem` concepts)
+          when (not predicate)
+            $ vWarning
+            $
+              [ setFile filepath <<< setError <<< messageFromIssue
+                  $ Issue
+                  $ hstr <> " is not in concept list but it's in the header."
+              ]
     )
   pure unit
 
@@ -313,5 +332,4 @@ validateConceptLength (DataSet ds) = do
       where
       msgs = map messageFromIssue errs
     Right _ -> pure unit
-
 

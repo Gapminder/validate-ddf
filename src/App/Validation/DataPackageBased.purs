@@ -62,11 +62,15 @@ readDataPackageResources :: FilePath -> ValidationT Messages Aff (Array Resource
 readDataPackageResources path = do
   datapackage <- liftEffect $ datapackageExists path
   case toEither datapackage of
-    Left issues -> emitErrorsAndStop issues
+    Left issues -> do
+      emitErrorsAndContinue issues
+      pure []
     Right dpath -> do
       content <- lift $ readTextFile Encoding.UTF8 dpath
       case toEither $ DataPackage.parseDataPackageResources content of
-        Left issues -> emitErrorsAndStop issues
+        Left issues -> do
+          emitErrorsAndContinue issues
+          pure []
         Right res -> pure res
 
 -- | main validation process
@@ -119,12 +123,21 @@ validate path = do
 
   -- create a base dataset from concepts and entities
   ds <- validateBaseDataSet (Arr.concat concepts) (Arr.concat entities)
+  -- validate all headers in concepts and entities files
+  -- this will emit errors
+  traverse_ (\c -> validateCsvHeaders ds c) conceptCsvFiles
+  traverse_ (\c -> validateCsvHeaders ds c) entityCsvFiles
 
   -- if there are errors, stop here
   msgs <- getState
   if (hasError msgs) then
     pure (Tuple ds [])
   else do
+    -- also validate all values in concepts/entities csv files
+    -- this will emit warnings
+    traverse_ (\c -> validateCsvFileWithDataSet ds c) entityCsvFiles
+    traverse_ (\c -> validateCsvFileWithDataSet ds c) conceptCsvFiles
+
     -- validate each indicators. First we will need to find all csv files for the indicator
     datapointFiles <-
       case HM.lookup FI.DATAPOINTS fileMap of

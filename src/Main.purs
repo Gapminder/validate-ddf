@@ -60,19 +60,28 @@ runMain opts = launchAff_ do
     liftEffect $ log "❌ Dataset is invalid"
     liftEffect $ setExitCode 1
   else do
-    -- dataset is valid, we can also generate a datapackage.json
     liftEffect $ log "✅ Dataset is valid"
-    when gendp do
-      case res of
-        Just (Tuple dataset resources) -> do
+
+  -- then if we should generate datapackage
+  when gendp do
+    case res of
+      Just (Tuple dataset resources) -> do
+        if (Arr.null resources) then do
+          liftEffect $ log "no valid resources to generate datapackage.json"
+          liftEffect $ setExitCode 1
+        else do
           liftEffect $ log "generating datapackage.json..."
           datapackage <- generateDataPackage path dataset resources
           let
             dpPath = Path.concat [ path, "datapackage.json" ]
           writeTextFile Encoding.UTF8 dpPath $ JSON.writePrettyJSON 2 $ writeDataPackage datapackage
           liftEffect $ log "Done!"
-          -- pure unit
-        Nothing -> pure unit
+          pure unit
+      Nothing -> do
+        liftEffect $ log "can not generate datapackage because there are errors in dataset"
+        liftEffect $ setExitCode 1
+        pure unit
+
 
 -- | main function to run under terminals
 main :: Effect Unit

@@ -22,8 +22,7 @@ module Data.DDF.DataSet
   , parseDataPoints
   , parseEntityDomains
   , queryDomainAndSet
-  )
-  where
+  ) where
 
 import Data.DDF.Atoms.Value
 import Prelude
@@ -63,6 +62,7 @@ import Data.Set (Set)
 import Data.String.NonEmpty (toString)
 import Data.String.NonEmpty as NES
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
+import Data.String.Utils as Str
 import Data.Traversable (for, for_, sequence, sequence_, traverse, traverse_)
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.Validation.Issue (Issue(..), Issues, toInvaildItem, withRowInfo)
@@ -362,7 +362,9 @@ lookupSetWithInDomain concepts set domain =
 
       )
 
+-- | parse a base dataset
 parseBaseDataSet :: ConceptsInput -> EntitiesInput -> V Issues DataSet
+-- FIXME: How should I use types to make the requirements more clear?
 parseBaseDataSet conceptsInput entitiesInput =
   parseConcepts conceptsInput
     `andThen`
@@ -381,12 +383,17 @@ parseBaseDataSet conceptsInput entitiesInput =
             ps = map (\x -> Tuple x (makeValueParser dataset x))
               (HM.keys $ getConcepts dataset)
             -- Add concept parser
-            ps' = Arr.snoc ps $
-              Tuple "concept"
-                ( Value.parseDomainVal "concept"
-                    $ HS.fromArray
-                    $ HM.keys ds.concepts
-                )
+            ps' = ps <>
+              -- append concept and concept_type parser.
+              -- because they are reversed concepts they won't be in
+              -- concept table.
+              [ Tuple "concept"
+                  ( Value.parseDomainVal "concept"
+                      $ HS.fromArray
+                      $ HM.keys ds.concepts
+                  )
+              , Tuple "concept_type" Value.parseStrVal
+              ]
           in
             pure $ DataSet (ds { _valueParsers = HM.fromArray ps' })
       )
@@ -475,8 +482,18 @@ parseCsvFileValues ds { fileInfo, csvContent } =
       getValueParser ds (toString concept)
         `andThen`
           (\vp -> parseColumnValues' fp concept vp vals index)
+
+    -- filter out is-- headers
+    targetHeaders (Tuple h _) =
+      let
+        h' = NES.toString h
+      in
+        if (Str.startsWith "is--" h') then false
+        else true
+
+    filtered = NEA.filter targetHeaders $ NEA.zip (map headerVal headers) columns
   in
-    traverse_ run $ NEA.zip (map headerVal headers) columns
+    traverse_ run filtered
 
 parseColumnValues' :: FilePath -> NonEmptyString -> ValueParser -> Array String -> Array Int -> V Issues Unit
 parseColumnValues' fp concept parser vals index = traverse_ run allValues
