@@ -39,8 +39,6 @@ import Data.Map (Map(..))
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromJust)
 import Data.Newtype (class Newtype, unwrap)
-import Data.Sequence (Seq)
-import Data.Sequence as Sq
 import Data.Set as S
 import Data.Set as Set
 import Data.Show.Generic (genericShow)

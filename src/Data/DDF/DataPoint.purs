@@ -25,7 +25,6 @@ import Data.Map (Map)
 import Data.Map as M
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, over)
-import Data.Sequence as Seq
 import Data.Set (Set)
 import Data.Set as Set
 import Data.String as Str
@@ -47,7 +46,7 @@ newtype DataPoints = DataPoints
   , by :: NonEmptyArray Identifier  -- the primary keys. use `by` to make it consistent with filename pattern.
   -- values are store in columns. where the column order is [*by, indicatorId]
   -- we will parse all values later, for now they should just be strings.
-  , values :: Map Identifier (Array String) 
+  , values :: Map Identifier (Array String)
   , itemInfo :: Array ItemInfo
   }
 
@@ -55,7 +54,7 @@ derive instance newtypeDataPoints :: Newtype DataPoints _
 
 instance showDataPoints :: Show DataPoints where
   show (DataPoints { indicatorId, by, values }) =
-    "Indicator " <> Id.value indicatorId 
+    "Indicator " <> Id.value indicatorId
     <> " by " <> (toString (join1With "," $ map Id.value1 by))
     <> "\n" <> "values: \n" <> keysLine <> "\n" <> samplesLines'
     where
@@ -66,10 +65,10 @@ instance showDataPoints :: Show DataPoints where
     samplesLines' = Str.joinWith "\n" $ Arr.fromFoldable samplesLines
 
 
-datapoints :: 
-  Identifier 
-  -> NonEmptyArray Identifier 
-  -> Map Identifier (Array String) 
+datapoints ::
+  Identifier
+  -> NonEmptyArray Identifier
+  -> Map Identifier (Array String)
   -> Array ItemInfo
   -> DataPoints
 datapoints indicatorId by values itemInfo =
@@ -84,17 +83,17 @@ type DataPointsInput =
   }
 
 unsafeGetRow :: Array (Array String) -> Int -> (Array String)
-unsafeGetRow xxs i = 
+unsafeGetRow xxs i =
   map (flip unsafeIndex $ i) xxs
 
 
 mergeDataPointsInput :: NonEmptyArray DataPointsInput -> V Issues DataPointsInput
 mergeDataPointsInput inputs =
-  let 
+  let
     { head, tail } = NEA.uncons inputs
 
-    go x acc = 
-      case acc of 
+    go x acc =
+      case acc of
         Nothing -> Nothing
         Just acc' -> mergeTwoDataPointsInput acc' x
   in
@@ -108,7 +107,7 @@ mergeTwoDataPointsInput a b =
     let
       newvalues = M.unionWith (<>) a.values b.values
       newiteminfo = a.itemInfo <> b.itemInfo
-    in 
+    in
       Just { indicatorId: a.indicatorId, by: a.by, values: newvalues, itemInfo: newiteminfo }
   else
     Nothing
@@ -116,11 +115,11 @@ mergeTwoDataPointsInput a b =
 
 -- | check if provided headers match actual data columns.
 -- | this is redundant check because we have checked in csv parsing steps.
-headersMatchesData 
+headersMatchesData
   :: Set Identifier
   -> Set Identifier
   -> V Issues Unit
-headersMatchesData expected actual = 
+headersMatchesData expected actual =
   if expected == actual then
     pure unit
   else
@@ -137,10 +136,10 @@ parseDataPoints input@{ indicatorId, by, values, itemInfo } =
     actualCols = M.keys values
   in
     headersMatchesData expectedCols actualCols
-      `andThen` 
+      `andThen`
     (\_ -> pure $ datapoints indicatorId by values itemInfo)
     -- the checking for duplicated was done in CsvFile parsing step.
-    -- (\_ -> case findDupsForColumns by values of 
+    -- (\_ -> case findDupsForColumns by values of
     --   [] -> pure $ datapoints indicatorId by values itemInfo
     --   dups -> invalid issues
     --     where
@@ -152,7 +151,7 @@ parseDataPoints input@{ indicatorId, by, values, itemInfo } =
     --         InvalidItem fp row "Duplicated datapoints"
     --     issues = map mkissue items
     -- )
-  
+
 -- findDupsForColumns :: NonEmptyArray Identifier -> Map Identifier (Array String) -> Array Int
 -- findDupsForColumns headers values =
 --   let

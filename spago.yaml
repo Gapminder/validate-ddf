@@ -2,8 +2,6 @@ package:
   dependencies:
     - aff
     - aff-promise
-    - argonaut
-    - argonaut-core
     - arrays
     - console
     - control
@@ -26,12 +24,10 @@ package:
     - optparse
     - ordered-collections
     - partial
-    - pipes
     - prelude
     - psci-support
     - quickcheck
     - safe-coerce
-    - sequences
     - spec
     - st
     - string-parsers
@@ -47,8 +43,4 @@ package:
   name: ddf-validation-ng
 workspace:
   packageSet:
-    registry: 51.2.0
-  extraPackages:
-    sequences:
-      git: https://github.com/flip111/purescript-sequences
-      ref: 646058056a62c979e446f414fc3f288a574af55b
+    registry: 57.2.0

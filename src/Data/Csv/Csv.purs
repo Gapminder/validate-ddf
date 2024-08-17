@@ -26,7 +26,6 @@ import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromJust)
 import Data.Newtype (class Newtype)
-import Data.Sequence.NonEmpty (Seq)
 import Data.Set as Set
 import Data.Traversable (for, for_, sequence, traverse)
 import Data.Tuple (Tuple(..), fst, snd)

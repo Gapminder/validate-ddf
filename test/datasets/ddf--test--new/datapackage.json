@@ -1,301 +1,373 @@
 {
-    "name": "ddf--test--new",
-    "language": {
-        "name": "English",
-        "id": "en"
+  "name": "ddf--test--new",
+  "title": "Test DDF",
+  "description": "Test DDF",
+  "author": "Gapminder",
+  "license": "CC-BY-4.0",
+  "language": {
+    "id": "en"
+  },
+  "created": "2024-08-17T05:37:54.856Z",
+  "translations": [],
+  "version": "0.0.1",
+  "resources": [
+    {
+      "schema": {
+        "primaryKey": [
+          "concept"
+        ],
+        "fields": [
+          {
+            "name": "concept"
+          },
+          {
+            "name": "concept_type"
+          },
+          {
+            "name": "name"
+          },
+          {
+            "name": "domain"
+          },
+          {
+            "name": "drill_up"
+          }
+        ]
+      },
+      "path": "ddf--concepts.csv",
+      "name": "ddf--concepts"
     },
-    "title": "Test DDF",
-    "description": "Test DDF",
-    "author": "Gapminder",
-    "license": "CC-BY-4.0",
-    "created": "2024-08-04T17:05:25.384991+00:00",
-    "translations": [],
-    "version": "0.0.1",
-    "resources": [
-        {
-            "name": "ddf--concepts",
-            "path": "ddf--concepts.csv",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "concept"
-                    },
-                    {
-                        "name": "concept_type"
-                    },
-                    {
-                        "name": "name"
-                    },
-                    {
-                        "name": "domain"
-                    },
-                    {
-                        "name": "drill_up"
-                    }
-                ],
-                "primaryKey": [
-                    "concept"
-                ]
-            }
-        },
-        {
-            "name": "ddf--datapoints--indicator--by--geo--time",
-            "path": "ddf--datapoints--indicator--by--geo--time.csv",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "geo"
-                    },
-                    {
-                        "name": "time"
-                    },
-                    {
-                        "name": "indicator"
-                    }
-                ],
-                "primaryKey": [
-                    "geo",
-                    "time"
-                ]
-            }
-        },
-        {
-            "name": "ddf--datapoints--indicator--by--geo-swe--time",
-            "path": "ddf--datapoints--indicator--by--geo-swe--time.csv",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "geo",
-                        "constraints": {
-                            "enum": [
-                                "swe"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "time"
-                    },
-                    {
-                        "name": "indicator"
-                    }
-                ],
-                "primaryKey": [
-                    "geo",
-                    "time"
-                ]
-            }
-        },
-        {
-            "name": "ddf--datapoints--indicator2--by--geo-chn--time",
-            "path": "ddf--datapoints--indicator2--by--geo-chn--time.csv",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "geo",
-                        "constraints": {
-                            "enum": [
-                                "chn"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "time"
-                    },
-                    {
-                        "name": "indicator2"
-                    }
-                ],
-                "primaryKey": [
-                    "geo",
-                    "time"
-                ]
-            }
-        },
-        {
-            "name": "ddf--entities--age",
-            "path": "ddf--entities--age.csv",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "age"
-                    },
-                    {
-                        "name": "name"
-                    },
-                    {
-                        "name": "is--board"
-                    }
-                ],
-                "primaryKey": [
-                    "age"
-                ]
-            }
-        },
-        {
-            "name": "ddf--entities--geo--country",
-            "path": "ddf--entities--geo--country.csv",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "country"
-                    },
-                    {
-                        "name": "name"
-                    },
-                    {
-                        "name": "is--country"
-                    }
-                ],
-                "primaryKey": [
-                    "country"
-                ]
-            }
-        },
-        {
-            "name": "ddf--entities--geo",
-            "path": "ddf--entities--geo.csv",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "geo"
-                    },
-                    {
-                        "name": "name"
-                    }
-                ],
-                "primaryKey": [
-                    "geo"
-                ]
-            }
-        },
-        {
-            "name": "ddf--entities--geo-1",
-            "path": "extra geos/ddf--entities--geo.csv",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "geo"
-                    },
-                    {
-                        "name": "name"
-                    }
-                ],
-                "primaryKey": [
-                    "geo"
-                ]
-            }
-        }
-    ],
-    "ddfSchema": {
-        "concepts": [
-            {
-                "primaryKey": [
-                    "concept"
-                ],
-                "value": "concept_type",
-                "resources": [
-                    "ddf--concepts"
-                ]
-            },
-            {
-                "primaryKey": [
-                    "concept"
-                ],
-                "value": "domain",
-                "resources": [
-                    "ddf--concepts"
-                ]
-            },
-            {
-                "primaryKey": [
-                    "concept"
-                ],
-                "value": "drill_up",
-                "resources": [
-                    "ddf--concepts"
-                ]
-            },
-            {
-                "primaryKey": [
-                    "concept"
-                ],
-                "value": "name",
-                "resources": [
-                    "ddf--concepts"
-                ]
-            }
+    {
+      "schema": {
+        "primaryKey": [
+          "age"
         ],
-        "entities": [
-            {
-                "primaryKey": [
-                    "age"
-                ],
-                "value": "is--board",
-                "resources": [
-                    "ddf--entities--age"
-                ]
-            },
-            {
-                "primaryKey": [
-                    "country"
-                ],
-                "value": "is--country",
-                "resources": [
-                    "ddf--entities--geo--country"
-                ]
-            },
-            {
-                "primaryKey": [
-                    "age"
-                ],
-                "value": "name",
-                "resources": [
-                    "ddf--entities--age"
-                ]
-            },
-            {
-                "primaryKey": [
-                    "country"
-                ],
-                "value": "name",
-                "resources": [
-                    "ddf--entities--geo--country"
-                ]
-            },
-            {
-                "primaryKey": [
-                    "geo"
-                ],
-                "value": "name",
-                "resources": [
-                    "ddf--entities--geo",
-                    "ddf--entities--geo-1"
-                ]
-            }
+        "fields": [
+          {
+            "name": "age"
+          },
+          {
+            "name": "name"
+          },
+          {
+            "name": "is--board"
+          }
+        ]
+      },
+      "path": "ddf--entities--age.csv",
+      "name": "ddf--entities--age"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "country"
         ],
-        "datapoints": [
-            {
-                "primaryKey": [
-                    "geo",
-                    "time"
-                ],
-                "value": "indicator",
-                "resources": [
-                    "ddf--datapoints--indicator--by--geo--time",
-                    "ddf--datapoints--indicator--by--geo-swe--time"
-                ]
-            },
-            {
-                "primaryKey": [
-                    "geo",
-                    "time"
-                ],
-                "value": "indicator2",
-                "resources": [
-                    "ddf--datapoints--indicator2--by--geo-chn--time"
-                ]
-            }
+        "fields": [
+          {
+            "name": "country"
+          },
+          {
+            "name": "name"
+          },
+          {
+            "name": "is--country"
+          }
+        ]
+      },
+      "path": "ddf--entities--geo--country.csv",
+      "name": "ddf--entities--geo--country"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "geo"
         ],
-        "synonyms": []
+        "fields": [
+          {
+            "name": "geo"
+          },
+          {
+            "name": "name"
+          }
+        ]
+      },
+      "path": "ddf--entities--geo.csv",
+      "name": "ddf--entities--geo"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "tag"
+        ],
+        "fields": [
+          {
+            "name": "tag"
+          }
+        ]
+      },
+      "path": "ddf--entities--tag.csv",
+      "name": "ddf--entities--tag"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "geo"
+        ],
+        "fields": [
+          {
+            "name": "geo"
+          },
+          {
+            "name": "name"
+          }
+        ]
+      },
+      "path": "extra geos/ddf--entities--geo.csv",
+      "name": "ddf--entities--geo-1"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "geo",
+          "time"
+        ],
+        "fields": [
+          {
+            "name": "geo"
+          },
+          {
+            "name": "time"
+          },
+          {
+            "name": "indicator"
+          }
+        ]
+      },
+      "path": "ddf--datapoints--indicator--by--geo--time.csv",
+      "name": "ddf--datapoints--indicator--by--geo--time"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "geo",
+          "time"
+        ],
+        "fields": [
+          {
+            "name": "geo",
+            "constraints": {
+              "enum": [
+                "swe"
+              ]
+            }
+          },
+          {
+            "name": "time"
+          },
+          {
+            "name": "indicator"
+          }
+        ]
+      },
+      "path": "ddf--datapoints--indicator--by--geo-swe--time.csv",
+      "name": "ddf--datapoints--indicator--by--geo-swe--time"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "geo",
+          "time"
+        ],
+        "fields": [
+          {
+            "name": "geo",
+            "constraints": {
+              "enum": [
+                "chn"
+              ]
+            }
+          },
+          {
+            "name": "time"
+          },
+          {
+            "name": "indicator2"
+          }
+        ]
+      },
+      "path": "ddf--datapoints--indicator2--by--geo-chn--time.csv",
+      "name": "ddf--datapoints--indicator2--by--geo-chn--time"
     }
+  ],
+  "ddfSchema": {
+    "synonyms": [],
+    "entities": [
+      {
+        "value": "is--board",
+        "resources": [
+          "ddf--entities--age"
+        ],
+        "primaryKey": [
+          "age"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--age"
+        ],
+        "primaryKey": [
+          "age"
+        ]
+      },
+      {
+        "value": "is--board",
+        "resources": [
+          "ddf--entities--age"
+        ],
+        "primaryKey": [
+          "board"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--age"
+        ],
+        "primaryKey": [
+          "board"
+        ]
+      },
+      {
+        "value": "is--country",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo--country",
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "is--country",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo--country",
+          "ddf--entities--geo",
+          "ddf--entities--geo-1"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": null,
+        "resources": [
+          "ddf--entities--tag"
+        ],
+        "primaryKey": [
+          "tag"
+        ]
+      }
+    ],
+    "datapoints": [
+      {
+        "value": "indicator",
+        "resources": [
+          "ddf--datapoints--indicator--by--geo--time",
+          "ddf--datapoints--indicator--by--geo-swe--time"
+        ],
+        "primaryKey": [
+          "country",
+          "time"
+        ]
+      },
+      {
+        "value": "indicator2",
+        "resources": [
+          "ddf--datapoints--indicator2--by--geo-chn--time"
+        ],
+        "primaryKey": [
+          "country",
+          "time"
+        ]
+      },
+      {
+        "value": "indicator",
+        "resources": [
+          "ddf--datapoints--indicator--by--geo--time",
+          "ddf--datapoints--indicator--by--geo-swe--time"
+        ],
+        "primaryKey": [
+          "geo",
+          "time"
+        ]
+      },
+      {
+        "value": "indicator2",
+        "resources": [
+          "ddf--datapoints--indicator2--by--geo-chn--time"
+        ],
+        "primaryKey": [
+          "geo",
+          "time"
+        ]
+      }
+    ],
+    "concepts": [
+      {
+        "value": "concept_type",
+        "resources": [
+          "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
+        ]
+      },
+      {
+        "value": "domain",
+        "resources": [
+          "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
+        ]
+      },
+      {
+        "value": "drill_up",
+        "resources": [
+          "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
+        ]
+      }
+    ]
+  }
 }
