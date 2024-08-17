@@ -3,26 +3,36 @@ module Data.Csv
   , RawCsvContent
   , createRawContent
   , filterBadRows
+  , foldRows
   , getLineNo
   , getRow
+  , iterRows
   , parseCsvContent
+  , readAndParseCsv
   , readCsv
   , readCsv'
-  , readAndParseCsv
-  )
-  where
+  ) where
 
 import Prelude
 
 import Data.Array (head, length, partition, range, replicate, tail, take, zip)
+import Data.Array as Arr
+import Data.Array.NonEmpty as NEA
 import Data.DDF.Csv.FileInfo (FileInfo(..), filepath)
-import Data.Maybe (Maybe(..))
+import Data.Function (on)
+import Data.List (List)
+import Data.List as List
+import Data.Map (Map)
+import Data.Map as Map
+import Data.Maybe (Maybe(..), fromJust)
 import Data.Newtype (class Newtype)
 import Data.Sequence.NonEmpty (Seq)
-import Data.Traversable (for_, sequence, traverse)
+import Data.Set as Set
+import Data.Traversable (for, for_, sequence, traverse)
 import Data.Tuple (Tuple(..), fst, snd)
 import Data.Validation.Issue (Issue(..), Issues)
 import Data.Validation.Semigroup (V, invalid)
+import Debug (trace, traceTime)
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
@@ -31,6 +41,8 @@ import Effect.Class.Console (logShow)
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff (readTextFile)
 import Node.Path (FilePath)
+import Partial.Unsafe (unsafePartial)
+import Utils (findDupsL, unsafeLookup)
 
 -- | CsvRow is a tuple of line number and row content
 newtype CsvRow =
@@ -96,7 +108,6 @@ createRawContent recs = { headers: headers, rows: rows }
 
   rows = toCsvRow <$> tail recs
 
-
 -- | a function to filter bad rows from csv rows
 filterBadRows :: RawCsvContent -> (Tuple (Array Int) RawCsvContent)
 filterBadRows rcsv@{ headers, rows } = case headers of
@@ -104,14 +115,13 @@ filterBadRows rcsv@{ headers, rows } = case headers of
   Just hs ->
     case rows of
       Nothing -> Tuple [] rcsv
-      Just rs -> Tuple (map getLineNo no) {headers: headers, rows: Just yes}
+      Just rs -> Tuple (map getLineNo no) { headers: headers, rows: Just yes }
         where
         headerLength = length hs
         func row =
           if (length $ getRow row) == headerLength then true
           else false
-        {yes, no} = partition func rs
-
+        { yes, no } = partition func rs
 
 foreign import rowsToColumnsImpl :: Array (Array String) -> Array (Array String)
 
@@ -129,9 +139,9 @@ parseCsvContent { headers, rows } = case headers of
         emptyCols = replicate (length hs) []
       Just rs -> { headers: hs, index: idxs, columns: cols }
         where
-          idxs = map getLineNo rs
-          rowsData = map getRow rs
-          cols = rowsToColumnsImpl rowsData
+        idxs = map getLineNo rs
+        rowsData = map getRow rs
+        cols = rowsToColumnsImpl rowsData
 
 readAndParseCsv :: FilePath -> Aff CsvContent
 readAndParseCsv fp = do
@@ -140,3 +150,33 @@ readAndParseCsv fp = do
     rawContent = createRawContent rows
     Tuple _ rawContent' = filterBadRows rawContent
   pure $ parseCsvContent rawContent'
+
+-- | iter each row on a function
+iterRows :: forall a. CsvContent -> ((Map String String) -> a) -> Array a
+iterRows { headers, columns, index } func =
+  let
+    func' i =
+      let
+        xs = map (\c -> unsafePartial $ Arr.unsafeIndex c i) columns
+        rowmap = Map.fromFoldable $ Arr.zip headers xs
+      in
+        func rowmap
+    idxs = Arr.range 0 $ (Arr.length index) - 1
+  in
+    map func' idxs
+
+-- | fold over each row
+foldRows :: forall a. CsvContent -> ((Map String String) -> a -> a) -> a -> a
+foldRows { headers, columns, index } func a =
+  let
+    func' i acc =
+      let
+        xs = map (\c -> unsafePartial $ Arr.unsafeIndex c i) columns
+        rowmap = Map.fromFoldable $ Arr.zip headers xs
+      in
+        func rowmap acc
+    idxs = Arr.range 0 $ (Arr.length index) - 1
+  in
+    Arr.foldr func' a idxs
+
+-- TODO: good to implement some common operators, such as drop duplicates

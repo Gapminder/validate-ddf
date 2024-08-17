@@ -70,7 +70,7 @@ readDataPackageResources path = do
         Right res -> pure res
 
 -- | main validation process
-validate :: FilePath -> ValidationT Messages Aff DataSet
+validate :: FilePath -> ValidationT Messages Aff (Tuple DataSet (Array Resource))
 validate path = do
   lift $ liftEffect $ log "reading file list..."
 
@@ -123,7 +123,7 @@ validate path = do
   -- if there are errors, stop here
   msgs <- getState
   if (hasError msgs) then
-    pure ds
+    pure (Tuple ds [])
   else do
     -- validate each indicators. First we will need to find all csv files for the indicator
     datapointFiles <-
@@ -195,8 +195,8 @@ validate path = do
       actualResources = conceptResources <> entityResources <> datapointResources <> synonymResources
       expectedResources = resources
     case toEither $ DataPackage.compareResources expectedResources actualResources of
-      Left issues -> emitWarningsAndContinue issues
+      Left issues -> emitErrorsAndContinue issues
       Right _ -> pure unit
 
-    pure ds
+    pure (Tuple ds actualResources)
 

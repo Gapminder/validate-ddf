@@ -4,21 +4,26 @@
 -- | for validation rules.
 
 module Data.DDF.DataSet
-  ( DataSet(..)
-  , ConceptDB
-  , EntityDB
+  ( ConceptDB
   , DataPointsDB
-  , ValueParserDB
+  , DataSet(..)
+  , EntityDB
   , ValueParser
+  , ValueParserDB
   , basedataset
-  , parseConcepts
-  , parseEntityDomains
-  , parseBaseDataSet
-  , parseDataPoints
-  , parseCsvFileValues
+  , genSetMemberships
+  , getConcept
   , getConcepts
+  , getDomainForEntitySet
+  , getEntities
+  , parseBaseDataSet
+  , parseConcepts
+  , parseCsvFileValues
+  , parseDataPoints
+  , parseEntityDomains
   , queryDomainAndSet
-  ) where
+  )
+  where
 
 import Data.DDF.Atoms.Value
 import Prelude
@@ -113,11 +118,12 @@ getEntities (DataSet { entities }) domain (Just set) =
 
 -- FIXME: I should use NonEmptyStrings here and the above functions
 getDomainForEntitySet :: DataSet -> String -> Maybe String
-getDomainForEntitySet dataset k =
-  (flip Conc.getProp) "domain" =<< theConcept
-  where
-  theConcept = getConcept dataset k
-
+getDomainForEntitySet dataset k = do
+  theConcept <- getConcept dataset k
+  if Conc.getType theConcept == Conc.EntityDomainC then
+    pure $ Conc.getId >>> Id.value $ theConcept
+  else
+    Conc.getProp theConcept "domain"
 
 -- | given a concept and a value, return which domain/set the value belongs to
 -- | if the concept is string/time type, then it will return the concept name itself
@@ -146,6 +152,21 @@ queryDomainAndSet dataset conceptname value = do
     Conc.TimeC -> Just $ NEA.singleton conceptname
     _ -> Nothing
 
+-- | generate a dictionary for set memberships
+genSetMemberships :: DataSet -> HashMap String (HashMap String (HashSet String))
+genSetMemberships (DataSet { entities }) = map func entities
+  where
+  func es =
+    let
+      groups = Arr.groupAllBy (compare `on` Ent.getId) es
+      getKey = NEA.head >>> Ent.getId >>> Id.value
+      getValues xs =
+        let
+          allSets = map (Ent.getDomainAndSets >>> NEA.toArray >>> HS.fromArray) xs
+        in
+          HS.map Id.value $ HS.unions allSets
+    in
+      HM.fromArrayBy getKey getValues groups
 
 type ConceptsInput = Array Concept
 type EntitiesInput = Array Entity
