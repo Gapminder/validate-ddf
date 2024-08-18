@@ -58,6 +58,8 @@ empty =
       }
   }
 
+-- TODO: add a way to do a basic validation and then create datapackage. It will be faster to run.
+
 -- | generate datapackage
 generateDataPackage :: FilePath -> DataSet -> Array Resource -> Aff DataPackage
 generateDataPackage root dataset resources = do

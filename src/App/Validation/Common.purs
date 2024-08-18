@@ -38,6 +38,9 @@ import Effect.Class (liftEffect)
 import Node.FS.Sync as PATH
 import Node.Path (FilePath)
 
+-- Error handlers
+--
+
 -- | emit warnings and continue the validation
 emitWarningsAndContinue :: forall m. Monad m => Issues -> ValidationT Messages m Unit
 emitWarningsAndContinue issues = do
@@ -60,6 +63,10 @@ emitErrorsAndStop issues = do
   vError msgs
   where
   msgs = map (setError <<< messageFromIssue) issues
+
+
+-- Validations
+--
 
 -- | validate if file exists
 validateFileExists :: FileInfo -> ValidationT Messages Aff (Maybe FileInfo)
@@ -260,8 +267,6 @@ validateCsvFileWithDataSet ds csvfile =
         emitWarningsAndContinue errs
       Right _ -> pure unit
 
--- Below are Validation for Warnings
-
 -- | check Csv Headers are not in concept list
 validateCsvHeaders :: DataSet -> CsvFile -> Validation Messages Unit
 validateCsvHeaders dataset@(DataSet ds) { csvContent, fileInfo } = do
@@ -312,6 +317,7 @@ validateCsvHeaders dataset@(DataSet ds) { csvContent, fileInfo } = do
   pure unit
 
 -- | Warn if concept length is longer then 64 chars
+-- | only needed for big waffle
 validateConceptLength :: DataSet -> Validation Messages Unit
 validateConceptLength (DataSet ds) = do
   let

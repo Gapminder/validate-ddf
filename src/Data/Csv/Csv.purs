@@ -58,6 +58,8 @@ derive instance newtypeCsvRow :: Newtype CsvRow _
 -- | Split headers and data rows
 type RawCsvContent =
   { headers :: Maybe (Array String)
+  -- FIXME: try use Lazy Array for CsvRows. Because sometimes we only need the headers,
+  -- so it's not necessary to run calculation to get csvrows
   , rows :: Maybe (Array CsvRow)
   }
 
