@@ -46,7 +46,7 @@ runMain opts = launchAff_ do
     mode = _.mode opts
     gendp = _.generateDP opts
 
-  liftEffect $ log "v0.1.1"
+  liftEffect $ log "v0.1.3"
   (Tuple msgs res) <- case mode of
     FileNameBased -> runValidationT $ VFN.validate path
     DataPackageBased -> runValidationT $ VDP.validate path
@@ -74,7 +74,7 @@ runMain opts = launchAff_ do
           datapackage <- generateDataPackage path dataset resources
           let
             dpPath = Path.concat [ path, "datapackage.json" ]
-	  writeTextFile Encoding.UTF8 dpPath $ JSON.writePrettyJSON 4 $ writeDataPackage datapackage
+          writeTextFile Encoding.UTF8 dpPath $ JSON.writePrettyJSON 4 $ writeDataPackage datapackage
           liftEffect $ log "Done!"
           pure unit
       Nothing -> do
