@@ -76,8 +76,8 @@ type Resource =
   }
 
 type FileSchema =
-  { primaryKey :: NonEmptyArray NonEmptyString
-  , fields :: Array FieldSchema
+  { fields :: Array FieldSchema
+  , primaryKey :: NonEmptyArray NonEmptyString
   }
 
 type FieldSchema =
@@ -164,7 +164,6 @@ createResources root xs = snd $ Arr.foldl go (Tuple HM.empty []) xs
     in
       (Tuple seenNames' res')
 
-
 -- | read datapackage.json content, and only read the resources part.
 parseDataPackageResources :: String -> V Issues (Array Resource)
 parseDataPackageResources content = do
@@ -206,13 +205,38 @@ writeDataPackage dp =
     created = JSON.write dp.created
     translations = JSON.write dp.translations
     version = JSON.write dp.version
-    resources = JSON.write dp.resources
-    ddfSchema = JSON.write dp.ddfSchema
+    resources = map writeResource dp.resources
+    ddfSchema =
+      { concepts: map writeDdfSchema dp.ddfSchema.concepts
+      , entities: map writeDdfSchema dp.ddfSchema.entities
+      , datapoints: map writeDdfSchema dp.ddfSchema.datapoints
+      , synonyms: map writeDdfSchema dp.ddfSchema.synonyms
+      }
 
     dp' = { name, title, description, author, license, language, created, translations, version, resources, ddfSchema }
   in
     unsafeToForeign dp'
 
+writeResource :: Resource -> Foreign
+writeResource res =
+  let
+    name = JSON.write res.name
+    path = JSON.write res.path
+    schema =
+      { fields: JSON.write res.schema.fields
+      , primaryKey: JSON.write res.schema.primaryKey
+      }
+  in
+    unsafeToForeign { name, path, schema }
+
+writeDdfSchema :: DdfSchema -> Foreign
+writeDdfSchema schema =
+  let
+    primaryKey = JSON.write schema.primaryKey
+    resources = JSON.write schema.resources
+    value = JSON.write schema.value
+  in
+    unsafeToForeign { primaryKey, value, resources }
 
 -- | compare 2 set of resources
 compareResources :: Array Resource -> Array Resource -> V Issues Unit
