@@ -1,20 +1,15 @@
 {
-  "name": "empty-data",
-  "title": "empty-data",
-  "description": "",
-  "version": "0.0.1",
   "language": {
-    "id": "en",
-    "name": "English"
+    "name": "English",
+    "id": "en-US"
   },
-  "translations": [],
-  "license": "",
-  "author": "",
+  "created": "2024-08-18T03:57:52.605Z",
   "resources": [
     {
-      "path": "ddf--concepts.csv",
-      "name": "ddf--concepts",
       "schema": {
+        "primaryKey": [
+          "concept"
+        ],
         "fields": [
           {
             "name": "concept"
@@ -31,52 +26,128 @@
           {
             "name": "drill_up"
           }
+        ]
+      },
+      "path": "ddf--concepts.csv",
+      "name": "ddf--concepts"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "geo"
         ],
-        "primaryKey": "concept"
-      }
+        "fields": [
+          {
+            "name": "geo"
+          },
+          {
+            "name": "name"
+          },
+          {
+            "name": "lat"
+          },
+          {
+            "name": "lng"
+          },
+          {
+            "name": "is--region"
+          },
+          {
+            "name": "is--country"
+          },
+          {
+            "name": "is--capital"
+          }
+        ]
+      },
+      "path": "ddf--entities--geo--country.csv",
+      "name": "ddf--entities--geo--country"
     }
   ],
   "ddfSchema": {
+    "synonyms": [],
+    "entities": [
+      {
+        "value": "is--capital",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": []
+      },
+      {
+        "value": "is--country",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": []
+      },
+      {
+        "value": "is--region",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": []
+      },
+      {
+        "value": "lat",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": []
+      },
+      {
+        "value": "lng",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": []
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": []
+      }
+    ],
     "datapoints": [],
-    "entities": [],
     "concepts": [
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "concept_type",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "domain",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "drill_up",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "name",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       }
-    ],
-    "synonyms": []
+    ]
   }
 }

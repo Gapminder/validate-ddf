@@ -1,20 +1,15 @@
 {
-  "name": "data-point-unexpected-entity-value-2",
-  "title": "data-point-unexpected-entity-value-2",
-  "description": "",
-  "version": "0.0.1",
   "language": {
-    "id": "en",
-    "name": "English"
+    "name": "English",
+    "id": "en-US"
   },
-  "translations": [],
-  "license": "",
-  "author": "",
+  "created": "2024-08-18T03:50:47.478Z",
   "resources": [
     {
-      "path": "ddf--concepts.csv",
-      "name": "ddf--concepts",
       "schema": {
+        "primaryKey": [
+          "concept"
+        ],
         "fields": [
           {
             "name": "concept"
@@ -28,14 +23,34 @@
           {
             "name": "name"
           }
-        ],
-        "primaryKey": "concept"
-      }
+        ]
+      },
+      "path": "ddf--concepts.csv",
+      "name": "ddf--concepts"
     },
     {
-      "path": "ddf--datapoints--pop--by--geo--year.csv",
-      "name": "pop--by--geo--year",
       "schema": {
+        "primaryKey": [
+          "geo"
+        ],
+        "fields": [
+          {
+            "name": "geo"
+          },
+          {
+            "name": "name"
+          }
+        ]
+      },
+      "path": "ddf--entities--geo.csv",
+      "name": "ddf--entities--geo"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "geo",
+          "year"
+        ],
         "fields": [
           {
             "name": "geo"
@@ -46,82 +61,64 @@
           {
             "name": "pop"
           }
-        ],
-        "primaryKey": [
-          "geo",
-          "year"
         ]
-      }
-    },
-    {
-      "path": "ddf--entities--geo.csv",
-      "name": "geo",
-      "schema": {
-        "fields": [
-          {
-            "name": "geo"
-          },
-          {
-            "name": "name"
-          }
-        ],
-        "primaryKey": "geo"
-      }
+      },
+      "path": "ddf--datapoints--pop--by--geo--year.csv",
+      "name": "ddf--datapoints--pop--by--geo--year"
     }
   ],
   "ddfSchema": {
-    "datapoints": [
+    "synonyms": [],
+    "entities": [
       {
-        "primaryKey": [
-          "geo",
-          "year"
-        ],
-        "value": "pop",
+        "value": "name",
         "resources": [
-          "pop--by--geo--year"
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       }
     ],
-    "entities": [
+    "datapoints": [
       {
-        "primaryKey": [
-          "geo"
-        ],
-        "value": "name",
+        "value": "pop",
         "resources": [
-          "geo"
+          "ddf--datapoints--pop--by--geo--year"
+        ],
+        "primaryKey": [
+          "year"
         ]
       }
     ],
     "concepts": [
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "concept_type",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "domain",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "name",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       }
-    ],
-    "synonyms": []
+    ]
   }
 }

@@ -270,7 +270,14 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
       pending "not a datapackage"
       pending "wrong datapoint header"
       pending "datapoint without indicator"
-      pending "inconsistent data package"
+      it "resource inconsistent with local file data" do
+        let
+          dirnames =
+            [ "test/fixtures/rules-cases/datapackage-confused-fields"
+            ]
+        for_ dirnames \dirname -> do
+          res <- runValidationTEither $ VFN.validate dirname
+          res `shouldSatisfy` isLeft
       pending "incorrect field"
       pending "incorrect file"
       pending "incorrect primary key"

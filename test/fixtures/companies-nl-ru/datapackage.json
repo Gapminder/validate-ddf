@@ -1,29 +1,15 @@
 {
-  "name": "ddf--ws-testing",
-  "title": "ddf--ws-testing",
-  "description": "",
-  "version": "0.0.1",
   "language": {
-    "id": "en",
-    "name": "English"
+    "name": "English",
+    "id": "en-US"
   },
-  "translations": [
-    {
-      "id": "nl-nl",
-      "name": "nl-nl"
-    },
-    {
-      "id": "ru-ru",
-      "name": "ru-ru"
-    }
-  ],
-  "license": "",
-  "author": "",
+  "created": "2024-08-18T03:37:09.477Z",
   "resources": [
     {
-      "path": "ddf--concepts.csv",
-      "name": "ddf--concepts",
       "schema": {
+        "primaryKey": [
+          "concept"
+        ],
         "fields": [
           {
             "name": "concept"
@@ -37,196 +23,16 @@
           {
             "name": "additional_column"
           }
-        ],
-        "primaryKey": "concept"
-      }
-    },
-    {
-      "path": "ddf--datapoints--company_scale--by--company--anno.csv",
-      "name": "company_scale--by--company--anno",
-      "schema": {
-        "fields": [
-          {
-            "name": "company"
-          },
-          {
-            "name": "anno"
-          },
-          {
-            "name": "company_scale"
-          }
-        ],
-        "primaryKey": [
-          "company",
-          "anno"
         ]
-      }
+      },
+      "path": "ddf--concepts.csv",
+      "name": "ddf--concepts"
     },
     {
-      "path": "ddf--datapoints--lines_of_code--by--company_scale--anno.csv",
-      "name": "lines_of_code--by--company_scale--anno",
       "schema": {
-        "fields": [
-          {
-            "name": "company"
-          },
-          {
-            "name": "anno"
-          },
-          {
-            "name": "lines_of_code"
-          }
-        ],
         "primaryKey": [
-          "company",
-          "anno"
-        ]
-      }
-    },
-    {
-      "path": "ddf--datapoints--meeting_style--by--company--anno.csv",
-      "name": "meeting_style--by--company--anno",
-      "schema": {
-        "fields": [
-          {
-            "name": "company"
-          },
-          {
-            "name": "anno"
-          },
-          {
-            "name": "meeting_style"
-          }
+          "company_scale"
         ],
-        "primaryKey": [
-          "company",
-          "anno"
-        ]
-      }
-    },
-    {
-      "path": "ddf--datapoints--meeting_style--by--company--project--anno.csv",
-      "name": "meeting_style--by--company--project--anno",
-      "schema": {
-        "fields": [
-          {
-            "name": "company"
-          },
-          {
-            "name": "project"
-          },
-          {
-            "name": "anno"
-          },
-          {
-            "name": "meeting_style"
-          }
-        ],
-        "primaryKey": [
-          "company",
-          "project",
-          "anno"
-        ]
-      }
-    },
-    {
-      "path": "ddf--datapoints--lines_of_code--by--company--anno.csv",
-      "name": "lines_of_code--by--company--anno",
-      "schema": {
-        "fields": [
-          {
-            "name": "company"
-          },
-          {
-            "name": "anno"
-          },
-          {
-            "name": "lines_of_code"
-          }
-        ],
-        "primaryKey": [
-          "company",
-          "anno"
-        ]
-      }
-    },
-    {
-      "path": "ddf--datapoints--lines_of_code--by--company--project--anno.csv",
-      "name": "lines_of_code--by--company--project--anno",
-      "schema": {
-        "fields": [
-          {
-            "name": "company"
-          },
-          {
-            "name": "project"
-          },
-          {
-            "name": "anno"
-          },
-          {
-            "name": "lines_of_code"
-          }
-        ],
-        "primaryKey": [
-          "company",
-          "project",
-          "anno"
-        ]
-      }
-    },
-    {
-      "path": "ddf--datapoints--lines_of_code--by--company--project.csv",
-      "name": "lines_of_code--by--company--project",
-      "schema": {
-        "fields": [
-          {
-            "name": "company"
-          },
-          {
-            "name": "project"
-          },
-          {
-            "name": "lines_of_code"
-          }
-        ],
-        "primaryKey": [
-          "company",
-          "project"
-        ]
-      }
-    },
-    {
-      "path": "ddf--datapoints--meeting_style--popular_appeal--methodology--by--company--project.csv",
-      "name": "meeting_style--popular_appeal--methodology--by--company--project",
-      "schema": {
-        "fields": [
-          {
-            "name": "company"
-          },
-          {
-            "name": "project"
-          },
-          {
-            "name": "meeting_style"
-          },
-          {
-            "name": "popular_appeal"
-          },
-          {
-            "name": "methodology"
-          }
-        ],
-        "primaryKey": [
-          "company",
-          "project"
-        ]
-      }
-    },
-    {
-      "path": "ddf--entities--company--company_scale.csv",
-      "name": "company--company_scale",
-      "schema": {
         "fields": [
           {
             "name": "company_scale"
@@ -237,14 +43,45 @@
           {
             "name": "is--company_scale"
           }
-        ],
-        "primaryKey": "company_scale"
-      }
+        ]
+      },
+      "path": "ddf--entities--company--company_scale.csv",
+      "name": "ddf--entities--company--company_scale"
     },
     {
+      "schema": {
+        "primaryKey": [
+          "company"
+        ],
+        "fields": [
+          {
+            "name": "company"
+          },
+          {
+            "name": "name"
+          },
+          {
+            "name": "country"
+          },
+          {
+            "name": "region"
+          },
+          {
+            "name": "additional_column"
+          },
+          {
+            "name": "is--english_speaking"
+          }
+        ]
+      },
       "path": "ddf--entities--company--english_speaking.csv",
-      "name": "company--english_speaking",
+      "name": "ddf--entities--company--english_speaking"
+    },
+    {
       "schema": {
+        "primaryKey": [
+          "company"
+        ],
         "fields": [
           {
             "name": "company"
@@ -264,41 +101,16 @@
           {
             "name": "is--english_speaking"
           }
-        ],
-        "primaryKey": "company"
-      }
-    },
-    {
+        ]
+      },
       "path": "ddf--entities--company.csv",
-      "name": "company",
-      "schema": {
-        "fields": [
-          {
-            "name": "company"
-          },
-          {
-            "name": "name"
-          },
-          {
-            "name": "country"
-          },
-          {
-            "name": "region"
-          },
-          {
-            "name": "additional_column"
-          },
-          {
-            "name": "is--english_speaking"
-          }
-        ],
-        "primaryKey": "company"
-      }
+      "name": "ddf--entities--company"
     },
     {
-      "path": "ddf--entities--project.csv",
-      "name": "project",
       "schema": {
+        "primaryKey": [
+          "project"
+        ],
         "fields": [
           {
             "name": "project"
@@ -306,14 +118,16 @@
           {
             "name": "name"
           }
-        ],
-        "primaryKey": "project"
-      }
+        ]
+      },
+      "path": "ddf--entities--project.csv",
+      "name": "ddf--entities--project"
     },
     {
-      "path": "ddf--entities--region.csv",
-      "name": "region",
       "schema": {
+        "primaryKey": [
+          "region"
+        ],
         "fields": [
           {
             "name": "region"
@@ -321,404 +135,469 @@
           {
             "name": "full_name_changed"
           }
+        ]
+      },
+      "path": "ddf--entities--region.csv",
+      "name": "ddf--entities--region"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "company",
+          "anno"
         ],
-        "primaryKey": "region"
-      }
+        "fields": [
+          {
+            "name": "company"
+          },
+          {
+            "name": "anno"
+          },
+          {
+            "name": "company_scale"
+          }
+        ]
+      },
+      "path": "ddf--datapoints--company_scale--by--company--anno.csv",
+      "name": "ddf--datapoints--company_scale--by--company--anno"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "company",
+          "anno"
+        ],
+        "fields": [
+          {
+            "name": "company"
+          },
+          {
+            "name": "anno"
+          },
+          {
+            "name": "lines_of_code"
+          }
+        ]
+      },
+      "path": "ddf--datapoints--lines_of_code--by--company--anno.csv",
+      "name": "ddf--datapoints--lines_of_code--by--company--anno"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "company",
+          "project"
+        ],
+        "fields": [
+          {
+            "name": "company"
+          },
+          {
+            "name": "project"
+          },
+          {
+            "name": "lines_of_code"
+          }
+        ]
+      },
+      "path": "ddf--datapoints--lines_of_code--by--company--project.csv",
+      "name": "ddf--datapoints--lines_of_code--by--company--project"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "company",
+          "project",
+          "anno"
+        ],
+        "fields": [
+          {
+            "name": "company"
+          },
+          {
+            "name": "project"
+          },
+          {
+            "name": "anno"
+          },
+          {
+            "name": "lines_of_code"
+          }
+        ]
+      },
+      "path": "ddf--datapoints--lines_of_code--by--company--project--anno.csv",
+      "name": "ddf--datapoints--lines_of_code--by--company--project--anno"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "company",
+          "anno"
+        ],
+        "fields": [
+          {
+            "name": "company"
+          },
+          {
+            "name": "anno"
+          },
+          {
+            "name": "meeting_style"
+          }
+        ]
+      },
+      "path": "ddf--datapoints--meeting_style--by--company--anno.csv",
+      "name": "ddf--datapoints--meeting_style--by--company--anno"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "company",
+          "project",
+          "anno"
+        ],
+        "fields": [
+          {
+            "name": "company"
+          },
+          {
+            "name": "project"
+          },
+          {
+            "name": "anno"
+          },
+          {
+            "name": "meeting_style"
+          }
+        ]
+      },
+      "path": "ddf--datapoints--meeting_style--by--company--project--anno.csv",
+      "name": "ddf--datapoints--meeting_style--by--company--project--anno"
     }
   ],
   "ddfSchema": {
-    "datapoints": [
+    "synonyms": [],
+    "entities": [
       {
-        "primaryKey": [
-          "english_speaking",
-          "project",
-          "anno"
-        ],
-        "value": "meeting_style",
+        "value": "additional_column",
         "resources": [
-          "meeting_style--by--company--project--anno"
-        ]
-      },
-      {
-        "primaryKey": [
-          "company_scale",
-          "project",
-          "anno"
+          "ddf--entities--company--english_speaking",
+          "ddf--entities--company"
         ],
-        "value": "meeting_style",
-        "resources": [
-          "meeting_style--by--company--project--anno"
-        ]
-      },
-      {
         "primaryKey": [
-          "company",
-          "project",
-          "anno"
-        ],
-        "value": "meeting_style",
-        "resources": [
-          "meeting_style--by--company--project--anno"
-        ]
-      },
-      {
-        "primaryKey": [
-          "company_scale",
-          "anno"
-        ],
-        "value": "meeting_style",
-        "resources": [
-          "meeting_style--by--company--anno"
-        ]
-      },
-      {
-        "primaryKey": [
-          "company",
-          "anno"
-        ],
-        "value": "meeting_style",
-        "resources": [
-          "meeting_style--by--company--anno"
-        ]
-      },
-      {
-        "primaryKey": [
-          "company_scale",
-          "anno"
-        ],
-        "value": "lines_of_code",
-        "resources": [
-          "lines_of_code--by--company_scale--anno"
-        ]
-      },
-      {
-        "primaryKey": [
-          "company",
-          "anno"
-        ],
-        "value": "lines_of_code",
-        "resources": [
-          "lines_of_code--by--company_scale--anno"
-        ]
-      },
-      {
-        "primaryKey": [
-          "anno",
           "company"
-        ],
-        "value": "company_scale",
-        "resources": [
-          "company_scale--by--company--anno"
         ]
       },
       {
+        "value": "country",
+        "resources": [
+          "ddf--entities--company--english_speaking",
+          "ddf--entities--company"
+        ],
         "primaryKey": [
-          "anno",
           "company"
-        ],
-        "value": "lines_of_code",
-        "resources": [
-          "lines_of_code--by--company--anno"
         ]
       },
       {
-        "primaryKey": [
-          "anno",
-          "company",
-          "project"
-        ],
-        "value": "lines_of_code",
+        "value": "full_name_changed",
         "resources": [
-          "lines_of_code--by--company--project--anno"
+          "ddf--entities--company--company_scale"
+        ],
+        "primaryKey": [
+          "company"
         ]
       },
       {
+        "value": "is--company_scale",
+        "resources": [
+          "ddf--entities--company--company_scale"
+        ],
         "primaryKey": [
-          "anno",
+          "company"
+        ]
+      },
+      {
+        "value": "is--english_speaking",
+        "resources": [
+          "ddf--entities--company--english_speaking",
+          "ddf--entities--company"
+        ],
+        "primaryKey": [
+          "company"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--company--english_speaking",
+          "ddf--entities--company"
+        ],
+        "primaryKey": [
+          "company"
+        ]
+      },
+      {
+        "value": "region",
+        "resources": [
+          "ddf--entities--company--english_speaking",
+          "ddf--entities--company"
+        ],
+        "primaryKey": [
+          "company"
+        ]
+      },
+      {
+        "value": "full_name_changed",
+        "resources": [
+          "ddf--entities--company--company_scale"
+        ],
+        "primaryKey": [
+          "company_scale"
+        ]
+      },
+      {
+        "value": "is--company_scale",
+        "resources": [
+          "ddf--entities--company--company_scale"
+        ],
+        "primaryKey": [
+          "company_scale"
+        ]
+      },
+      {
+        "value": "additional_column",
+        "resources": [
+          "ddf--entities--company--english_speaking",
+          "ddf--entities--company"
+        ],
+        "primaryKey": [
           "english_speaking"
-        ],
-        "value": "company_scale",
-        "resources": [
-          "company_scale--by--company--anno"
         ]
       },
       {
+        "value": "country",
+        "resources": [
+          "ddf--entities--company--english_speaking",
+          "ddf--entities--company"
+        ],
         "primaryKey": [
-          "anno",
           "english_speaking"
-        ],
-        "value": "lines_of_code",
-        "resources": [
-          "lines_of_code--by--company--anno"
         ]
       },
       {
-        "primaryKey": [
-          "anno",
-          "english_speaking",
-          "project"
-        ],
-        "value": "lines_of_code",
+        "value": "is--english_speaking",
         "resources": [
-          "lines_of_code--by--company--project--anno"
+          "ddf--entities--company--english_speaking",
+          "ddf--entities--company"
+        ],
+        "primaryKey": [
+          "english_speaking"
         ]
       },
       {
-        "primaryKey": [
-          "company",
-          "project"
-        ],
-        "value": "lines_of_code",
+        "value": "name",
         "resources": [
-          "lines_of_code--by--company--project"
+          "ddf--entities--company--english_speaking",
+          "ddf--entities--company"
+        ],
+        "primaryKey": [
+          "english_speaking"
         ]
       },
       {
-        "primaryKey": [
-          "company",
-          "project"
-        ],
-        "value": "meeting_style",
+        "value": "region",
         "resources": [
-          "meeting_style--popular_appeal--methodology--by--company--project"
+          "ddf--entities--company--english_speaking",
+          "ddf--entities--company"
+        ],
+        "primaryKey": [
+          "english_speaking"
         ]
       },
       {
-        "primaryKey": [
-          "company",
-          "project"
-        ],
-        "value": "methodology",
+        "value": "name",
         "resources": [
-          "meeting_style--popular_appeal--methodology--by--company--project"
+          "ddf--entities--project"
+        ],
+        "primaryKey": [
+          "project"
         ]
       },
       {
-        "primaryKey": [
-          "company",
-          "project"
-        ],
-        "value": "popular_appeal",
+        "value": "full_name_changed",
         "resources": [
-          "meeting_style--popular_appeal--methodology--by--company--project"
-        ]
-      },
-      {
-        "primaryKey": [
-          "english_speaking",
-          "project"
+          "ddf--entities--region"
         ],
-        "value": "lines_of_code",
-        "resources": [
-          "lines_of_code--by--company--project"
-        ]
-      },
-      {
         "primaryKey": [
-          "english_speaking",
-          "project"
-        ],
-        "value": "meeting_style",
-        "resources": [
-          "meeting_style--popular_appeal--methodology--by--company--project"
-        ]
-      },
-      {
-        "primaryKey": [
-          "english_speaking",
-          "project"
-        ],
-        "value": "methodology",
-        "resources": [
-          "meeting_style--popular_appeal--methodology--by--company--project"
-        ]
-      },
-      {
-        "primaryKey": [
-          "english_speaking",
-          "project"
-        ],
-        "value": "popular_appeal",
-        "resources": [
-          "meeting_style--popular_appeal--methodology--by--company--project"
+          "region"
         ]
       }
     ],
-    "entities": [
+    "datapoints": [
       {
-        "primaryKey": [
-          "company"
-        ],
-        "value": "additional_column",
+        "value": "company_scale",
         "resources": [
-          "company"
+          "ddf--datapoints--company_scale--by--company--anno"
+        ],
+        "primaryKey": [
+          "company",
+          "anno"
         ]
       },
       {
-        "primaryKey": [
-          "company"
-        ],
-        "value": "country",
+        "value": "lines_of_code",
         "resources": [
-          "company"
+          "ddf--datapoints--lines_of_code--by--company--anno"
+        ],
+        "primaryKey": [
+          "company",
+          "anno"
         ]
       },
       {
-        "primaryKey": [
-          "company"
-        ],
-        "value": "full_name_changed",
+        "value": "meeting_style",
         "resources": [
-          "company--company_scale"
+          "ddf--datapoints--meeting_style--by--company--anno"
+        ],
+        "primaryKey": [
+          "company",
+          "anno"
         ]
       },
       {
-        "primaryKey": [
-          "company"
-        ],
-        "value": "is--company_scale",
+        "value": "lines_of_code",
         "resources": [
-          "company--company_scale"
-        ]
-      },
-      {
-        "primaryKey": [
-          "company"
+          "ddf--datapoints--lines_of_code--by--company--project"
         ],
-        "value": "is--english_speaking",
-        "resources": [
-          "company"
-        ]
-      },
-      {
         "primaryKey": [
-          "company"
-        ],
-        "value": "name",
-        "resources": [
-          "company"
-        ]
-      },
-      {
-        "primaryKey": [
-          "company"
-        ],
-        "value": "region",
-        "resources": [
-          "company"
-        ]
-      },
-      {
-        "primaryKey": [
-          "company_scale"
-        ],
-        "value": "full_name_changed",
-        "resources": [
-          "company--company_scale"
-        ]
-      },
-      {
-        "primaryKey": [
-          "company_scale"
-        ],
-        "value": "is--company_scale",
-        "resources": [
-          "company--company_scale"
-        ]
-      },
-      {
-        "primaryKey": [
-          "english_speaking"
-        ],
-        "value": "additional_column",
-        "resources": [
-          "company"
-        ]
-      },
-      {
-        "primaryKey": [
-          "english_speaking"
-        ],
-        "value": "country",
-        "resources": [
-          "company"
-        ]
-      },
-      {
-        "primaryKey": [
-          "english_speaking"
-        ],
-        "value": "is--english_speaking",
-        "resources": [
-          "company"
-        ]
-      },
-      {
-        "primaryKey": [
-          "english_speaking"
-        ],
-        "value": "name",
-        "resources": [
-          "company"
-        ]
-      },
-      {
-        "primaryKey": [
-          "english_speaking"
-        ],
-        "value": "region",
-        "resources": [
-          "company"
-        ]
-      },
-      {
-        "primaryKey": [
-          "project"
-        ],
-        "value": "name",
-        "resources": [
+          "company",
           "project"
         ]
       },
       {
-        "primaryKey": [
-          "region"
-        ],
-        "value": "full_name_changed",
+        "value": "lines_of_code",
         "resources": [
-          "region"
+          "ddf--datapoints--lines_of_code--by--company--project--anno"
+        ],
+        "primaryKey": [
+          "company",
+          "project",
+          "anno"
+        ]
+      },
+      {
+        "value": "meeting_style",
+        "resources": [
+          "ddf--datapoints--meeting_style--by--company--project--anno"
+        ],
+        "primaryKey": [
+          "company",
+          "project",
+          "anno"
+        ]
+      },
+      {
+        "value": "meeting_style",
+        "resources": [
+          "ddf--datapoints--meeting_style--by--company--anno"
+        ],
+        "primaryKey": [
+          "company_scale",
+          "anno"
+        ]
+      },
+      {
+        "value": "meeting_style",
+        "resources": [
+          "ddf--datapoints--meeting_style--by--company--project--anno"
+        ],
+        "primaryKey": [
+          "company_scale",
+          "project",
+          "anno"
+        ]
+      },
+      {
+        "value": "company_scale",
+        "resources": [
+          "ddf--datapoints--company_scale--by--company--anno"
+        ],
+        "primaryKey": [
+          "english_speaking",
+          "anno"
+        ]
+      },
+      {
+        "value": "lines_of_code",
+        "resources": [
+          "ddf--datapoints--lines_of_code--by--company--anno"
+        ],
+        "primaryKey": [
+          "english_speaking",
+          "anno"
+        ]
+      },
+      {
+        "value": "lines_of_code",
+        "resources": [
+          "ddf--datapoints--lines_of_code--by--company--project"
+        ],
+        "primaryKey": [
+          "english_speaking",
+          "project"
+        ]
+      },
+      {
+        "value": "lines_of_code",
+        "resources": [
+          "ddf--datapoints--lines_of_code--by--company--project--anno"
+        ],
+        "primaryKey": [
+          "english_speaking",
+          "project",
+          "anno"
+        ]
+      },
+      {
+        "value": "meeting_style",
+        "resources": [
+          "ddf--datapoints--meeting_style--by--company--project--anno"
+        ],
+        "primaryKey": [
+          "english_speaking",
+          "project",
+          "anno"
         ]
       }
     ],
     "concepts": [
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "additional_column",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "concept_type",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "domain",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       }
-    ],
-    "synonyms": []
+    ]
   }
 }

@@ -1,20 +1,15 @@
 {
-  "name": "ddf_quoted_header_test_case",
-  "title": "ddf_quoted_header_test_case",
-  "description": "",
-  "version": "0.0.1",
   "language": {
-    "id": "en",
-    "name": "English"
+    "name": "English",
+    "id": "en-US"
   },
-  "translations": [],
-  "license": "",
-  "author": "",
+  "created": "2024-08-18T03:02:23.448Z",
   "resources": [
     {
-      "path": "ddf--concepts.csv",
-      "name": "ddf--concepts",
       "schema": {
+        "primaryKey": [
+          "concept"
+        ],
         "fields": [
           {
             "name": "concept"
@@ -25,14 +20,34 @@
           {
             "name": "name"
           }
-        ],
-        "primaryKey": "concept"
-      }
+        ]
+      },
+      "path": "ddf--concepts.csv",
+      "name": "ddf--concepts"
     },
     {
-      "path": "ddf--datapoints--income_per_person_gdppercapita_ppp_inflation_adjusted--by--geo--time.csv",
-      "name": "income_per_person_gdppercapita_ppp_inflation_adjusted--by--geo--time",
       "schema": {
+        "primaryKey": [
+          "geo"
+        ],
+        "fields": [
+          {
+            "name": "geo"
+          },
+          {
+            "name": "name"
+          }
+        ]
+      },
+      "path": "ddf--entities--geo.csv",
+      "name": "ddf--entities--geo"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "geo",
+          "time"
+        ],
         "fields": [
           {
             "name": "geo"
@@ -43,73 +58,56 @@
           {
             "name": "income_per_person_gdppercapita_ppp_inflation_adjusted"
           }
-        ],
-        "primaryKey": [
-          "geo",
-          "time"
         ]
-      }
-    },
-    {
-      "path": "ddf--entities--geo.csv",
-      "name": "geo",
-      "schema": {
-        "fields": [
-          {
-            "name": "geo"
-          },
-          {
-            "name": "name"
-          }
-        ],
-        "primaryKey": "geo"
-      }
+      },
+      "path": "ddf--datapoints--income_per_person_gdppercapita_ppp_inflation_adjusted--by--geo--time.csv",
+      "name": "ddf--datapoints--income_per_person_gdppercapita_ppp_inflation_adjusted--by--geo--time"
     }
   ],
   "ddfSchema": {
-    "datapoints": [
+    "synonyms": [],
+    "entities": [
       {
-        "primaryKey": [
-          "geo",
-          "time"
-        ],
-        "value": "income_per_person_gdppercapita_ppp_inflation_adjusted",
+        "value": "name",
         "resources": [
-          "income_per_person_gdppercapita_ppp_inflation_adjusted--by--geo--time"
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "geo"
         ]
       }
     ],
-    "entities": [
+    "datapoints": [
       {
-        "primaryKey": [
-          "geo"
-        ],
-        "value": "name",
+        "value": "income_per_person_gdppercapita_ppp_inflation_adjusted",
         "resources": [
-          "geo"
+          "ddf--datapoints--income_per_person_gdppercapita_ppp_inflation_adjusted--by--geo--time"
+        ],
+        "primaryKey": [
+          "geo",
+          "time"
         ]
       }
     ],
     "concepts": [
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "concept_type",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "name",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       }
-    ],
-    "synonyms": []
+    ]
   }
 }

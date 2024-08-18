@@ -1,20 +1,15 @@
 {
-  "name": "data-point-unexpected-entity-value",
-  "title": "data-point-unexpected-entity-value",
-  "description": "",
-  "version": "0.0.1",
   "language": {
-    "id": "en",
-    "name": "English"
+    "name": "English",
+    "id": "en-US"
   },
-  "translations": [],
-  "license": "",
-  "author": "",
+  "created": "2024-08-18T03:50:53.413Z",
   "resources": [
     {
-      "path": "ddf--concepts.csv",
-      "name": "ddf--concepts",
       "schema": {
+        "primaryKey": [
+          "concept"
+        ],
         "fields": [
           {
             "name": "concept"
@@ -28,35 +23,16 @@
           {
             "name": "name"
           }
-        ],
-        "primaryKey": "concept"
-      }
-    },
-    {
-      "path": "ddf--datapoints--pop--by--country--year.csv",
-      "name": "pop--by--country--year",
-      "schema": {
-        "fields": [
-          {
-            "name": "country"
-          },
-          {
-            "name": "year"
-          },
-          {
-            "name": "pop"
-          }
-        ],
-        "primaryKey": [
-          "country",
-          "year"
         ]
-      }
+      },
+      "path": "ddf--concepts.csv",
+      "name": "ddf--concepts"
     },
     {
-      "path": "ddf--entities--geo--country.csv",
-      "name": "geo--country",
       "schema": {
+        "primaryKey": [
+          "geo"
+        ],
         "fields": [
           {
             "name": "geo"
@@ -79,291 +55,312 @@
           {
             "name": "is--capital"
           }
-        ],
-        "primaryKey": "geo"
-      }
-    }
-  ],
-  "ddfSchema": {
-    "datapoints": [
-      {
-        "primaryKey": [
-          "capital",
-          "year"
-        ],
-        "value": "pop",
-        "resources": [
-          "pop--by--country--year"
         ]
       },
-      {
+      "path": "ddf--entities--geo--country.csv",
+      "name": "ddf--entities--geo--country"
+    },
+    {
+      "schema": {
         "primaryKey": [
           "country",
           "year"
         ],
-        "value": "pop",
+        "fields": [
+          {
+            "name": "country"
+          },
+          {
+            "name": "year"
+          },
+          {
+            "name": "pop"
+          }
+        ]
+      },
+      "path": "ddf--datapoints--pop--by--country--year.csv",
+      "name": "ddf--datapoints--pop--by--country--year"
+    }
+  ],
+  "ddfSchema": {
+    "synonyms": [],
+    "entities": [
+      {
+        "value": "is--capital",
         "resources": [
-          "pop--by--country--year"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "capital"
         ]
       },
       {
-        "primaryKey": [
-          "geo",
-          "year"
-        ],
-        "value": "pop",
+        "value": "is--country",
         "resources": [
-          "pop--by--country--year"
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "capital"
+        ]
+      },
+      {
+        "value": "is--region",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "capital"
+        ]
+      },
+      {
+        "value": "lat",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "capital"
+        ]
+      },
+      {
+        "value": "lng",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "capital"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "capital"
+        ]
+      },
+      {
+        "value": "is--capital",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "is--country",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "is--region",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "lat",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "lng",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "is--capital",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "is--country",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "is--region",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "lat",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "lng",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "is--capital",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "region"
+        ]
+      },
+      {
+        "value": "is--country",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "region"
+        ]
+      },
+      {
+        "value": "is--region",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "region"
+        ]
+      },
+      {
+        "value": "lat",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "region"
+        ]
+      },
+      {
+        "value": "lng",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "region"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "region"
         ]
       }
     ],
-    "entities": [
+    "datapoints": [
       {
-        "primaryKey": [
-          "capital"
-        ],
-        "value": "is--capital",
+        "value": "pop",
         "resources": [
-          "geo--country"
+          "ddf--datapoints--pop--by--country--year"
+        ],
+        "primaryKey": [
+          "country",
+          "year"
         ]
       },
       {
-        "primaryKey": [
-          "capital"
-        ],
-        "value": "is--country",
+        "value": "pop",
         "resources": [
-          "geo--country"
+          "ddf--datapoints--pop--by--country--year"
+        ],
+        "primaryKey": [
+          "geo",
+          "year"
         ]
       },
       {
-        "primaryKey": [
-          "capital"
-        ],
-        "value": "is--region",
+        "value": "pop",
         "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "capital"
+          "ddf--datapoints--pop--by--country--year"
         ],
-        "value": "lat",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
         "primaryKey": [
-          "capital"
-        ],
-        "value": "lng",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "capital"
-        ],
-        "value": "name",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "country"
-        ],
-        "value": "is--capital",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "country"
-        ],
-        "value": "is--country",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "country"
-        ],
-        "value": "is--region",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "country"
-        ],
-        "value": "lat",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "country"
-        ],
-        "value": "lng",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "country"
-        ],
-        "value": "name",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "geo"
-        ],
-        "value": "is--capital",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "geo"
-        ],
-        "value": "is--country",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "geo"
-        ],
-        "value": "is--region",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "geo"
-        ],
-        "value": "lat",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "geo"
-        ],
-        "value": "lng",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "geo"
-        ],
-        "value": "name",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "region"
-        ],
-        "value": "is--capital",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "region"
-        ],
-        "value": "is--country",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "region"
-        ],
-        "value": "is--region",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "region"
-        ],
-        "value": "lat",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "region"
-        ],
-        "value": "lng",
-        "resources": [
-          "geo--country"
-        ]
-      },
-      {
-        "primaryKey": [
-          "region"
-        ],
-        "value": "name",
-        "resources": [
-          "geo--country"
+          "year"
         ]
       }
     ],
     "concepts": [
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "concept_type",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "domain",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       },
       {
-        "primaryKey": [
-          "concept"
-        ],
         "value": "name",
         "resources": [
           "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
         ]
       }
-    ],
-   "synonyms": []
+    ]
   }
 }

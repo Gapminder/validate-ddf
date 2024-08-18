@@ -1,181 +1,636 @@
 {
-    "name": "ddf-schema",
-    "title": "ddf-schema",
-    "description": "",
-    "version": "0.0.1",
-    "language": {
-        "id": "en",
-        "name": "English"
+  "language": {
+    "name": "English",
+    "id": "en-US"
+  },
+  "created": "2024-08-18T03:36:25.361Z",
+  "resources": [
+    {
+      "schema": {
+        "primaryKey": [
+          "concept"
+        ],
+        "fields": [
+          {
+            "name": "concept"
+          },
+          {
+            "name": "concept_type"
+          },
+          {
+            "name": "domain"
+          }
+        ]
+      },
+      "path": "ddf--concepts.csv",
+      "name": "ddf--concepts"
     },
-    "translations": [],
-    "license": "",
-    "author": "",
-    "resources": [
-        {
-            "path": "ddf--concepts.csv",
-            "name": "ddf--concepts",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "concept"
-                    },
-                    {
-                        "name": "concept_type"
-                    },
-                    {
-                        "name": "domain"
-                    }
-                ],
-                "primaryKey": "concept"
-            }
-        },
-        {
-            "path": "ddf--datapoints--country--by--city--year.csv",
-            "name": "ddf--datapoints--country--by--city--year",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "city"
-                    },
-                    {
-                        "name": "year"
-                    },
-                    {
-                        "name": "country"
-                    }
-                ],
-                "primaryKey": [
-                    "city",
-                    "year"
-                ]
-            }
-        },
-        {
-            "path": "ddf--datapoints--population--by--country--year--gender.csv",
-            "name": "ddf--datapoints--population--by--country--year--gender",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "country"
-                    },
-                    {
-                        "name": "year"
-                    },
-                    {
-                        "name": "gender"
-                    },
-                    {
-                        "name": "population"
-                    }
-                ],
-                "primaryKey": [
-                    "country",
-                    "year",
-                    "gender"
-                ]
-            }
-        },
-        {
-            "path": "ddf--datapoints--population--by--geo--year.csv",
-            "name": "ddf--datapoints--population--by--geo--year",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "geo"
-                    },
-                    {
-                        "name": "year"
-                    },
-                    {
-                        "name": "population"
-                    }
-                ],
-                "primaryKey": [
-                    "geo",
-                    "year"
-                ]
-            }
-        },
-        {
-            "path": "ddf--entities--gender--binary.csv",
-            "name": "ddf--entities--gender--binary",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "binary"
-                    },
-                    {
-                        "name": "name"
-                    },
-                    {
-                        "name": "is--binary"
-                    },
-                    {
-                        "name": "sex"
-                    }
-                ],
-                "primaryKey": "binary"
-            }
-        },
-        {
-            "path": "ddf--entities--gender.csv",
-            "name": "ddf--entities--gender",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "gender"
-                    },
-                    {
-                        "name": "name"
-                    },
-                    {
-                        "name": "is--nonbinary"
-                    }
-                ],
-                "primaryKey": "gender"
-            }
-        },
-        {
-            "path": "ddf--entities--geo--country.csv",
-            "name": "ddf--entities--geo--country",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "geo"
-                    },
-                    {
-                        "name": "city"
-                    },
-                    {
-                        "name": "is--country"
-                    },
-                    {
-                        "name": "is--un_state"
-                    }
-                ],
-                "primaryKey": "geo"
-            }
-        },
-        {
-            "path": "ddf--entities--geo.csv",
-            "name": "ddf--entities--geo",
-            "schema": {
-                "fields": [
-                    {
-                        "name": "geo"
-                    },
-                    {
-                        "name": "name"
-                    },
-                    {
-                        "name": "is--country"
-                    },
-                    {
-                        "name": "is--city"
-                    }
-                ],
-                "primaryKey": "geo"
-            }
-        }
+    {
+      "schema": {
+        "primaryKey": [
+          "binary"
+        ],
+        "fields": [
+          {
+            "name": "binary"
+          },
+          {
+            "name": "name"
+          },
+          {
+            "name": "is--binary"
+          },
+          {
+            "name": "sex"
+          }
+        ]
+      },
+      "path": "ddf--entities--gender--binary.csv",
+      "name": "ddf--entities--gender--binary"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "gender"
+        ],
+        "fields": [
+          {
+            "name": "gender"
+          },
+          {
+            "name": "name"
+          },
+          {
+            "name": "is--nonbinary"
+          }
+        ]
+      },
+      "path": "ddf--entities--gender.csv",
+      "name": "ddf--entities--gender"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "geo"
+        ],
+        "fields": [
+          {
+            "name": "geo"
+          },
+          {
+            "name": "city"
+          },
+          {
+            "name": "is--country"
+          },
+          {
+            "name": "is--un_state"
+          }
+        ]
+      },
+      "path": "ddf--entities--geo--country.csv",
+      "name": "ddf--entities--geo--country"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "geo"
+        ],
+        "fields": [
+          {
+            "name": "geo"
+          },
+          {
+            "name": "name"
+          },
+          {
+            "name": "is--country"
+          },
+          {
+            "name": "is--city"
+          }
+        ]
+      },
+      "path": "ddf--entities--geo.csv",
+      "name": "ddf--entities--geo"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "city",
+          "year"
+        ],
+        "fields": [
+          {
+            "name": "city"
+          },
+          {
+            "name": "year"
+          },
+          {
+            "name": "country"
+          }
+        ]
+      },
+      "path": "ddf--datapoints--country--by--city--year.csv",
+      "name": "ddf--datapoints--country--by--city--year"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "country",
+          "year",
+          "gender"
+        ],
+        "fields": [
+          {
+            "name": "country"
+          },
+          {
+            "name": "year"
+          },
+          {
+            "name": "gender"
+          },
+          {
+            "name": "population"
+          }
+        ]
+      },
+      "path": "ddf--datapoints--population--by--country--year--gender.csv",
+      "name": "ddf--datapoints--population--by--country--year--gender"
+    },
+    {
+      "schema": {
+        "primaryKey": [
+          "geo",
+          "year"
+        ],
+        "fields": [
+          {
+            "name": "geo"
+          },
+          {
+            "name": "year"
+          },
+          {
+            "name": "population"
+          }
+        ]
+      },
+      "path": "ddf--datapoints--population--by--geo--year.csv",
+      "name": "ddf--datapoints--population--by--geo--year"
+    }
+  ],
+  "ddfSchema": {
+    "synonyms": [],
+    "entities": [
+      {
+        "value": "is--binary",
+        "resources": [
+          "ddf--entities--gender--binary"
+        ],
+        "primaryKey": [
+          "binary"
+        ]
+      },
+      {
+        "value": "is--nonbinary",
+        "resources": [
+          "ddf--entities--gender"
+        ],
+        "primaryKey": [
+          "binary"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--gender--binary",
+          "ddf--entities--gender"
+        ],
+        "primaryKey": [
+          "binary"
+        ]
+      },
+      {
+        "value": "sex",
+        "resources": [
+          "ddf--entities--gender--binary"
+        ],
+        "primaryKey": [
+          "binary"
+        ]
+      },
+      {
+        "value": "city",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "city"
+        ]
+      },
+      {
+        "value": "is--city",
+        "resources": [
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "city"
+        ]
+      },
+      {
+        "value": "is--country",
+        "resources": [
+          "ddf--entities--geo--country",
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "city"
+        ]
+      },
+      {
+        "value": "is--un_state",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "city"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "city"
+        ]
+      },
+      {
+        "value": "city",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "is--city",
+        "resources": [
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "is--country",
+        "resources": [
+          "ddf--entities--geo--country",
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "is--un_state",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "country"
+        ]
+      },
+      {
+        "value": "is--binary",
+        "resources": [
+          "ddf--entities--gender--binary"
+        ],
+        "primaryKey": [
+          "gender"
+        ]
+      },
+      {
+        "value": "is--nonbinary",
+        "resources": [
+          "ddf--entities--gender"
+        ],
+        "primaryKey": [
+          "gender"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--gender--binary",
+          "ddf--entities--gender"
+        ],
+        "primaryKey": [
+          "gender"
+        ]
+      },
+      {
+        "value": "sex",
+        "resources": [
+          "ddf--entities--gender--binary"
+        ],
+        "primaryKey": [
+          "gender"
+        ]
+      },
+      {
+        "value": "city",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "is--city",
+        "resources": [
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "is--country",
+        "resources": [
+          "ddf--entities--geo--country",
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "is--un_state",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "geo"
+        ]
+      },
+      {
+        "value": "is--nonbinary",
+        "resources": [
+          "ddf--entities--gender"
+        ],
+        "primaryKey": [
+          "nonbinary"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--gender"
+        ],
+        "primaryKey": [
+          "nonbinary"
+        ]
+      },
+      {
+        "value": "city",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "un_state"
+        ]
+      },
+      {
+        "value": "is--city",
+        "resources": [
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "un_state"
+        ]
+      },
+      {
+        "value": "is--country",
+        "resources": [
+          "ddf--entities--geo--country",
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "un_state"
+        ]
+      },
+      {
+        "value": "is--un_state",
+        "resources": [
+          "ddf--entities--geo--country"
+        ],
+        "primaryKey": [
+          "un_state"
+        ]
+      },
+      {
+        "value": "name",
+        "resources": [
+          "ddf--entities--geo"
+        ],
+        "primaryKey": [
+          "un_state"
+        ]
+      }
+    ],
+    "datapoints": [
+      {
+        "value": "population",
+        "resources": [
+          "ddf--datapoints--population--by--country--year--gender"
+        ],
+        "primaryKey": [
+          "city",
+          "binary",
+          "year"
+        ]
+      },
+      {
+        "value": "population",
+        "resources": [
+          "ddf--datapoints--population--by--country--year--gender"
+        ],
+        "primaryKey": [
+          "city",
+          "gender",
+          "year"
+        ]
+      },
+      {
+        "value": "country",
+        "resources": [
+          "ddf--datapoints--country--by--city--year"
+        ],
+        "primaryKey": [
+          "city",
+          "year"
+        ]
+      },
+      {
+        "value": "population",
+        "resources": [
+          "ddf--datapoints--population--by--geo--year"
+        ],
+        "primaryKey": [
+          "city",
+          "year"
+        ]
+      },
+      {
+        "value": "population",
+        "resources": [
+          "ddf--datapoints--population--by--country--year--gender"
+        ],
+        "primaryKey": [
+          "country",
+          "binary",
+          "year"
+        ]
+      },
+      {
+        "value": "population",
+        "resources": [
+          "ddf--datapoints--population--by--country--year--gender"
+        ],
+        "primaryKey": [
+          "country",
+          "gender",
+          "year"
+        ]
+      },
+      {
+        "value": "population",
+        "resources": [
+          "ddf--datapoints--population--by--geo--year"
+        ],
+        "primaryKey": [
+          "country",
+          "year"
+        ]
+      },
+      {
+        "value": "population",
+        "resources": [
+          "ddf--datapoints--population--by--country--year--gender"
+        ],
+        "primaryKey": [
+          "geo",
+          "binary",
+          "year"
+        ]
+      },
+      {
+        "value": "population",
+        "resources": [
+          "ddf--datapoints--population--by--country--year--gender"
+        ],
+        "primaryKey": [
+          "geo",
+          "gender",
+          "year"
+        ]
+      },
+      {
+        "value": "country",
+        "resources": [
+          "ddf--datapoints--country--by--city--year"
+        ],
+        "primaryKey": [
+          "geo",
+          "year"
+        ]
+      },
+      {
+        "value": "population",
+        "resources": [
+          "ddf--datapoints--population--by--geo--year"
+        ],
+        "primaryKey": [
+          "geo",
+          "year"
+        ]
+      },
+      {
+        "value": "population",
+        "resources": [
+          "ddf--datapoints--population--by--country--year--gender"
+        ],
+        "primaryKey": [
+          "un_state",
+          "binary",
+          "year"
+        ]
+      },
+      {
+        "value": "population",
+        "resources": [
+          "ddf--datapoints--population--by--country--year--gender"
+        ],
+        "primaryKey": [
+          "un_state",
+          "gender",
+          "year"
+        ]
+      },
+      {
+        "value": "population",
+        "resources": [
+          "ddf--datapoints--population--by--geo--year"
+        ],
+        "primaryKey": [
+          "un_state",
+          "year"
+        ]
+      }
+    ],
+    "concepts": [
+      {
+        "value": "concept_type",
+        "resources": [
+          "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
+        ]
+      },
+      {
+        "value": "domain",
+        "resources": [
+          "ddf--concepts"
+        ],
+        "primaryKey": [
+          "concept"
+        ]
+      }
     ]
+  }
 }

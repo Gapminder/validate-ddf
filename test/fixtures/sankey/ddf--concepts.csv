@@ -5,5 +5,4 @@ phase_to,phase_to,entity_set,phase
 year,year,time,
 amount,amount,measure,
 name,,string,
-concept_type,,string,
 domain,,string,
