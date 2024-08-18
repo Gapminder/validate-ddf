@@ -142,23 +142,25 @@ generateDataPackage root dataset resources = do
           xs -> map notNull xs
         resName = NES.toString res.name
         combinationsForEntityDomains =
-          snd $
-            foldRows csvContent
-              ( \row acc ->
-                  getPkeyCombinations yes row acc
-              )
-              (Tuple HS.empty HS.empty)
+          if Arr.length yes == 0 then HS.empty
+          else
+            snd $
+              foldRows csvContent
+                ( \row acc ->
+                    getPkeyCombinations yes row acc
+                )
+                (Tuple HS.empty HS.empty)
         t1 = Arr.fromFoldable $ combinationsForEntityDomains
-        t2 = Arr.mapMaybe (\x -> whichSets dataset x "") $ no
+        t2 = permutations $ Arr.mapMaybe (\x -> whichSets dataset x "") $ no
         allCombinations = permConcat t1 t2
         schema = (\pk v -> makeDdfSchema pk v [ resName ]) <$> allCombinations <*> values
 
       case primaryKeys of
-        [ "concept" ] -> pure schemaAcc { concepts = schemaAcc.concepts <> (Arr.fromFoldable schema) }
-        [ _ ] ->  pure schemaAcc { entities = schemaAcc.entities <> (Arr.fromFoldable schema) }
+        [ "concept" ] -> pure schemaAcc { concepts = (Arr.fromFoldable schema) <> schemaAcc.concepts }
+        [ _ ] -> pure schemaAcc { entities = (Arr.fromFoldable schema) <> schemaAcc.entities }
         [ a, b ]
-          | (a == "synonym" || b == "synonym") -> pure schemaAcc { synonyms = schemaAcc.synonyms <> (Arr.fromFoldable schema) }
-        otherwise -> pure schemaAcc { datapoints = schemaAcc.datapoints <> (Arr.fromFoldable schema) }
+          | (a == "synonym" || b == "synonym") -> pure schemaAcc { synonyms = (Arr.fromFoldable schema) <> schemaAcc.synonyms }
+        otherwise -> pure schemaAcc { datapoints = (Arr.fromFoldable schema) <> schemaAcc.datapoints }
 
   ddfSchema' <- Arr.foldM func ddfSchema resources
   let
@@ -200,7 +202,7 @@ isDomainOrSet dataset concept =
 
 permutations :: forall a. Array (Array a) -> Array (Array a)
 permutations xss = case Arr.unsnoc xss of
-  Nothing -> [[]]
+  Nothing -> [ [] ]
   Just { init, last } -> do
     x <- last
     ys <- permutations init

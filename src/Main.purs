@@ -74,7 +74,7 @@ runMain opts = launchAff_ do
           datapackage <- generateDataPackage path dataset resources
           let
             dpPath = Path.concat [ path, "datapackage.json" ]
-          writeTextFile Encoding.UTF8 dpPath $ JSON.writePrettyJSON 2 $ writeDataPackage datapackage
+	  writeTextFile Encoding.UTF8 dpPath $ JSON.writePrettyJSON 4 $ writeDataPackage datapackage
           liftEffect $ log "Done!"
           pure unit
       Nothing -> do

@@ -125,7 +125,7 @@ getPrimaryKey { fileInfo, csvContent } =
         else
           NEA.singleton domain
     FI.DataPoints dp -> NEA.fromFoldable1 dp.pkeys
-    FI.Synonyms x -> NEA.snoc' [ (unsafePartial $ NES.unsafeFromString "concept") ] $ x
+    FI.Synonyms x -> NEA.snoc' [ (unsafePartial $ NES.unsafeFromString "synonym") ] $ x
     FI.Translations _ -> unsafeCrashWith "do not gererate resources for translation files."
     FI.Other x -> NEA.singleton x
   where
