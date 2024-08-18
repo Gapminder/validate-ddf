@@ -135,7 +135,7 @@ parseBoolVal x = invalid [ Issue $ "not a boolean value: " <> show x ]
 parseNumVal :: String -> V Issues Value
 parseNumVal input =
   case Num.fromString input of
-    Nothing -> invalid [ Issue $ input <> " is not a number." ]
+    Nothing -> invalid [ Issue $ show input <> " is not a number." ]
     Just n -> pure $ NumVal n
 
 -- TODO add more complex time parser.

@@ -48,7 +48,7 @@ alphaNum =
 alphaNumAnd_ :: Parser Char
 alphaNumAnd_ =
   alphaNum <|> char '_'
-    <?> "expect alphanumeric and underscore _"
+    <?> "expect alphanumeric and underscore(_)"
 
 -- | parse identifier strings.
 -- | note this parser doesn't parse whole string, it's used in parsing ddf filenames
@@ -71,7 +71,7 @@ parseId x = case runParser identifier' x of
     where
     pos = show $ e.pos
 
-    msg = e.error <> "at pos " <> pos
+    msg = e.error <> " at pos " <> pos
 
     err = InvalidValue x msg
 

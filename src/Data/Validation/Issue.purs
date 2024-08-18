@@ -54,3 +54,11 @@ updateFilePath fp =
 extractInvalidValue :: Issue -> String
 extractInvalidValue (InvalidValue str _) = str
 extractInvalidValue _ = ""
+
+-- | update message
+updateMessage :: Issue -> (Msg -> Msg) -> Issue
+updateMessage (Issue m) f = Issue (f m)
+updateMessage (InvalidValue v m) f = InvalidValue v (f m)
+updateMessage (InvalidCSV m) f = InvalidCSV (f m)
+updateMessage (InvalidItem fp v m) f = InvalidItem fp v (f m)
+updateMessage x _ = x

@@ -65,7 +65,7 @@ import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.String.Utils as Str
 import Data.Traversable (for, for_, sequence, sequence_, traverse, traverse_)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Validation.Issue (Issue(..), Issues, toInvaildItem, withRowInfo)
+import Data.Validation.Issue (Issue(..), Issues, toInvaildItem, updateMessage, withRowInfo)
 import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither, validation)
 import Debug (trace)
 import Node.Path (FilePath)
@@ -319,9 +319,9 @@ checkDomainAndSetExists concepts entities =
           ( \_ -> for_ ents \e ->
               let
                 sets = Id.value <$> Ent.getEntitySets e
-                Tuple fp _ = pathAndRow $ Ent.getItemInfo e
+                Tuple fp i = pathAndRow $ Ent.getItemInfo e
               in
-                traverse_ (\x -> withRowInfo fp 0 $ lookupSetWithInDomain concepts x domain) sets
+                traverse_ (\x -> withRowInfo fp i $ lookupSetWithInDomain concepts x domain) sets
           )
   in
     (sequence $ HM.toArrayBy run entities)
@@ -349,7 +349,7 @@ lookupSetWithInDomain concepts set domain =
   lookupDomain concepts domain
     `andThen`
       ( \_ -> case HM.lookup set concepts of
-          Nothing -> invalid [ Issue $ "entity set " <> set <> " is not defined in concepts." ]
+          Nothing -> invalid [ Issue $ "the entity set " <> set <> " is not defined in concepts." ]
           Just v -> case Conc.getType v of
             Conc.EntitySetC -> case Conc.getProp v "domain" of
               Nothing -> invalid [ Issue $ "entity set " <> set <> " doesn't belong to any domain." ]
@@ -501,4 +501,14 @@ parseColumnValues' fp concept parser vals index = traverse_ run allValues
   allValues = HM.values $ HM.fromArrayBy fst identity $ Arr.zip vals index
 
   run (Tuple v i) =
-    withRowInfo fp i (parser v `andThen` (\_ -> pure unit))
+    let
+      res = withRowInfo fp i (parser v `andThen` (\_ -> pure unit))
+      -- function to update the error message with column names.
+      func = map
+        ( \issue -> updateMessage issue
+            ( \m ->
+                "in column " <> (NES.toString concept) <> ": " <> m
+            )
+        )
+    in
+      lmap func res

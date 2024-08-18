@@ -65,7 +65,7 @@ parseGeneralHeader x = case runParser generalHeader x of
     where
     pos = show $ e.pos
 
-    msg = "invalid header: " <> x <> ", " <> e.error <> "at pos " <> pos
+    msg = "invalid header: " <> x <> ", " <> e.error <> " at pos " <> pos
 
     err = InvalidCSV msg
 
@@ -77,7 +77,7 @@ parseEntityHeader x = case runParser entityHeader x of
     where
     pos = show $ e.pos
 
-    msg = "invalid header: " <> x <> ", " <> e.error <> "at pos " <> pos
+    msg = "invalid header: " <> x <> ", " <> e.error <> " at pos " <> pos
 
     err = InvalidCSV msg
 
