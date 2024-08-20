@@ -1,20 +1,18 @@
 module Data.Csv
-  ( CsvRow(..)
+  ( CsvColumn
   , RawCsvContent
-  , createRawContent
-  , filterBadRows
   , foldRows
-  , getLineNo
-  , getRow
-  , iterRows
   , parseCsvContent
   , readAndParseCsv
   , readCsv
   , readCsv'
+  , iterRows
+  , myTest
   ) where
 
 import Prelude
 
+import Control.Promise (Promise, toAff, toAffE)
 import Data.Array (head, length, partition, range, replicate, tail, take, zip)
 import Data.Array as Arr
 import Data.Array.NonEmpty as NEA
@@ -37,120 +35,55 @@ import Effect.Aff (Aff, launchAff_)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console (logShow)
+import Effect.Console (log)
+import Foreign (Foreign, unsafeFromForeign)
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff (readTextFile)
 import Node.Path (FilePath)
 import Partial.Unsafe (unsafePartial)
 import Utils (findDupsL, unsafeLookup)
+import Yoga.JSON as JSON
 
--- | CsvRow is a tuple of line number and row content
-newtype CsvRow =
-  CsvRow (Tuple Int (Array String))
 
-instance showCsvRow :: Show CsvRow where
-  show (CsvRow (Tuple i x)) =
-    show rec
-    where
-    rec = { line: i, record: x }
-
-derive instance newtypeCsvRow :: Newtype CsvRow _
-
--- | Split headers and data rows
-type RawCsvContent =
-  { headers :: Maybe (Array String)
-  -- FIXME: try use Lazy Array for CsvRows. Because sometimes we only need the headers,
-  -- so it's not necessary to run calculation to get csvrows
-  , rows :: Maybe (Array CsvRow)
-  }
-
--- CsvContent: convert csv rows to columns
-
+-- | we will use array of columns to store csv data
 type CsvColumn = Array String
 
+-- | this is the type we get from csv parsing FFI function
+type RawCsvContent =
+  { headers :: Array String
+  , index :: Array Int
+  , columns :: Array CsvColumn
+  , badrows :: Array Int
+  }
+
+-- CsvContent
 type CsvContent =
   { headers :: Array String
   , index :: Array Int
-  , columns :: Array (Array String)
+  , columns :: Array CsvColumn
   }
 
-foreign import parseCsvImpl :: String -> EffectFnAff (Array (Array String))
+-- improtant: Please make sure the return type match RawCsvContent as there are no parsing here
+foreign import parseCsvImpl :: String -> Effect (Promise Foreign)
 
 -- | Read entire csv
-readCsv :: FilePath -> Aff (Array (Array String)) -- NOTE: this will not handle exceptions from the js side.
-readCsv x = do
-  csvContent <- readTextFile UTF8 x
-  fromEffectFnAff $ parseCsvImpl csvContent
+readCsv :: FilePath -> Aff RawCsvContent
+readCsv path = do
+  f <- toAffE $ parseCsvImpl path
+  pure $ unsafeFromForeign f
 
-readCsv' :: FileInfo -> Aff (Array (Array String))
+readCsv' :: FileInfo -> Aff RawCsvContent
 readCsv' = filepath >>> readCsv
-
-getRow :: CsvRow -> (Array String)
-getRow (CsvRow tpl) = snd tpl
-
-getLineNo :: CsvRow -> Int
-getLineNo (CsvRow tpl) = fst tpl
-
-toCsvRow :: Array (Array String) -> Array CsvRow
-toCsvRow [] = []
-toCsvRow xs =
-  let
-    idxs = range 2 ((length xs) + 1) -- idx starts from 2, excluding header row
-
-    tuples = zip idxs xs
-
-    mkRow tpls = CsvRow tpls
-  in
-    map mkRow tuples
-
-createRawContent :: (Array (Array String)) -> RawCsvContent
-createRawContent recs = { headers: headers, rows: rows }
-  where
-  headers = head recs
-
-  rows = toCsvRow <$> tail recs
-
--- | a function to filter bad rows from csv rows
-filterBadRows :: RawCsvContent -> (Tuple (Array Int) RawCsvContent)
-filterBadRows rcsv@{ headers, rows } = case headers of
-  Nothing -> Tuple [] rcsv
-  Just hs ->
-    case rows of
-      Nothing -> Tuple [] rcsv
-      Just rs -> Tuple (map getLineNo no) { headers: headers, rows: Just yes }
-        where
-        headerLength = length hs
-        func row =
-          if (length $ getRow row) == headerLength then true
-          else false
-        { yes, no } = partition func rs
 
 foreign import rowsToColumnsImpl :: Array (Array String) -> Array (Array String)
 
--- | parse csv content
--- | Note that the rowsToColumnsImpl function will fill undefined values with ''
--- | This happens when the length of data row is shorter than header row.
--- | So you should run filterBadRows first if you want to drop all bad rows.
 parseCsvContent :: RawCsvContent -> CsvContent
-parseCsvContent { headers, rows } = case headers of
-  Nothing -> { headers: [], index: [], columns: [] }
-  Just hs ->
-    case rows of
-      Nothing -> { headers: hs, index: [], columns: emptyCols }
-        where
-        emptyCols = replicate (length hs) []
-      Just rs -> { headers: hs, index: idxs, columns: cols }
-        where
-        idxs = map getLineNo rs
-        rowsData = map getRow rs
-        cols = rowsToColumnsImpl rowsData
+parseCsvContent { headers, index, columns } = { headers, index, columns }
 
 readAndParseCsv :: FilePath -> Aff CsvContent
 readAndParseCsv fp = do
-  rows <- readCsv fp
-  let
-    rawContent = createRawContent rows
-    Tuple _ rawContent' = filterBadRows rawContent
-  pure $ parseCsvContent rawContent'
+  csv <- readCsv fp
+  pure $ parseCsvContent csv
 
 -- | iter each row on a function
 iterRows :: forall a. CsvContent -> ((Map String String) -> a) -> Array a
@@ -181,3 +114,9 @@ foldRows { headers, columns, index } func a =
     Arr.foldr func' a idxs
 
 -- TODO: good to implement some common operators, such as drop duplicates
+
+-- for testing
+myTest :: Effect Unit
+myTest = launchAff_ do
+  c <- readCsv "/home/semio/src/work/gapminder/datasets/repo/github.com/open-numbers/ddf--open_numbers/ddf--synonyms--geo.csv"
+  liftEffect $ logShow c.badrows

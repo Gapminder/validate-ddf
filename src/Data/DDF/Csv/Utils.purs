@@ -11,7 +11,7 @@ import Data.Array as A
 import Data.Array as Arr
 import Data.Array.NonEmpty as NEA
 import Data.Array.NonEmpty.Internal (NonEmptyArray)
-import Data.Csv (CsvRow(..), getLineNo, getRow)
+-- import Data.Csv (CsvRow(..), getLineNo, getRow)
 import Data.DDF.Atoms.Header (Header(..))
 import Data.DDF.Atoms.Header as Hd
 import Data.DDF.Atoms.Identifier (Identifier, parseId')

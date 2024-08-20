@@ -127,13 +127,14 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
       it "filenames vs headers" do
         let
           fileName = "ddf--concepts.csv"
-          rawCsvContent =
-            [ [ "concept", "concept_type", "name" ]
-            , [ "geo", "entity_domain", "Geo" ]
-            ]
+          csvContent =
+            { headers: [ "concept", "concept_type", "name" ]
+            , columns: [ [ "geo", "entity_domain", "Geo" ] ]
+            , index: [ 2 ]
+            }
           output = ado
             fileInfo <- parseFileInfo "./" fileName
-            in parseCsvFile { fileInfo: fileInfo, csvContent: Csv.parseCsvContent $ Csv.createRawContent rawCsvContent }
+            in parseCsvFile { fileInfo: fileInfo, csvContent: csvContent }
         output `shouldSatisfy` isValid
       it "concept validation - one concept" do
         let

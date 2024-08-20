@@ -6,7 +6,7 @@ import Control.Monad.Trans.Class (lift)
 import Data.Array as Arr
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as NEA
-import Data.Csv (RawCsvContent, createRawContent, parseCsvContent, readCsv')
+import Data.Csv (RawCsvContent, parseCsvContent, readCsv')
 import Data.Csv as C
 import Data.DDF.Atoms.Identifier as Id
 import Data.DDF.Concept (Concept(..), getId, getInfo, parseConcept, reservedConcepts)
@@ -80,10 +80,8 @@ validateFileExists fi@{ filepath } = do
 -- | read csv data from file
 readAndParseCsvFiles :: Array FileInfo -> ValidationT Messages Aff (Array CsvFile)
 readAndParseCsvFiles files = do
-  csvRows <- lift $ sequence $ readCsv' <$> files
-  let
-    csvContents = map createRawContent csvRows
-  validateCsvFiles $ Arr.zip files csvContents
+  rawContents <- lift $ sequence $ readCsv' <$> files
+  validateCsvFiles $ Arr.zip files rawContents
 
 -- | validte csv content, drop bad csv rows
 dropAndWarnBadCsvRows
@@ -92,7 +90,7 @@ dropAndWarnBadCsvRows
   -> Validation Messages RawCsvContent
 dropAndWarnBadCsvRows fp content = do
   let
-    (Tuple badIdx content') = C.filterBadRows content
+    badIdx = content.badrows
     makemsg idx =
       ( setLineNo idx
           <<< setFile fp
@@ -100,7 +98,7 @@ dropAndWarnBadCsvRows fp content = do
       ) $ Issue "Bad Csv row"
     msgs = map makemsg badIdx
   vWarning msgs
-  pure content'
+  pure content
 
 -- | parse csv file info and csv data into a valid CsvFile
 validateCsvFile

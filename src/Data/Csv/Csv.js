@@ -1,33 +1,49 @@
 import { parse } from 'csv-parse';
+import fs from 'node:fs';
 
-export function parseCsvImpl(csvLine) {
-  return function (onError, onSuccess) {
-    parse(csvLine, {
-        bom: true,
-        quote: '"',
-        columns: false,
-        relax_column_count: true,
-        // we will send all records (including bad ones) to purescript side.
-        // uncomment below to skip the records that have different field numbers from headers.
-        // but we need to adjust purescript types to handle line numbers correctly.
-        // on_record: (record, { lines, error }) => {
-        //     if (error) {
-        //         console.log(`Warning: skipped row because ${error.message}`);
-        //         return null
-        //     } else {
-        //         return { "line": lines, "record": record }
-        //     }
-        // }
-    }, function(err, records) {
-      if (err) {
-        onError(err);
-      }
-      onSuccess(records);
-    })
 
-    return function (cancelError, onCancelerError, onCancelerSuccess) {
-      onCancelerSuccess();
+export function parseCsvImpl(path) {
+  return function () {
+    const func = async () => {
+      const parser = fs
+        .createReadStream(path, "utf8")
+        .pipe(parse({
+          bom: true,
+          quote: '"',
+          columns: false,
+          relax_column_count: true
+        }));
+      let records;
+      let headers;
+      let numColumns;
+      var count = -1;
+      var badrows = [];
+      var index = [];
+      for await (const record of parser) {
+        count++;
+        if (count === 0) {
+          headers = record;
+          numColumns = headers.length;
+          records = Array(numColumns).fill().map(() => []);
+        } else {
+          if (record.length !== numColumns) {
+            badrows.push(count)
+          } else {
+            index.push(count)
+            for (let i = 0; i < numColumns; i++) {
+              records[i].push(record[i])
+            }
+          }
+        }
+      };
+      return {
+        headers: headers,
+        columns: records,
+        index: index,
+        badrows: badrows
+      };
     };
+    return func()
   }
 }
 
