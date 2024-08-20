@@ -1063,14 +1063,14 @@ var arrayMap = function(f) {
 var functorArray = { map: arrayMap };
 
 // output-es/Control.Apply/foreign.js
-var arrayApply = function(fs) {
+var arrayApply = function(fs2) {
   return function(xs) {
-    var l = fs.length;
+    var l = fs2.length;
     var k = xs.length;
     var result = new Array(l * k);
     var n = 0;
     for (var i = 0; i < l; i++) {
-      var f = fs[i];
+      var f = fs2[i];
       for (var j = 0; j < k; j++) {
         result[n++] = f(xs[j]);
       }
@@ -1467,6 +1467,9 @@ var joinWith = function(s) {
 };
 
 // output-es/Effect.Exception/foreign.js
+function error(msg) {
+  return new Error(msg);
+}
 function message(e) {
   return e.message;
 }
@@ -6365,483 +6368,6 @@ var opts = {
   infoProgDesc: /* @__PURE__ */ paragraph("validate DDF dataset at PATH (default to current working dir)")
 };
 
-// output-es/Data.Map.Internal/index.js
-var $$$Map = (tag, _1, _2, _3, _4, _5, _6) => ({ tag, _1, _2, _3, _4, _5, _6 });
-var $MapIter = (tag, _1, _2, _3) => ({ tag, _1, _2, _3 });
-var $MapIterStep = (tag, _1, _2, _3) => ({ tag, _1, _2, _3 });
-var $Split = (_1, _2, _3) => ({ tag: "Split", _1, _2, _3 });
-var $SplitLast = (_1, _2, _3) => ({ tag: "SplitLast", _1, _2, _3 });
-var Leaf2 = /* @__PURE__ */ $$$Map("Leaf");
-var IterLeaf = /* @__PURE__ */ $MapIter("IterLeaf");
-var IterDone = /* @__PURE__ */ $MapIterStep("IterDone");
-var unsafeNode = (k, v, l, r) => {
-  if (l.tag === "Leaf") {
-    if (r.tag === "Leaf") {
-      return $$$Map("Node", 1, 1, k, v, l, r);
-    }
-    if (r.tag === "Node") {
-      return $$$Map("Node", 1 + r._1 | 0, 1 + r._2 | 0, k, v, l, r);
-    }
-    fail();
-  }
-  if (l.tag === "Node") {
-    if (r.tag === "Leaf") {
-      return $$$Map("Node", 1 + l._1 | 0, 1 + l._2 | 0, k, v, l, r);
-    }
-    if (r.tag === "Node") {
-      return $$$Map("Node", l._1 > r._1 ? 1 + l._1 | 0 : 1 + r._1 | 0, (1 + l._2 | 0) + r._2 | 0, k, v, l, r);
-    }
-  }
-  fail();
-};
-var unsafeBalancedNode = (k, v, l, r) => {
-  if (l.tag === "Leaf") {
-    if (r.tag === "Leaf") {
-      return $$$Map("Node", 1, 1, k, v, Leaf2, Leaf2);
-    }
-    if (r.tag === "Node" && r._1 > 1) {
-      if (r._5.tag === "Node" && (() => {
-        if (r._6.tag === "Leaf") {
-          return r._5._1 > 0;
-        }
-        if (r._6.tag === "Node") {
-          return r._5._1 > r._6._1;
-        }
-        fail();
-      })()) {
-        return unsafeNode(r._5._3, r._5._4, unsafeNode(k, v, l, r._5._5), unsafeNode(r._3, r._4, r._5._6, r._6));
-      }
-      return unsafeNode(r._3, r._4, unsafeNode(k, v, l, r._5), r._6);
-    }
-    return unsafeNode(k, v, l, r);
-  }
-  if (l.tag === "Node") {
-    if (r.tag === "Node") {
-      if (r._1 > (l._1 + 1 | 0)) {
-        if (r._5.tag === "Node" && (() => {
-          if (r._6.tag === "Leaf") {
-            return r._5._1 > 0;
-          }
-          if (r._6.tag === "Node") {
-            return r._5._1 > r._6._1;
-          }
-          fail();
-        })()) {
-          return unsafeNode(r._5._3, r._5._4, unsafeNode(k, v, l, r._5._5), unsafeNode(r._3, r._4, r._5._6, r._6));
-        }
-        return unsafeNode(r._3, r._4, unsafeNode(k, v, l, r._5), r._6);
-      }
-      if (l._1 > (r._1 + 1 | 0)) {
-        if (l._6.tag === "Node" && (() => {
-          if (l._5.tag === "Leaf") {
-            return 0 <= l._6._1;
-          }
-          if (l._5.tag === "Node") {
-            return l._5._1 <= l._6._1;
-          }
-          fail();
-        })()) {
-          return unsafeNode(l._6._3, l._6._4, unsafeNode(l._3, l._4, l._5, l._6._5), unsafeNode(k, v, l._6._6, r));
-        }
-        return unsafeNode(l._3, l._4, l._5, unsafeNode(k, v, l._6, r));
-      }
-      return unsafeNode(k, v, l, r);
-    }
-    if (r.tag === "Leaf" && l._1 > 1) {
-      if (l._6.tag === "Node" && (() => {
-        if (l._5.tag === "Leaf") {
-          return 0 <= l._6._1;
-        }
-        if (l._5.tag === "Node") {
-          return l._5._1 <= l._6._1;
-        }
-        fail();
-      })()) {
-        return unsafeNode(l._6._3, l._6._4, unsafeNode(l._3, l._4, l._5, l._6._5), unsafeNode(k, v, l._6._6, r));
-      }
-      return unsafeNode(l._3, l._4, l._5, unsafeNode(k, v, l._6, r));
-    }
-    return unsafeNode(k, v, l, r);
-  }
-  fail();
-};
-var unsafeSplit = (comp, k, m) => {
-  if (m.tag === "Leaf") {
-    return $Split(Nothing, Leaf2, Leaf2);
-  }
-  if (m.tag === "Node") {
-    const v = comp(k)(m._3);
-    if (v === "LT") {
-      const v1 = unsafeSplit(comp, k, m._5);
-      return $Split(v1._1, v1._2, unsafeBalancedNode(m._3, m._4, v1._3, m._6));
-    }
-    if (v === "GT") {
-      const v1 = unsafeSplit(comp, k, m._6);
-      return $Split(v1._1, unsafeBalancedNode(m._3, m._4, m._5, v1._2), v1._3);
-    }
-    if (v === "EQ") {
-      return $Split($Maybe("Just", m._4), m._5, m._6);
-    }
-  }
-  fail();
-};
-var unsafeSplitLast = (k, v, l, r) => {
-  if (r.tag === "Leaf") {
-    return $SplitLast(k, v, l);
-  }
-  if (r.tag === "Node") {
-    const v1 = unsafeSplitLast(r._3, r._4, r._5, r._6);
-    return $SplitLast(v1._1, v1._2, unsafeBalancedNode(k, v, l, v1._3));
-  }
-  fail();
-};
-var unsafeJoinNodes = (v, v1) => {
-  if (v.tag === "Leaf") {
-    return v1;
-  }
-  if (v.tag === "Node") {
-    const v2 = unsafeSplitLast(v._3, v._4, v._5, v._6);
-    return unsafeBalancedNode(v2._1, v2._2, v2._3, v1);
-  }
-  fail();
-};
-var unsafeDifference = (comp, l, r) => {
-  if (l.tag === "Leaf") {
-    return Leaf2;
-  }
-  if (r.tag === "Leaf") {
-    return l;
-  }
-  if (r.tag === "Node") {
-    const v = unsafeSplit(comp, r._3, l);
-    return unsafeJoinNodes(unsafeDifference(comp, v._2, r._5), unsafeDifference(comp, v._3, r._6));
-  }
-  fail();
-};
-var unsafeUnionWith = (comp, app, l, r) => {
-  if (l.tag === "Leaf") {
-    return r;
-  }
-  if (r.tag === "Leaf") {
-    return l;
-  }
-  if (r.tag === "Node") {
-    const v = unsafeSplit(comp, r._3, l);
-    const l$p = unsafeUnionWith(comp, app, v._2, r._5);
-    const r$p = unsafeUnionWith(comp, app, v._3, r._6);
-    if (v._1.tag === "Just") {
-      return unsafeBalancedNode(r._3, app(v._1._1)(r._4), l$p, r$p);
-    }
-    if (v._1.tag === "Nothing") {
-      return unsafeBalancedNode(r._3, r._4, l$p, r$p);
-    }
-  }
-  fail();
-};
-var pop = (dictOrd) => {
-  const compare2 = dictOrd.compare;
-  return (k) => (m) => {
-    const v = unsafeSplit(compare2, k, m);
-    if (v._1.tag === "Just") {
-      return $Maybe("Just", $Tuple(v._1._1, unsafeJoinNodes(v._2, v._3)));
-    }
-    return Nothing;
-  };
-};
-var mapMaybeWithKey = (dictOrd) => (f) => {
-  const go = (v) => {
-    if (v.tag === "Leaf") {
-      return Leaf2;
-    }
-    if (v.tag === "Node") {
-      const v2 = f(v._3)(v._4);
-      if (v2.tag === "Just") {
-        return unsafeBalancedNode(v._3, v2._1, go(v._5), go(v._6));
-      }
-      if (v2.tag === "Nothing") {
-        return unsafeJoinNodes(go(v._5), go(v._6));
-      }
-    }
-    fail();
-  };
-  return go;
-};
-var lookup2 = (dictOrd) => (k) => {
-  const go = (go$a0$copy) => {
-    let go$a0 = go$a0$copy, go$c = true, go$r;
-    while (go$c) {
-      const v = go$a0;
-      if (v.tag === "Leaf") {
-        go$c = false;
-        go$r = Nothing;
-        continue;
-      }
-      if (v.tag === "Node") {
-        const v1 = dictOrd.compare(k)(v._3);
-        if (v1 === "LT") {
-          go$a0 = v._5;
-          continue;
-        }
-        if (v1 === "GT") {
-          go$a0 = v._6;
-          continue;
-        }
-        if (v1 === "EQ") {
-          go$c = false;
-          go$r = $Maybe("Just", v._4);
-          continue;
-        }
-      }
-      fail();
-    }
-    return go$r;
-  };
-  return go;
-};
-var stepUnorderedCps = (next) => (done) => {
-  const go = (go$a0$copy) => {
-    let go$a0 = go$a0$copy, go$c = true, go$r;
-    while (go$c) {
-      const v = go$a0;
-      if (v.tag === "IterLeaf") {
-        go$c = false;
-        go$r = done();
-        continue;
-      }
-      if (v.tag === "IterEmit") {
-        go$c = false;
-        go$r = next(v._1, v._2, v._3);
-        continue;
-      }
-      if (v.tag === "IterNode") {
-        go$a0 = (() => {
-          if (v._1.tag === "Leaf") {
-            return v._2;
-          }
-          if (v._1.tag === "Node") {
-            if (v._1._5.tag === "Leaf") {
-              if (v._1._6.tag === "Leaf") {
-                return $MapIter("IterEmit", v._1._3, v._1._4, v._2);
-              }
-              return $MapIter("IterEmit", v._1._3, v._1._4, $MapIter("IterNode", v._1._6, v._2));
-            }
-            if (v._1._6.tag === "Leaf") {
-              return $MapIter("IterEmit", v._1._3, v._1._4, $MapIter("IterNode", v._1._5, v._2));
-            }
-            return $MapIter("IterEmit", v._1._3, v._1._4, $MapIter("IterNode", v._1._5, $MapIter("IterNode", v._1._6, v._2)));
-          }
-          fail();
-        })();
-        continue;
-      }
-      fail();
-    }
-    return go$r;
-  };
-  return go;
-};
-var stepUnfoldrUnordered = /* @__PURE__ */ stepUnorderedCps((k, v, next) => $Maybe("Just", $Tuple($Tuple(k, v), next)))((v) => Nothing);
-var stepAscCps = (next) => (done) => {
-  const go = (go$a0$copy) => {
-    let go$a0 = go$a0$copy, go$c = true, go$r;
-    while (go$c) {
-      const v = go$a0;
-      if (v.tag === "IterLeaf") {
-        go$c = false;
-        go$r = done();
-        continue;
-      }
-      if (v.tag === "IterEmit") {
-        go$c = false;
-        go$r = next(v._1, v._2, v._3);
-        continue;
-      }
-      if (v.tag === "IterNode") {
-        go$a0 = (() => {
-          const go$1 = (go$1$a0$copy) => (go$1$a1$copy) => {
-            let go$1$a0 = go$1$a0$copy, go$1$a1 = go$1$a1$copy, go$1$c = true, go$1$r;
-            while (go$1$c) {
-              const iter = go$1$a0, v$1 = go$1$a1;
-              if (v$1.tag === "Leaf") {
-                go$1$c = false;
-                go$1$r = iter;
-                continue;
-              }
-              if (v$1.tag === "Node") {
-                if (v$1._6.tag === "Leaf") {
-                  go$1$a0 = $MapIter("IterEmit", v$1._3, v$1._4, iter);
-                  go$1$a1 = v$1._5;
-                  continue;
-                }
-                go$1$a0 = $MapIter("IterEmit", v$1._3, v$1._4, $MapIter("IterNode", v$1._6, iter));
-                go$1$a1 = v$1._5;
-                continue;
-              }
-              fail();
-            }
-            return go$1$r;
-          };
-          return go$1(v._2)(v._1);
-        })();
-        continue;
-      }
-      fail();
-    }
-    return go$r;
-  };
-  return go;
-};
-var stepAsc = /* @__PURE__ */ stepAscCps((k, v, next) => $MapIterStep("IterNext", k, v, next))((v) => IterDone);
-var eqMapIter = (dictEq) => (dictEq1) => ({
-  eq: (() => {
-    const go = (a) => (b) => {
-      const v = stepAsc(a);
-      if (v.tag === "IterNext") {
-        const v2 = stepAsc(b);
-        return v2.tag === "IterNext" && dictEq.eq(v._1)(v2._1) && dictEq1.eq(v._2)(v2._2) && go(v._3)(v2._3);
-      }
-      if (v.tag === "IterDone") {
-        return true;
-      }
-      fail();
-    };
-    return go;
-  })()
-});
-var stepUnfoldr = /* @__PURE__ */ stepAscCps((k, v, next) => $Maybe("Just", $Tuple($Tuple(k, v), next)))((v) => Nothing);
-var insertWith = (dictOrd) => (app) => (k) => (v) => {
-  const go = (v1) => {
-    if (v1.tag === "Leaf") {
-      return $$$Map("Node", 1, 1, k, v, Leaf2, Leaf2);
-    }
-    if (v1.tag === "Node") {
-      const v2 = dictOrd.compare(k)(v1._3);
-      if (v2 === "LT") {
-        return unsafeBalancedNode(v1._3, v1._4, go(v1._5), v1._6);
-      }
-      if (v2 === "GT") {
-        return unsafeBalancedNode(v1._3, v1._4, v1._5, go(v1._6));
-      }
-      if (v2 === "EQ") {
-        return $$$Map("Node", v1._1, v1._2, k, app(v1._4)(v), v1._5, v1._6);
-      }
-    }
-    fail();
-  };
-  return go;
-};
-var insert = (dictOrd) => (k) => (v) => {
-  const go = (v1) => {
-    if (v1.tag === "Leaf") {
-      return $$$Map("Node", 1, 1, k, v, Leaf2, Leaf2);
-    }
-    if (v1.tag === "Node") {
-      const v2 = dictOrd.compare(k)(v1._3);
-      if (v2 === "LT") {
-        return unsafeBalancedNode(v1._3, v1._4, go(v1._5), v1._6);
-      }
-      if (v2 === "GT") {
-        return unsafeBalancedNode(v1._3, v1._4, v1._5, go(v1._6));
-      }
-      if (v2 === "EQ") {
-        return $$$Map("Node", v1._1, v1._2, k, v, v1._5, v1._6);
-      }
-    }
-    fail();
-  };
-  return go;
-};
-var functorMap = {
-  map: (f) => {
-    const go = (v) => {
-      if (v.tag === "Leaf") {
-        return Leaf2;
-      }
-      if (v.tag === "Node") {
-        return $$$Map("Node", v._1, v._2, v._3, f(v._4), go(v._5), go(v._6));
-      }
-      fail();
-    };
-    return go;
-  }
-};
-var keys2 = /* @__PURE__ */ (() => {
-  const go = (m$p, z$p) => {
-    if (m$p.tag === "Leaf") {
-      return z$p;
-    }
-    if (m$p.tag === "Node") {
-      return go(m$p._5, $List("Cons", m$p._3, go(m$p._6, z$p)));
-    }
-    fail();
-  };
-  return (m) => go(m, Nil);
-})();
-var values = /* @__PURE__ */ (() => {
-  const go = (m$p, z$p) => {
-    if (m$p.tag === "Leaf") {
-      return z$p;
-    }
-    if (m$p.tag === "Node") {
-      return go(m$p._5, $List("Cons", m$p._4, go(m$p._6, z$p)));
-    }
-    fail();
-  };
-  return (m) => go(m, Nil);
-})();
-var filterKeys = (dictOrd) => (f) => {
-  const go = (v) => {
-    if (v.tag === "Leaf") {
-      return Leaf2;
-    }
-    if (v.tag === "Node") {
-      if (f(v._3)) {
-        return unsafeBalancedNode(v._3, v._4, go(v._5), go(v._6));
-      }
-      return unsafeJoinNodes(go(v._5), go(v._6));
-    }
-    fail();
-  };
-  return go;
-};
-var eqMap = (dictEq) => (dictEq1) => ({
-  eq: (xs) => (ys) => {
-    if (xs.tag === "Leaf") {
-      return ys.tag === "Leaf";
-    }
-    if (xs.tag === "Node") {
-      return ys.tag === "Node" && xs._2 === ys._2 && eqMapIter(dictEq)(dictEq1).eq($MapIter("IterNode", xs, IterLeaf))($MapIter("IterNode", ys, IterLeaf));
-    }
-    fail();
-  }
-});
-var fromFoldable3 = (dictOrd) => (dictFoldable) => dictFoldable.foldl((m) => (v) => insert(dictOrd)(v._1)(v._2)(m))(Leaf2);
-var fromFoldableWith = (dictOrd) => (dictFoldable) => (f) => {
-  const f$p = insertWith(dictOrd)((b) => (a) => f(a)(b));
-  return dictFoldable.foldl((m) => (v) => f$p(v._1)(v._2)(m))(Leaf2);
-};
-var $$delete2 = (dictOrd) => (k) => {
-  const go = (v) => {
-    if (v.tag === "Leaf") {
-      return Leaf2;
-    }
-    if (v.tag === "Node") {
-      const v1 = dictOrd.compare(k)(v._3);
-      if (v1 === "LT") {
-        return unsafeBalancedNode(v._3, v._4, go(v._5), v._6);
-      }
-      if (v1 === "GT") {
-        return unsafeBalancedNode(v._3, v._4, v._5, go(v._6));
-      }
-      if (v1 === "EQ") {
-        return unsafeJoinNodes(v._5, v._6);
-      }
-    }
-    fail();
-  };
-  return go;
-};
-
 // output-es/Effect.Aff/foreign.js
 var Aff = function() {
   var EMPTY = {};
@@ -7762,169 +7288,572 @@ var nonCanceler = /* @__PURE__ */ (() => {
   return (v) => $0;
 })();
 
-// output-es/Effect.Aff.Compat/index.js
-var fromEffectFnAff = (v) => makeAff((k) => () => {
-  const v1 = v((x) => k($Either("Left", x))(), (x) => k($Either("Right", x))());
-  return (e) => makeAff((k2) => () => {
-    v1(e, (x) => k2($Either("Left", x))(), (x) => k2($Either("Right", x))());
-    return nonCanceler;
-  });
-});
+// output-es/Foreign/foreign.js
+function typeOf(value2) {
+  return typeof value2;
+}
+function tagOf(value2) {
+  return Object.prototype.toString.call(value2).slice(8, -1);
+}
+function isNull(value2) {
+  return value2 === null;
+}
+function isUndefined(value2) {
+  return value2 === void 0;
+}
+var isArray = Array.isArray || function(value2) {
+  return Object.prototype.toString.call(value2) === "[object Array]";
+};
 
-// output-es/Node.FS.Constants/foreign.js
-import { constants } from "node:fs";
-var f_OK = constants.F_OK;
-var r_OK = constants.R_OK;
-var w_OK = constants.W_OK;
-var x_OK = constants.X_OK;
-var copyFile_EXCL = constants.COPYFILE_EXCL;
-var copyFile_FICLONE = constants.COPYFILE_FICLONE;
-var copyFile_FICLONE_FORCE = constants.COPYFILE_FICLONE_FORCE;
-
-// output-es/Node.FS.Async/foreign.js
-import {
-  access,
-  copyFile,
-  mkdtemp,
-  rename,
-  truncate,
-  chown,
-  chmod,
-  stat,
-  lstat,
-  link as link2,
-  symlink,
-  readlink,
-  realpath,
-  unlink,
-  rmdir,
-  rm,
-  mkdir,
-  readdir,
-  utimes,
-  readFile,
-  writeFile,
-  appendFile,
-  open,
-  read as read2,
-  write as write2,
-  close
-} from "node:fs";
-
-// output-es/Node.FS.Async/index.js
-var handleCallback = (cb) => (err, a) => {
-  const v = nullable(err, Nothing, Just);
-  if (v.tag === "Nothing") {
-    return cb($Either("Right", a))();
+// output-es/Foreign/index.js
+var $ForeignError = (tag, _1, _2) => ({ tag, _1, _2 });
+var ErrorAtIndex = (value0) => (value12) => $ForeignError("ErrorAtIndex", value0, value12);
+var ErrorAtProperty = (value0) => (value12) => $ForeignError("ErrorAtProperty", value0, value12);
+var readNull = (dictMonad) => {
+  const $0 = applicativeExceptT(dictMonad);
+  return (value2) => {
+    if (isNull(value2)) {
+      return $0.pure(Nothing);
+    }
+    return $0.pure($Maybe("Just", value2));
+  };
+};
+var readArray = (dictMonad) => (value2) => {
+  if (isArray(value2)) {
+    return applicativeExceptT(dictMonad).pure(value2);
   }
-  if (v.tag === "Just") {
-    return cb($Either("Left", v._1))();
+  return monadThrowExceptT(dictMonad).throwError($NonEmpty($ForeignError("TypeMismatch", "array", tagOf(value2)), Nil));
+};
+var unsafeReadTagged = (dictMonad) => (tag) => (value2) => {
+  if (tagOf(value2) === tag) {
+    return applicativeExceptT(dictMonad).pure(value2);
+  }
+  return monadThrowExceptT(dictMonad).throwError($NonEmpty($ForeignError("TypeMismatch", tag, tagOf(value2)), Nil));
+};
+var readString = (dictMonad) => unsafeReadTagged(dictMonad)("String");
+
+// output-es/Control.Promise/foreign.js
+function thenImpl(promise2) {
+  return function(errCB) {
+    return function(succCB) {
+      return function() {
+        promise2.then(succCB, errCB);
+      };
+    };
+  };
+}
+
+// output-es/Control.Promise/index.js
+var alt2 = /* @__PURE__ */ (() => altExceptT(semigroupNonEmptyList)(monadIdentity).alt)();
+var toAff$p = (customCoerce) => (p) => makeAff((cb) => {
+  const $0 = thenImpl(p)(($02) => cb($Either("Left", customCoerce($02)))())((x) => cb($Either("Right", x))());
+  return () => {
+    $0();
+    return nonCanceler;
+  };
+});
+var coerce = (fn) => {
+  const $0 = alt2(unsafeReadTagged(monadIdentity)("Error")(fn))((() => {
+    const $02 = unsafeReadTagged(monadIdentity)("String")(fn);
+    if ($02.tag === "Left") {
+      return $Either("Left", $02._1);
+    }
+    if ($02.tag === "Right") {
+      return $Either("Right", error($02._1));
+    }
+    fail();
+  })());
+  if ($0.tag === "Left") {
+    return error("Promise failed, couldn't extract JS Error or String");
+  }
+  if ($0.tag === "Right") {
+    return $0._1;
   }
   fail();
 };
-var readTextFile = (encoding) => (file) => (cb) => {
-  const $0 = {
-    encoding: (() => {
-      if (encoding === "ASCII") {
-        return "ASCII";
-      }
-      if (encoding === "UTF8") {
-        return "UTF8";
-      }
-      if (encoding === "UTF16LE") {
-        return "UTF16LE";
-      }
-      if (encoding === "UCS2") {
-        return "UCS2";
-      }
-      if (encoding === "Base64") {
-        return "Base64";
-      }
-      if (encoding === "Base64Url") {
-        return "Base64Url";
-      }
-      if (encoding === "Latin1") {
-        return "Latin1";
-      }
-      if (encoding === "Binary") {
-        return "Binary";
-      }
-      if (encoding === "Hex") {
-        return "Hex";
-      }
-      fail();
-    })()
-  };
-  return () => readFile(file, $0, handleCallback(cb));
+
+// output-es/Data.Map.Internal/index.js
+var $$$Map = (tag, _1, _2, _3, _4, _5, _6) => ({ tag, _1, _2, _3, _4, _5, _6 });
+var $MapIter = (tag, _1, _2, _3) => ({ tag, _1, _2, _3 });
+var $MapIterStep = (tag, _1, _2, _3) => ({ tag, _1, _2, _3 });
+var $Split = (_1, _2, _3) => ({ tag: "Split", _1, _2, _3 });
+var $SplitLast = (_1, _2, _3) => ({ tag: "SplitLast", _1, _2, _3 });
+var Leaf2 = /* @__PURE__ */ $$$Map("Leaf");
+var IterLeaf = /* @__PURE__ */ $MapIter("IterLeaf");
+var IterDone = /* @__PURE__ */ $MapIterStep("IterDone");
+var unsafeNode = (k, v, l, r) => {
+  if (l.tag === "Leaf") {
+    if (r.tag === "Leaf") {
+      return $$$Map("Node", 1, 1, k, v, l, r);
+    }
+    if (r.tag === "Node") {
+      return $$$Map("Node", 1 + r._1 | 0, 1 + r._2 | 0, k, v, l, r);
+    }
+    fail();
+  }
+  if (l.tag === "Node") {
+    if (r.tag === "Leaf") {
+      return $$$Map("Node", 1 + l._1 | 0, 1 + l._2 | 0, k, v, l, r);
+    }
+    if (r.tag === "Node") {
+      return $$$Map("Node", l._1 > r._1 ? 1 + l._1 | 0 : 1 + r._1 | 0, (1 + l._2 | 0) + r._2 | 0, k, v, l, r);
+    }
+  }
+  fail();
 };
-var readdir2 = (file) => (cb) => () => readdir(file, handleCallback(cb));
-var stat2 = (file) => (cb) => () => stat(file, handleCallback(cb));
-var writeTextFile = (encoding) => (file) => (buff) => (cb) => {
-  const $0 = {
-    encoding: (() => {
-      if (encoding === "ASCII") {
-        return "ASCII";
+var unsafeBalancedNode = (k, v, l, r) => {
+  if (l.tag === "Leaf") {
+    if (r.tag === "Leaf") {
+      return $$$Map("Node", 1, 1, k, v, Leaf2, Leaf2);
+    }
+    if (r.tag === "Node" && r._1 > 1) {
+      if (r._5.tag === "Node" && (() => {
+        if (r._6.tag === "Leaf") {
+          return r._5._1 > 0;
+        }
+        if (r._6.tag === "Node") {
+          return r._5._1 > r._6._1;
+        }
+        fail();
+      })()) {
+        return unsafeNode(r._5._3, r._5._4, unsafeNode(k, v, l, r._5._5), unsafeNode(r._3, r._4, r._5._6, r._6));
       }
-      if (encoding === "UTF8") {
-        return "UTF8";
+      return unsafeNode(r._3, r._4, unsafeNode(k, v, l, r._5), r._6);
+    }
+    return unsafeNode(k, v, l, r);
+  }
+  if (l.tag === "Node") {
+    if (r.tag === "Node") {
+      if (r._1 > (l._1 + 1 | 0)) {
+        if (r._5.tag === "Node" && (() => {
+          if (r._6.tag === "Leaf") {
+            return r._5._1 > 0;
+          }
+          if (r._6.tag === "Node") {
+            return r._5._1 > r._6._1;
+          }
+          fail();
+        })()) {
+          return unsafeNode(r._5._3, r._5._4, unsafeNode(k, v, l, r._5._5), unsafeNode(r._3, r._4, r._5._6, r._6));
+        }
+        return unsafeNode(r._3, r._4, unsafeNode(k, v, l, r._5), r._6);
       }
-      if (encoding === "UTF16LE") {
-        return "UTF16LE";
+      if (l._1 > (r._1 + 1 | 0)) {
+        if (l._6.tag === "Node" && (() => {
+          if (l._5.tag === "Leaf") {
+            return 0 <= l._6._1;
+          }
+          if (l._5.tag === "Node") {
+            return l._5._1 <= l._6._1;
+          }
+          fail();
+        })()) {
+          return unsafeNode(l._6._3, l._6._4, unsafeNode(l._3, l._4, l._5, l._6._5), unsafeNode(k, v, l._6._6, r));
+        }
+        return unsafeNode(l._3, l._4, l._5, unsafeNode(k, v, l._6, r));
       }
-      if (encoding === "UCS2") {
-        return "UCS2";
+      return unsafeNode(k, v, l, r);
+    }
+    if (r.tag === "Leaf" && l._1 > 1) {
+      if (l._6.tag === "Node" && (() => {
+        if (l._5.tag === "Leaf") {
+          return 0 <= l._6._1;
+        }
+        if (l._5.tag === "Node") {
+          return l._5._1 <= l._6._1;
+        }
+        fail();
+      })()) {
+        return unsafeNode(l._6._3, l._6._4, unsafeNode(l._3, l._4, l._5, l._6._5), unsafeNode(k, v, l._6._6, r));
       }
-      if (encoding === "Base64") {
-        return "Base64";
+      return unsafeNode(l._3, l._4, l._5, unsafeNode(k, v, l._6, r));
+    }
+    return unsafeNode(k, v, l, r);
+  }
+  fail();
+};
+var unsafeSplit = (comp, k, m) => {
+  if (m.tag === "Leaf") {
+    return $Split(Nothing, Leaf2, Leaf2);
+  }
+  if (m.tag === "Node") {
+    const v = comp(k)(m._3);
+    if (v === "LT") {
+      const v1 = unsafeSplit(comp, k, m._5);
+      return $Split(v1._1, v1._2, unsafeBalancedNode(m._3, m._4, v1._3, m._6));
+    }
+    if (v === "GT") {
+      const v1 = unsafeSplit(comp, k, m._6);
+      return $Split(v1._1, unsafeBalancedNode(m._3, m._4, m._5, v1._2), v1._3);
+    }
+    if (v === "EQ") {
+      return $Split($Maybe("Just", m._4), m._5, m._6);
+    }
+  }
+  fail();
+};
+var unsafeSplitLast = (k, v, l, r) => {
+  if (r.tag === "Leaf") {
+    return $SplitLast(k, v, l);
+  }
+  if (r.tag === "Node") {
+    const v1 = unsafeSplitLast(r._3, r._4, r._5, r._6);
+    return $SplitLast(v1._1, v1._2, unsafeBalancedNode(k, v, l, v1._3));
+  }
+  fail();
+};
+var unsafeJoinNodes = (v, v1) => {
+  if (v.tag === "Leaf") {
+    return v1;
+  }
+  if (v.tag === "Node") {
+    const v2 = unsafeSplitLast(v._3, v._4, v._5, v._6);
+    return unsafeBalancedNode(v2._1, v2._2, v2._3, v1);
+  }
+  fail();
+};
+var unsafeDifference = (comp, l, r) => {
+  if (l.tag === "Leaf") {
+    return Leaf2;
+  }
+  if (r.tag === "Leaf") {
+    return l;
+  }
+  if (r.tag === "Node") {
+    const v = unsafeSplit(comp, r._3, l);
+    return unsafeJoinNodes(unsafeDifference(comp, v._2, r._5), unsafeDifference(comp, v._3, r._6));
+  }
+  fail();
+};
+var unsafeUnionWith = (comp, app, l, r) => {
+  if (l.tag === "Leaf") {
+    return r;
+  }
+  if (r.tag === "Leaf") {
+    return l;
+  }
+  if (r.tag === "Node") {
+    const v = unsafeSplit(comp, r._3, l);
+    const l$p = unsafeUnionWith(comp, app, v._2, r._5);
+    const r$p = unsafeUnionWith(comp, app, v._3, r._6);
+    if (v._1.tag === "Just") {
+      return unsafeBalancedNode(r._3, app(v._1._1)(r._4), l$p, r$p);
+    }
+    if (v._1.tag === "Nothing") {
+      return unsafeBalancedNode(r._3, r._4, l$p, r$p);
+    }
+  }
+  fail();
+};
+var pop = (dictOrd) => {
+  const compare2 = dictOrd.compare;
+  return (k) => (m) => {
+    const v = unsafeSplit(compare2, k, m);
+    if (v._1.tag === "Just") {
+      return $Maybe("Just", $Tuple(v._1._1, unsafeJoinNodes(v._2, v._3)));
+    }
+    return Nothing;
+  };
+};
+var mapMaybeWithKey = (dictOrd) => (f) => {
+  const go = (v) => {
+    if (v.tag === "Leaf") {
+      return Leaf2;
+    }
+    if (v.tag === "Node") {
+      const v2 = f(v._3)(v._4);
+      if (v2.tag === "Just") {
+        return unsafeBalancedNode(v._3, v2._1, go(v._5), go(v._6));
       }
-      if (encoding === "Base64Url") {
-        return "Base64Url";
+      if (v2.tag === "Nothing") {
+        return unsafeJoinNodes(go(v._5), go(v._6));
       }
-      if (encoding === "Latin1") {
-        return "Latin1";
+    }
+    fail();
+  };
+  return go;
+};
+var lookup2 = (dictOrd) => (k) => {
+  const go = (go$a0$copy) => {
+    let go$a0 = go$a0$copy, go$c = true, go$r;
+    while (go$c) {
+      const v = go$a0;
+      if (v.tag === "Leaf") {
+        go$c = false;
+        go$r = Nothing;
+        continue;
       }
-      if (encoding === "Binary") {
-        return "Binary";
-      }
-      if (encoding === "Hex") {
-        return "Hex";
+      if (v.tag === "Node") {
+        const v1 = dictOrd.compare(k)(v._3);
+        if (v1 === "LT") {
+          go$a0 = v._5;
+          continue;
+        }
+        if (v1 === "GT") {
+          go$a0 = v._6;
+          continue;
+        }
+        if (v1 === "EQ") {
+          go$c = false;
+          go$r = $Maybe("Just", v._4);
+          continue;
+        }
       }
       fail();
-    })()
+    }
+    return go$r;
   };
-  return () => writeFile(file, buff, $0, handleCallback(cb));
+  return go;
+};
+var stepUnorderedCps = (next) => (done) => {
+  const go = (go$a0$copy) => {
+    let go$a0 = go$a0$copy, go$c = true, go$r;
+    while (go$c) {
+      const v = go$a0;
+      if (v.tag === "IterLeaf") {
+        go$c = false;
+        go$r = done();
+        continue;
+      }
+      if (v.tag === "IterEmit") {
+        go$c = false;
+        go$r = next(v._1, v._2, v._3);
+        continue;
+      }
+      if (v.tag === "IterNode") {
+        go$a0 = (() => {
+          if (v._1.tag === "Leaf") {
+            return v._2;
+          }
+          if (v._1.tag === "Node") {
+            if (v._1._5.tag === "Leaf") {
+              if (v._1._6.tag === "Leaf") {
+                return $MapIter("IterEmit", v._1._3, v._1._4, v._2);
+              }
+              return $MapIter("IterEmit", v._1._3, v._1._4, $MapIter("IterNode", v._1._6, v._2));
+            }
+            if (v._1._6.tag === "Leaf") {
+              return $MapIter("IterEmit", v._1._3, v._1._4, $MapIter("IterNode", v._1._5, v._2));
+            }
+            return $MapIter("IterEmit", v._1._3, v._1._4, $MapIter("IterNode", v._1._5, $MapIter("IterNode", v._1._6, v._2)));
+          }
+          fail();
+        })();
+        continue;
+      }
+      fail();
+    }
+    return go$r;
+  };
+  return go;
+};
+var stepUnfoldrUnordered = /* @__PURE__ */ stepUnorderedCps((k, v, next) => $Maybe("Just", $Tuple($Tuple(k, v), next)))((v) => Nothing);
+var stepAscCps = (next) => (done) => {
+  const go = (go$a0$copy) => {
+    let go$a0 = go$a0$copy, go$c = true, go$r;
+    while (go$c) {
+      const v = go$a0;
+      if (v.tag === "IterLeaf") {
+        go$c = false;
+        go$r = done();
+        continue;
+      }
+      if (v.tag === "IterEmit") {
+        go$c = false;
+        go$r = next(v._1, v._2, v._3);
+        continue;
+      }
+      if (v.tag === "IterNode") {
+        go$a0 = (() => {
+          const go$1 = (go$1$a0$copy) => (go$1$a1$copy) => {
+            let go$1$a0 = go$1$a0$copy, go$1$a1 = go$1$a1$copy, go$1$c = true, go$1$r;
+            while (go$1$c) {
+              const iter = go$1$a0, v$1 = go$1$a1;
+              if (v$1.tag === "Leaf") {
+                go$1$c = false;
+                go$1$r = iter;
+                continue;
+              }
+              if (v$1.tag === "Node") {
+                if (v$1._6.tag === "Leaf") {
+                  go$1$a0 = $MapIter("IterEmit", v$1._3, v$1._4, iter);
+                  go$1$a1 = v$1._5;
+                  continue;
+                }
+                go$1$a0 = $MapIter("IterEmit", v$1._3, v$1._4, $MapIter("IterNode", v$1._6, iter));
+                go$1$a1 = v$1._5;
+                continue;
+              }
+              fail();
+            }
+            return go$1$r;
+          };
+          return go$1(v._2)(v._1);
+        })();
+        continue;
+      }
+      fail();
+    }
+    return go$r;
+  };
+  return go;
+};
+var stepAsc = /* @__PURE__ */ stepAscCps((k, v, next) => $MapIterStep("IterNext", k, v, next))((v) => IterDone);
+var eqMapIter = (dictEq) => (dictEq1) => ({
+  eq: (() => {
+    const go = (a) => (b) => {
+      const v = stepAsc(a);
+      if (v.tag === "IterNext") {
+        const v2 = stepAsc(b);
+        return v2.tag === "IterNext" && dictEq.eq(v._1)(v2._1) && dictEq1.eq(v._2)(v2._2) && go(v._3)(v2._3);
+      }
+      if (v.tag === "IterDone") {
+        return true;
+      }
+      fail();
+    };
+    return go;
+  })()
+});
+var stepUnfoldr = /* @__PURE__ */ stepAscCps((k, v, next) => $Maybe("Just", $Tuple($Tuple(k, v), next)))((v) => Nothing);
+var insertWith = (dictOrd) => (app) => (k) => (v) => {
+  const go = (v1) => {
+    if (v1.tag === "Leaf") {
+      return $$$Map("Node", 1, 1, k, v, Leaf2, Leaf2);
+    }
+    if (v1.tag === "Node") {
+      const v2 = dictOrd.compare(k)(v1._3);
+      if (v2 === "LT") {
+        return unsafeBalancedNode(v1._3, v1._4, go(v1._5), v1._6);
+      }
+      if (v2 === "GT") {
+        return unsafeBalancedNode(v1._3, v1._4, v1._5, go(v1._6));
+      }
+      if (v2 === "EQ") {
+        return $$$Map("Node", v1._1, v1._2, k, app(v1._4)(v), v1._5, v1._6);
+      }
+    }
+    fail();
+  };
+  return go;
+};
+var insert = (dictOrd) => (k) => (v) => {
+  const go = (v1) => {
+    if (v1.tag === "Leaf") {
+      return $$$Map("Node", 1, 1, k, v, Leaf2, Leaf2);
+    }
+    if (v1.tag === "Node") {
+      const v2 = dictOrd.compare(k)(v1._3);
+      if (v2 === "LT") {
+        return unsafeBalancedNode(v1._3, v1._4, go(v1._5), v1._6);
+      }
+      if (v2 === "GT") {
+        return unsafeBalancedNode(v1._3, v1._4, v1._5, go(v1._6));
+      }
+      if (v2 === "EQ") {
+        return $$$Map("Node", v1._1, v1._2, k, v, v1._5, v1._6);
+      }
+    }
+    fail();
+  };
+  return go;
+};
+var functorMap = {
+  map: (f) => {
+    const go = (v) => {
+      if (v.tag === "Leaf") {
+        return Leaf2;
+      }
+      if (v.tag === "Node") {
+        return $$$Map("Node", v._1, v._2, v._3, f(v._4), go(v._5), go(v._6));
+      }
+      fail();
+    };
+    return go;
+  }
+};
+var keys2 = /* @__PURE__ */ (() => {
+  const go = (m$p, z$p) => {
+    if (m$p.tag === "Leaf") {
+      return z$p;
+    }
+    if (m$p.tag === "Node") {
+      return go(m$p._5, $List("Cons", m$p._3, go(m$p._6, z$p)));
+    }
+    fail();
+  };
+  return (m) => go(m, Nil);
+})();
+var values = /* @__PURE__ */ (() => {
+  const go = (m$p, z$p) => {
+    if (m$p.tag === "Leaf") {
+      return z$p;
+    }
+    if (m$p.tag === "Node") {
+      return go(m$p._5, $List("Cons", m$p._4, go(m$p._6, z$p)));
+    }
+    fail();
+  };
+  return (m) => go(m, Nil);
+})();
+var filterKeys = (dictOrd) => (f) => {
+  const go = (v) => {
+    if (v.tag === "Leaf") {
+      return Leaf2;
+    }
+    if (v.tag === "Node") {
+      if (f(v._3)) {
+        return unsafeBalancedNode(v._3, v._4, go(v._5), go(v._6));
+      }
+      return unsafeJoinNodes(go(v._5), go(v._6));
+    }
+    fail();
+  };
+  return go;
+};
+var eqMap = (dictEq) => (dictEq1) => ({
+  eq: (xs) => (ys) => {
+    if (xs.tag === "Leaf") {
+      return ys.tag === "Leaf";
+    }
+    if (xs.tag === "Node") {
+      return ys.tag === "Node" && xs._2 === ys._2 && eqMapIter(dictEq)(dictEq1).eq($MapIter("IterNode", xs, IterLeaf))($MapIter("IterNode", ys, IterLeaf));
+    }
+    fail();
+  }
+});
+var fromFoldable3 = (dictOrd) => (dictFoldable) => dictFoldable.foldl((m) => (v) => insert(dictOrd)(v._1)(v._2)(m))(Leaf2);
+var fromFoldableWith = (dictOrd) => (dictFoldable) => (f) => {
+  const f$p = insertWith(dictOrd)((b) => (a) => f(a)(b));
+  return dictFoldable.foldl((m) => (v) => f$p(v._1)(v._2)(m))(Leaf2);
+};
+var $$delete2 = (dictOrd) => (k) => {
+  const go = (v) => {
+    if (v.tag === "Leaf") {
+      return Leaf2;
+    }
+    if (v.tag === "Node") {
+      const v1 = dictOrd.compare(k)(v._3);
+      if (v1 === "LT") {
+        return unsafeBalancedNode(v._3, v._4, go(v._5), v._6);
+      }
+      if (v1 === "GT") {
+        return unsafeBalancedNode(v._3, v._4, v._5, go(v._6));
+      }
+      if (v1 === "EQ") {
+        return unsafeJoinNodes(v._5, v._6);
+      }
+    }
+    fail();
+  };
+  return go;
 };
 
-// output-es/Node.FS.Aff/index.js
-var toAff1 = (f) => (a) => {
-  const $0 = f(a);
-  return makeAff((k) => {
-    const $1 = $0(k);
-    return () => {
-      $1();
-      return nonCanceler;
-    };
-  });
-};
-var toAff2 = (f) => (a) => (b) => {
-  const $0 = f(a)(b);
-  return makeAff((k) => {
-    const $1 = $0(k);
-    return () => {
-      $1();
-      return nonCanceler;
-    };
-  });
-};
-var toAff3 = (f) => (a) => (b) => (c) => {
-  const $0 = f(a)(b)(c);
-  return makeAff((k) => {
-    const $1 = $0(k);
-    return () => {
-      $1();
-      return nonCanceler;
-    };
-  });
+// output-es/Effect.Console/foreign.js
+var log2 = function(s) {
+  return function() {
+    console.log(s);
+  };
 };
 
 // node_modules/csv-parse/lib/index.js
@@ -9262,68 +9191,56 @@ var parse = function() {
 };
 
 // output-es/Data.Csv/foreign.js
-function parseCsvImpl(csvLine) {
-  return function(onError, onSuccess) {
-    parse(csvLine, {
-      bom: true,
-      quote: '"',
-      columns: false,
-      relax_column_count: true
-    }, function(err, records) {
-      if (err) {
-        onError(err);
+import fs from "node:fs";
+function parseCsvImpl(path2) {
+  return function() {
+    const func = async () => {
+      const parser = fs.createReadStream(path2, "utf8").pipe(parse({
+        bom: true,
+        quote: '"',
+        columns: false,
+        relax_column_count: true
+      }));
+      let records;
+      let headers;
+      let numColumns;
+      var count = -1;
+      var badrows = [];
+      var index4 = [];
+      for await (const record of parser) {
+        count++;
+        if (count === 0) {
+          headers = record;
+          numColumns = headers.length;
+          records = Array(numColumns).fill().map(() => []);
+        } else {
+          if (record.length !== numColumns) {
+            badrows.push(count);
+          } else {
+            index4.push(count);
+            for (let i = 0; i < numColumns; i++) {
+              records[i].push(record[i]);
+            }
+          }
+        }
       }
-      onSuccess(records);
-    });
-    return function(cancelError, onCancelerError, onCancelerSuccess) {
-      onCancelerSuccess();
+      ;
+      return {
+        headers,
+        columns: records,
+        index: index4,
+        badrows
+      };
     };
+    return func();
   };
-}
-function rowsToColumnsImpl(rows) {
-  if (rows.length === 0)
-    return [];
-  const numColumns = rows[0].length;
-  const columns = Array(numColumns).fill().map(() => []);
-  for (let i = 0; i < rows.length; i++) {
-    for (let j = 0; j < numColumns; j++) {
-      var value2 = rows[i][j];
-      if (typeof value2 === "undefined") {
-        columns[j].push("");
-      } else {
-        columns[j].push(rows[i][j]);
-      }
-    }
-  }
-  return columns;
 }
 
 // output-es/Data.Csv/index.js
 var fromFoldable4 = /* @__PURE__ */ fromFoldable3(ordString)(foldableArray);
-var toCsvRow = (v) => {
-  if (v.length === 0) {
-    return [];
-  }
-  return arrayMap((tpls) => tpls)(zipWithImpl(Tuple, rangeImpl(2, v.length + 1 | 0), v));
-};
-var readCsv = (x) => _bind(toAff2(readTextFile)(UTF8)(x))((csvContent) => fromEffectFnAff(parseCsvImpl(csvContent)));
+var readCsv = (path2) => _bind(_bind(_liftEffect(parseCsvImpl(path2)))(toAff$p(coerce)))((f) => _pure(f));
 var readCsv$p = (x) => readCsv(x.filepath);
-var getRow = (v) => v._2;
-var getLineNo = (v) => v._1;
-var parseCsvContent = (v) => {
-  if (v.headers.tag === "Nothing") {
-    return { headers: [], index: [], columns: [] };
-  }
-  if (v.headers.tag === "Just") {
-    if (v.rows.tag === "Nothing") {
-      return { headers: v.headers._1, index: [], columns: replicateImpl(v.headers._1.length, []) };
-    }
-    if (v.rows.tag === "Just") {
-      return { headers: v.headers._1, index: arrayMap(getLineNo)(v.rows._1), columns: rowsToColumnsImpl(arrayMap(getRow)(v.rows._1)) };
-    }
-  }
-  fail();
-};
+var readAndParseCsv = (fp) => _bind(readCsv(fp))((csv) => _pure({ headers: csv.headers, index: csv.index, columns: csv.columns }));
 var foldRows = (v) => (func) => (a) => {
   const $0 = v.columns;
   const $1 = v.headers;
@@ -9332,33 +9249,6 @@ var foldRows = (v) => (func) => (a) => {
     v.index.length - 1 | 0
   ));
 };
-var filterBadRows = (v) => {
-  if (v.headers.tag === "Nothing") {
-    return $Tuple([], v);
-  }
-  if (v.headers.tag === "Just") {
-    if (v.rows.tag === "Nothing") {
-      return $Tuple([], v);
-    }
-    if (v.rows.tag === "Just") {
-      const headerLength = v.headers._1.length;
-      const v1 = partitionImpl((row) => row._2.length === headerLength, v.rows._1);
-      return $Tuple(arrayMap(getLineNo)(v1.no), { headers: v.headers, rows: $Maybe("Just", v1.yes) });
-    }
-  }
-  fail();
-};
-var createRawContent = (recs) => ({
-  headers: 0 < recs.length ? $Maybe("Just", recs[0]) : Nothing,
-  rows: (() => {
-    const $0 = unconsImpl((v) => Nothing, (v) => (xs) => $Maybe("Just", xs), recs);
-    if ($0.tag === "Just") {
-      return $Maybe("Just", toCsvRow($0._1));
-    }
-    return Nothing;
-  })()
-});
-var readAndParseCsv = (fp) => _bind(readCsv(fp))((rows) => _pure(parseCsvContent(filterBadRows(createRawContent(rows))._2)));
 
 // output-es/Data.Hashable/foreign.js
 function hashString(s) {
@@ -10996,50 +10886,6 @@ var foldableHashMap = {
   foldl: (f) => foldlDefault(foldableHashMap)(f)
 };
 
-// output-es/Foreign/foreign.js
-function typeOf(value2) {
-  return typeof value2;
-}
-function tagOf(value2) {
-  return Object.prototype.toString.call(value2).slice(8, -1);
-}
-function isNull(value2) {
-  return value2 === null;
-}
-function isUndefined(value2) {
-  return value2 === void 0;
-}
-var isArray = Array.isArray || function(value2) {
-  return Object.prototype.toString.call(value2) === "[object Array]";
-};
-
-// output-es/Foreign/index.js
-var $ForeignError = (tag, _1, _2) => ({ tag, _1, _2 });
-var ErrorAtIndex = (value0) => (value12) => $ForeignError("ErrorAtIndex", value0, value12);
-var ErrorAtProperty = (value0) => (value12) => $ForeignError("ErrorAtProperty", value0, value12);
-var readNull = (dictMonad) => {
-  const $0 = applicativeExceptT(dictMonad);
-  return (value2) => {
-    if (isNull(value2)) {
-      return $0.pure(Nothing);
-    }
-    return $0.pure($Maybe("Just", value2));
-  };
-};
-var readArray = (dictMonad) => (value2) => {
-  if (isArray(value2)) {
-    return applicativeExceptT(dictMonad).pure(value2);
-  }
-  return monadThrowExceptT(dictMonad).throwError($NonEmpty($ForeignError("TypeMismatch", "array", tagOf(value2)), Nil));
-};
-var unsafeReadTagged = (dictMonad) => (tag) => (value2) => {
-  if (tagOf(value2) === tag) {
-    return applicativeExceptT(dictMonad).pure(value2);
-  }
-  return monadThrowExceptT(dictMonad).throwError($NonEmpty($ForeignError("TypeMismatch", tag, tagOf(value2)), Nil));
-};
-var readString = (dictMonad) => unsafeReadTagged(dictMonad)("String");
-
 // output-es/Data.JSDate/foreign.js
 function now() {
   return new Date();
@@ -11649,6 +11495,162 @@ var monoidHashSet = (dictHashable) => {
 function startsWithImpl(searchString, s) {
   return s.startsWith(searchString);
 }
+
+// output-es/Node.FS.Constants/foreign.js
+import { constants } from "node:fs";
+var f_OK = constants.F_OK;
+var r_OK = constants.R_OK;
+var w_OK = constants.W_OK;
+var x_OK = constants.X_OK;
+var copyFile_EXCL = constants.COPYFILE_EXCL;
+var copyFile_FICLONE = constants.COPYFILE_FICLONE;
+var copyFile_FICLONE_FORCE = constants.COPYFILE_FICLONE_FORCE;
+
+// output-es/Node.FS.Async/foreign.js
+import {
+  access,
+  copyFile,
+  mkdtemp,
+  rename,
+  truncate,
+  chown,
+  chmod,
+  stat,
+  lstat,
+  link as link2,
+  symlink,
+  readlink,
+  realpath,
+  unlink,
+  rmdir,
+  rm,
+  mkdir,
+  readdir,
+  utimes,
+  readFile,
+  writeFile,
+  appendFile,
+  open,
+  read as read2,
+  write as write2,
+  close
+} from "node:fs";
+
+// output-es/Node.FS.Async/index.js
+var handleCallback = (cb) => (err, a) => {
+  const v = nullable(err, Nothing, Just);
+  if (v.tag === "Nothing") {
+    return cb($Either("Right", a))();
+  }
+  if (v.tag === "Just") {
+    return cb($Either("Left", v._1))();
+  }
+  fail();
+};
+var readTextFile = (encoding) => (file) => (cb) => {
+  const $0 = {
+    encoding: (() => {
+      if (encoding === "ASCII") {
+        return "ASCII";
+      }
+      if (encoding === "UTF8") {
+        return "UTF8";
+      }
+      if (encoding === "UTF16LE") {
+        return "UTF16LE";
+      }
+      if (encoding === "UCS2") {
+        return "UCS2";
+      }
+      if (encoding === "Base64") {
+        return "Base64";
+      }
+      if (encoding === "Base64Url") {
+        return "Base64Url";
+      }
+      if (encoding === "Latin1") {
+        return "Latin1";
+      }
+      if (encoding === "Binary") {
+        return "Binary";
+      }
+      if (encoding === "Hex") {
+        return "Hex";
+      }
+      fail();
+    })()
+  };
+  return () => readFile(file, $0, handleCallback(cb));
+};
+var readdir2 = (file) => (cb) => () => readdir(file, handleCallback(cb));
+var stat2 = (file) => (cb) => () => stat(file, handleCallback(cb));
+var writeTextFile = (encoding) => (file) => (buff) => (cb) => {
+  const $0 = {
+    encoding: (() => {
+      if (encoding === "ASCII") {
+        return "ASCII";
+      }
+      if (encoding === "UTF8") {
+        return "UTF8";
+      }
+      if (encoding === "UTF16LE") {
+        return "UTF16LE";
+      }
+      if (encoding === "UCS2") {
+        return "UCS2";
+      }
+      if (encoding === "Base64") {
+        return "Base64";
+      }
+      if (encoding === "Base64Url") {
+        return "Base64Url";
+      }
+      if (encoding === "Latin1") {
+        return "Latin1";
+      }
+      if (encoding === "Binary") {
+        return "Binary";
+      }
+      if (encoding === "Hex") {
+        return "Hex";
+      }
+      fail();
+    })()
+  };
+  return () => writeFile(file, buff, $0, handleCallback(cb));
+};
+
+// output-es/Node.FS.Aff/index.js
+var toAff1 = (f) => (a) => {
+  const $0 = f(a);
+  return makeAff((k) => {
+    const $1 = $0(k);
+    return () => {
+      $1();
+      return nonCanceler;
+    };
+  });
+};
+var toAff2 = (f) => (a) => (b) => {
+  const $0 = f(a)(b);
+  return makeAff((k) => {
+    const $1 = $0(k);
+    return () => {
+      $1();
+      return nonCanceler;
+    };
+  });
+};
+var toAff3 = (f) => (a) => (b) => (c) => {
+  const $0 = f(a)(b)(c);
+  return makeAff((k) => {
+    const $1 = $0(k);
+    return () => {
+      $1();
+      return nonCanceler;
+    };
+  });
+};
 
 // output-es/Node.FS.Stats/foreign.js
 var isDirectoryImpl = (s) => s.isDirectory();
@@ -14575,17 +14577,13 @@ var validateDatapointsFileGroup = (indicator) => (pkeys) => (ds) => (csvfiles) =
     ))
   ]);
 };
-var dropAndWarnBadCsvRows = (fp) => (content) => (dictMonad) => {
-  const v = filterBadRows(content);
-  const $0 = v._2;
-  return bindExceptT({
-    Applicative0: () => applicativeStateT(dictMonad),
-    Bind1: () => bindStateT(dictMonad)
-  }).bind(vWarning(dictMonad)(monoidArray)(arrayMap((idx) => ({ ...messageFromIssue($Issue("Issue", "Bad Csv row")), file: fp, lineNo: idx }))(v._1)))(() => applicativeExceptT({
-    Applicative0: () => applicativeStateT(dictMonad),
-    Bind1: () => bindStateT(dictMonad)
-  }).pure($0));
-};
+var dropAndWarnBadCsvRows = (fp) => (content) => (dictMonad) => bindExceptT({
+  Applicative0: () => applicativeStateT(dictMonad),
+  Bind1: () => bindStateT(dictMonad)
+}).bind(vWarning(dictMonad)(monoidArray)(arrayMap((idx) => ({ ...messageFromIssue($Issue("Issue", "Bad Csv row")), file: fp, lineNo: idx }))(content.badrows)))(() => applicativeExceptT({
+  Applicative0: () => applicativeStateT(dictMonad),
+  Bind1: () => bindStateT(dictMonad)
+}).pure(content));
 var validateCsvFile = (v) => (dictMonad) => {
   const bindVT1 = bindExceptT({
     Applicative0: () => applicativeStateT(dictMonad),
@@ -14599,7 +14597,7 @@ var validateCsvFile = (v) => (dictMonad) => {
   const $1 = v._1;
   const fp = $1.filepath;
   return bindVT1.bind(dropAndWarnBadCsvRows(fp)(v._2)(dictMonad))((rawcsv$p) => {
-    const $2 = parseCsvFile({ fileInfo: $1, csvContent: parseCsvContent(rawcsv$p) });
+    const $2 = parseCsvFile({ fileInfo: $1, csvContent: { headers: rawcsv$p.headers, index: rawcsv$p.index, columns: rawcsv$p.columns } });
     if ($2.tag === "Right") {
       return $0.pure($Maybe("Just", $2._1));
     }
@@ -14626,13 +14624,34 @@ var validateCsvFiles = (dictTraversable) => {
   };
 };
 var validateCsvFiles1 = /* @__PURE__ */ validateCsvFiles(traversableArray);
-var readAndParseCsvFiles = (files) => bindVT.bind(monadtransVT.lift(monadAff)(sequence1(arrayMap(readCsv$p)(files))))((csvRows) => validateCsvFiles1(zipWithImpl(
+var readAndParseCsvFiles = (files) => bindVT.bind(monadtransVT.lift(monadAff)(sequence1(arrayMap(readCsv$p)(files))))((rawContents) => validateCsvFiles1(zipWithImpl(
   Tuple,
   files,
-  arrayMap(createRawContent)(csvRows)
+  rawContents
 ))(monadAff));
 
 // output-es/Data.JSON.DataPackage/index.js
+var constraintsIsSymbol = { reflectSymbol: () => "constraints" };
+var enumIsSymbol = { reflectSymbol: () => "enum" };
+var nameIsSymbol = { reflectSymbol: () => "name" };
+var write3 = /* @__PURE__ */ (() => {
+  const $0 = writeForeignFieldsCons(constraintsIsSymbol)((() => {
+    const $02 = writeForeignFieldsCons(enumIsSymbol)({ writeImpl: (xs) => arrayMap(unsafeCoerce)(xs) })(writeForeignFieldsNilRowR)()()();
+    return {
+      writeImpl: (v2) => {
+        if (v2.tag === "Nothing") {
+          return _undefined;
+        }
+        if (v2.tag === "Just") {
+          return $02.writeImplFields($$Proxy)(v2._1)({});
+        }
+        fail();
+      }
+    };
+  })())(writeForeignFieldsCons(nameIsSymbol)(writeForeignNonEmptyStrin)(writeForeignFieldsNilRowR)()()())()()();
+  return (xs) => arrayMap((rec) => $0.writeImplFields($$Proxy)(rec)({}))(xs);
+})();
+var write32 = /* @__PURE__ */ (() => writeForeignNullable(writeForeignString).writeImpl)();
 var writeForeignMaybe = {
   writeImpl: (v2) => {
     if (v2.tag === "Nothing") {
@@ -14645,59 +14664,18 @@ var writeForeignMaybe = {
   }
 };
 var idIsSymbol = { reflectSymbol: () => "id" };
-var nameIsSymbol = { reflectSymbol: () => "name" };
 var writeForeignRecord1 = /* @__PURE__ */ (() => {
   const $0 = writeForeignFieldsCons(idIsSymbol)(writeForeignString)(writeForeignFieldsCons(nameIsSymbol)(writeForeignMaybe)(writeForeignFieldsNilRowR)()()())()()();
   return { writeImpl: (rec) => $0.writeImplFields($$Proxy)(rec)({}) };
 })();
-var pathIsSymbol = { reflectSymbol: () => "path" };
-var schemaIsSymbol = { reflectSymbol: () => "schema" };
-var fieldsIsSymbol = { reflectSymbol: () => "fields" };
-var constraintsIsSymbol = { reflectSymbol: () => "constraints" };
-var enumIsSymbol = { reflectSymbol: () => "enum" };
-var primaryKeyIsSymbol2 = { reflectSymbol: () => "primaryKey" };
-var write22 = /* @__PURE__ */ (() => {
-  const $0 = writeForeignFieldsCons(nameIsSymbol)(writeForeignNonEmptyStrin)(writeForeignFieldsCons(pathIsSymbol)(writeForeignNonEmptyStrin)(writeForeignFieldsCons(schemaIsSymbol)((() => {
-    const $02 = writeForeignFieldsCons(fieldsIsSymbol)((() => {
-      const $03 = writeForeignFieldsCons(constraintsIsSymbol)((() => {
-        const $04 = writeForeignFieldsCons(enumIsSymbol)({ writeImpl: (xs) => arrayMap(unsafeCoerce)(xs) })(writeForeignFieldsNilRowR)()()();
-        return {
-          writeImpl: (v2) => {
-            if (v2.tag === "Nothing") {
-              return _undefined;
-            }
-            if (v2.tag === "Just") {
-              return $04.writeImplFields($$Proxy)(v2._1)({});
-            }
-            fail();
-          }
-        };
-      })())(writeForeignFieldsCons(nameIsSymbol)(writeForeignNonEmptyStrin)(writeForeignFieldsNilRowR)()()())()()();
-      return { writeImpl: (xs) => arrayMap((rec) => $03.writeImplFields($$Proxy)(rec)({}))(xs) };
-    })())(writeForeignFieldsCons(primaryKeyIsSymbol2)({ writeImpl: (a) => arrayMap(unsafeCoerce)(a) })(writeForeignFieldsNilRowR)()()())()()();
-    return { writeImpl: (rec) => $02.writeImplFields($$Proxy)(rec)({}) };
-  })())(writeForeignFieldsNilRowR)()()())()()())()()();
-  return (xs) => arrayMap((rec) => $0.writeImplFields($$Proxy)(rec)({}))(xs);
-})();
-var conceptsIsSymbol = { reflectSymbol: () => "concepts" };
-var writeForeignArray = { writeImpl: (xs) => arrayMap(unsafeCoerce)(xs) };
-var resourcesIsSymbol = { reflectSymbol: () => "resources" };
-var valueIsSymbol2 = { reflectSymbol: () => "value" };
-var writeForeignArray1 = /* @__PURE__ */ (() => {
-  const $0 = writeForeignFieldsCons(primaryKeyIsSymbol2)(writeForeignArray)(writeForeignFieldsCons(resourcesIsSymbol)(writeForeignArray)(writeForeignFieldsCons(valueIsSymbol2)(writeForeignNullable(writeForeignString))(writeForeignFieldsNilRowR)()()())()()())()()();
-  return { writeImpl: (xs) => arrayMap((rec) => $0.writeImplFields($$Proxy)(rec)({}))(xs) };
-})();
-var datapointsIsSymbol = { reflectSymbol: () => "datapoints" };
-var entitiesIsSymbol = { reflectSymbol: () => "entities" };
-var synonymsIsSymbol = { reflectSymbol: () => "synonyms" };
-var write4 = /* @__PURE__ */ (() => {
-  const $0 = writeForeignFieldsCons(conceptsIsSymbol)(writeForeignArray1)(writeForeignFieldsCons(datapointsIsSymbol)(writeForeignArray1)(writeForeignFieldsCons(entitiesIsSymbol)(writeForeignArray1)(writeForeignFieldsCons(synonymsIsSymbol)(writeForeignArray1)(writeForeignFieldsNilRowR)()()())()()())()()())()()();
-  return (rec) => $0.writeImplFields($$Proxy)(rec)({});
-})();
 var bind3 = /* @__PURE__ */ (() => bindExceptT(monadIdentity).bind)();
 var readProp2 = /* @__PURE__ */ unsafeReadProp(monadIdentity);
 var readForeignFieldsCons1 = /* @__PURE__ */ readForeignFieldsCons(nameIsSymbol)(readForeignNonEmptyString);
-var readForeignArray3 = /* @__PURE__ */ readForeignArray(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons1(/* @__PURE__ */ readForeignFieldsCons(pathIsSymbol)(readForeignNonEmptyString)(/* @__PURE__ */ readForeignFieldsCons(schemaIsSymbol)(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons(fieldsIsSymbol)(/* @__PURE__ */ readForeignArray(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons(constraintsIsSymbol)(/* @__PURE__ */ readForeignMaybe(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons(enumIsSymbol)(/* @__PURE__ */ readForeignArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()())))(/* @__PURE__ */ readForeignFieldsCons1(readForeignFieldsNilRowRo)()())()())))(/* @__PURE__ */ readForeignFieldsCons(primaryKeyIsSymbol2)(/* @__PURE__ */ readForeignNonEmptyArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()())()()))(readForeignFieldsNilRowRo)()())()())()()));
+var fieldsIsSymbol = { reflectSymbol: () => "fields" };
+var primaryKeyIsSymbol2 = { reflectSymbol: () => "primaryKey" };
+var readForeignArray3 = /* @__PURE__ */ readForeignArray(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons1(/* @__PURE__ */ readForeignFieldsCons({
+  reflectSymbol: () => "path"
+})(readForeignNonEmptyString)(/* @__PURE__ */ readForeignFieldsCons({ reflectSymbol: () => "schema" })(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons(fieldsIsSymbol)(/* @__PURE__ */ readForeignArray(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons(constraintsIsSymbol)(/* @__PURE__ */ readForeignMaybe(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons(enumIsSymbol)(/* @__PURE__ */ readForeignArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()())))(/* @__PURE__ */ readForeignFieldsCons1(readForeignFieldsNilRowRo)()())()())))(/* @__PURE__ */ readForeignFieldsCons(primaryKeyIsSymbol2)(/* @__PURE__ */ readForeignNonEmptyArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()())()()))(readForeignFieldsNilRowRo)()())()())()()));
 var applicativeV5 = /* @__PURE__ */ (() => {
   const applyV1 = applyV(semigroupArray);
   return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
@@ -14712,6 +14690,12 @@ var insert6 = /* @__PURE__ */ insertPurs(eqStringImpl, hashString);
 var eqArray = { eq: /* @__PURE__ */ eqArrayImpl(eqStringImpl) };
 var difference1 = /* @__PURE__ */ foldrArray(/* @__PURE__ */ $$delete(eqString));
 var sequence_ = /* @__PURE__ */ traverse_(applicativeV5)(foldableArray)(identity2);
+var writeResource = (res) => ({ name: res.name, path: res.path, schema: { fields: write3(res.schema.fields), primaryKey: arrayMap(unsafeCoerce)(res.schema.primaryKey) } });
+var writeDdfSchema = (schema) => ({
+  primaryKey: arrayMap(unsafeCoerce)(schema.primaryKey),
+  value: write32(schema.value),
+  resources: arrayMap(unsafeCoerce)(schema.resources)
+});
 var writeDataPackage = (dp) => ({
   name: (() => {
     if (dp.name.tag === "Nothing") {
@@ -14794,8 +14778,13 @@ var writeDataPackage = (dp) => ({
     }
     fail();
   })(),
-  resources: write22(dp.resources),
-  ddfSchema: write4(dp.ddfSchema)
+  resources: arrayMap(writeResource)(dp.resources),
+  ddfSchema: {
+    concepts: arrayMap(writeDdfSchema)(dp.ddfSchema.concepts),
+    entities: arrayMap(writeDdfSchema)(dp.ddfSchema.entities),
+    datapoints: arrayMap(writeDdfSchema)(dp.ddfSchema.datapoints),
+    synonyms: arrayMap(writeDdfSchema)(dp.ddfSchema.synonyms)
+  }
 });
 var parseDataPackageResources = (content) => {
   const $0 = bind3(parseJSON(content))((json) => bind3(readProp2("resources")(json))((prop) => readForeignArray3.readImpl(prop)));
@@ -14918,13 +14907,6 @@ var compareResources = (expected) => (actual) => {
     );
   }
   return sequence_(zipWithImpl(compareOneResource, expectedSorted, actualSorted));
-};
-
-// output-es/Effect.Console/foreign.js
-var log2 = function(s) {
-  return function() {
-    console.log(s);
-  };
 };
 
 // output-es/App.Validation.DataPackageBased/index.js
@@ -15134,7 +15116,7 @@ var readDataPackageResources2 = (path2) => bindVT3.bind(liftEffect3(datapackageE
   }
   fail();
 });
-var readAllFileInfoForValidation2 = (root) => (fs) => (dictMonad) => {
+var readAllFileInfoForValidation2 = (root) => (fs2) => (dictMonad) => {
   const applicativeVT1 = applicativeExceptT({
     Applicative0: () => applicativeStateT(dictMonad),
     Bind1: () => bindStateT(dictMonad)
@@ -15148,7 +15130,7 @@ var readAllFileInfoForValidation2 = (root) => (fs) => (dictMonad) => {
       return $Maybe("Just", $0._1);
     }
     fail();
-  })(fs));
+  })(fs2));
   return bindExceptT({
     Applicative0: () => applicativeStateT(dictMonad),
     Bind1: () => bindStateT(dictMonad)
@@ -15164,7 +15146,7 @@ var validate2 = (path2) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(
   "etl",
   "assets",
   "langsplit"
-])))((fs) => bindVT3.bind(readAllFileInfoForValidation2(path2)(fs)(monadAff))((ddfFiles) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
+])))((fs2) => bindVT3.bind(readAllFileInfoForValidation2(path2)(fs2)(monadAff))((ddfFiles) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
   const fileMap = fromArrayBy3((x) => getCollectionType((() => {
     if (0 < x.length) {
       return x[0].collectionInfo;
@@ -15274,7 +15256,7 @@ var runMain = (opts2) => {
     ffiUtil,
     (() => {
       const gendp = opts2.generateDP;
-      return _bind(_liftEffect(log2("v0.1.3")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v0.1.4")))(() => _bind((() => {
         if (mode === "FileNameBased") {
           return runValidationT2(validate2(path2));
         }
