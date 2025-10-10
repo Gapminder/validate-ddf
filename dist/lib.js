@@ -15444,7 +15444,7 @@ var runMain = (opts2) => {
     ffiUtil,
     (() => {
       const gendp = opts2.generateDP;
-      return _bind(_liftEffect(log2("v0.1.5")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v0.1.6")))(() => _bind((() => {
         if (mode === "FileNameBased") {
           return runValidationT2(validate2(path2));
         }

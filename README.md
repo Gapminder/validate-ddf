@@ -45,7 +45,9 @@ validator will read all files in the resources list in datapackage.json.
 - run `spago test`
 
 ### create new version
-1. build the app and module bundle
+1. `npm version patch`
+2. update the version string in src/Main.purs
+3. build the app and module bundle
     - `npm run bundle-app`
     - `npm run bundle-module`
-2. `npm publish`
+4. `npm publish`
