@@ -43,4 +43,4 @@ package:
   name: ddf-validation-ng
 workspace:
   packageSet:
-    registry: 57.2.0
+    registry: 66.8.0
