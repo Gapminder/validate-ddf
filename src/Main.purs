@@ -46,7 +46,7 @@ runMain opts = launchAff_ do
     mode = _.mode opts
     gendp = _.generateDP opts
 
-  liftEffect $ log "v0.1.4"
+  liftEffect $ log "v0.1.5"
   (Tuple msgs res) <- case mode of
     FileNameBased -> runValidationT $ VFN.validate path
     DataPackageBased -> runValidationT $ VDP.validate path
@@ -81,7 +81,6 @@ runMain opts = launchAff_ do
         liftEffect $ log "can not generate datapackage because there are errors in dataset"
         liftEffect $ setExitCode 1
         pure unit
-
 
 -- | main function to run under terminals
 main :: Effect Unit
