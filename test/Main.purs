@@ -42,7 +42,7 @@ import Partial.Unsafe (unsafePartial)
 import Test.Spec (pending, describe, describeOnly, it, itOnly, Spec)
 import Test.Spec.Assertions (fail, shouldContain, shouldEqual, shouldNotContain, shouldNotSatisfy, shouldSatisfy)
 import Test.Spec.Reporter.Console (consoleReporter)
-import Test.Spec.Runner (runSpec)
+import Test.Spec.Runner (runSpecPure)
 import Utils (getFiles)
 
 testMain :: Effect Unit
@@ -51,7 +51,7 @@ testMain = do
   M.runMain { targetPath: path, noWarning: false, mode: FileNameBased, generateDP: true }
 
 main :: Effect Unit
-main = launchAff_ $ runSpec [ consoleReporter ] do
+main = launchAff_ $ runSpecPure [ consoleReporter ] do
   describe "ddf-validation" do
     describe "low level" do
       it "value - parse numbers" do
@@ -154,6 +154,24 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
             }
           output = parseConcept input
         output `shouldSatisfy` isValid
+      it "concept validation - time concept" do
+        let
+          input =
+            { conceptId: "anno"
+            , props: Map.fromFoldable
+                [ ( Tuple
+                      (Hd.unsafeCreate "Year")
+                      "testing_name"
+                  )
+                , ( Tuple
+                      (Hd.unsafeCreate "concept_type")
+                      "time"
+                  )
+                ]
+            , _info: Nothing
+            }
+          output = parseConcept input
+        output `shouldNotSatisfy` isValid
       it "entity validation - one entity" do
         let
           input =
@@ -177,7 +195,7 @@ main = launchAff_ $ runSpec [ consoleReporter ] do
         files `shouldContain` (dirname <> "ddf--concepts.csv")
     -- many of below rules are from old ddf-validation code,
     -- TODO: needs cleanup
-    describeOnly "DDF Rules Checking" do
+    describe "DDF Rules Checking" do
       -- good datasets
       it "good datasets" do
         let

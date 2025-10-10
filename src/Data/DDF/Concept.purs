@@ -145,6 +145,7 @@ type ConceptInput =
 parseConcept :: ConceptInput -> V Issues Concept
 parseConcept input =
   let
+    -- coerce Header to Identifier because they are both string
     -- FIXME: double check the Header -> Identifier convertion.
     props = mapKeys coerce input.props :: Map Identifier String
   in
@@ -162,6 +163,8 @@ parseConcept input =
       `andThen`
         checkMandatoryField
       `andThen`
+        checkRestrictedConecptIds
+      `andThen`
         (\c -> pure $ setInfo input._info c)
 
 -- | some concept type require a column exists
@@ -174,6 +177,20 @@ checkMandatoryField input@(Concept c) = case c.conceptType of
       `andThen`
         nonEmptyField "domain"
     in input
+  _ -> pure input
+
+-- | some concept type has restricted possible concept ID values
+-- | for example if concept type is time, then concept ID must
+-- | be in [year, month, day, week, quarter, time]
+checkRestrictedConecptIds :: Concept -> V Issues Concept
+checkRestrictedConecptIds input@(Concept c) = case c.conceptType of
+  TimeC ->
+    let
+      possibleTimeConcepts = map Id.unsafeCreate [ "year", "month", "day", "week", "quarter", "time" ]
+    in
+      case c.conceptId `elem` possibleTimeConcepts of
+        true -> pure input
+        false -> invalid [ Issue $ Id.value c.conceptId <> " MUST be one of following: year, month, day, week, quarter, time" ]
   _ -> pure input
 
 hasFieldAndGetValue :: String -> Props -> V Issues String
