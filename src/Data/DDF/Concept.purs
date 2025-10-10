@@ -190,7 +190,12 @@ checkRestrictedConecptIds input@(Concept c) = case c.conceptType of
     in
       case c.conceptId `elem` possibleTimeConcepts of
         true -> pure input
-        false -> invalid [ Issue $ Id.value c.conceptId <> " MUST be one of following: year, month, day, week, quarter, time" ]
+        false -> invalid
+          [ Issue
+              $ "time concept MUST be one of following: year, month, day, week, quarter, time, but "
+                  <> Id.value c.conceptId
+                  <> " is provided."
+          ]
   _ -> pure input
 
 hasFieldAndGetValue :: String -> Props -> V Issues String

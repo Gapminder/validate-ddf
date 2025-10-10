@@ -42,7 +42,7 @@ validator will read all files in the resources list in datapackage.json.
 
 ### run test
 
-- run `spago test`
+- run `npm run test`
 
 ### create new version
 1. `npm version patch`
