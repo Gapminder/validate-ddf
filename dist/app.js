@@ -10140,7 +10140,10 @@ var checkRestrictedConecptIds = (v) => {
     if (elem22(v.conceptId)(arrayMap(unsafeCreate)(["year", "month", "day", "week", "quarter", "time"]))) {
       return $Either("Right", v);
     }
-    return $Either("Left", [$Issue("Issue", v.conceptId + " MUST be one of following: year, month, day, week, quarter, time")]);
+    return $Either(
+      "Left",
+      [$Issue("Issue", "time concept MUST be one of following: year, month, day, week, quarter, time, but " + v.conceptId + " is provided.")]
+    );
   }
   return $Either("Right", v);
 };

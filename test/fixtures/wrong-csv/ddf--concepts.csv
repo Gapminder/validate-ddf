@@ -1,0 +1,7 @@
+concept,concept_type,name,abc,def
+tag,entity_domain,tag,1,2
+abc,string,abc,1,2
+def,string,abc,2,3
+incorrect,string,
+another_incorrect,string,
+name,string,name,4,5

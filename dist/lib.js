@@ -10197,7 +10197,10 @@ var checkRestrictedConecptIds = (v) => {
     if (elem22(v.conceptId)(arrayMap(unsafeCreate)(["year", "month", "day", "week", "quarter", "time"]))) {
       return $Either("Right", v);
     }
-    return $Either("Left", [$Issue("Issue", v.conceptId + " MUST be one of following: year, month, day, week, quarter, time")]);
+    return $Either(
+      "Left",
+      [$Issue("Issue", "time concept MUST be one of following: year, month, day, week, quarter, time, but " + v.conceptId + " is provided.")]
+    );
   }
   return $Either("Right", v);
 };
@@ -11133,6 +11136,7 @@ var readProp = /* @__PURE__ */ unsafeReadProp(monadIdentity);
 var writeForeignString = { writeImpl: unsafeCoerce };
 var writeForeignNonEmptyStrin = { writeImpl: unsafeCoerce };
 var writeForeignInt = { writeImpl: unsafeCoerce };
+var writeForeignForeign = { writeImpl: (x) => x };
 var writeForeignFieldsNilRowR = { writeImplFields: (v) => (v1) => identity15 };
 var writeForeignBoolean = { writeImpl: unsafeCoerce };
 var readForeignString = { readImpl: /* @__PURE__ */ readString(monadIdentity) };
@@ -11164,6 +11168,7 @@ var writeForeignNullable = (dictWriteForeign) => ({
     fail();
   }
 });
+var writeForeignTuple = (dictWriteForeign) => (dictWriteForeign1) => ({ writeImpl: (v) => arrayMap(writeForeignForeign.writeImpl)([dictWriteForeign.writeImpl(v._1), dictWriteForeign1.writeImpl(v._2)]) });
 var sequenceCombining = (dictMonoid) => {
   const mempty = dictMonoid.mempty;
   return (dictFoldable) => (dictApplicative) => dictFoldable.foldl((acc) => (elem5) => {
@@ -15429,13 +15434,47 @@ var validate2 = (path2) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(
 
 // output-es/Main/index.js
 var runValidationT2 = /* @__PURE__ */ runValidationT(monadAff)(monoidArray);
-var write4 = /* @__PURE__ */ (() => {
+var write4 = /* @__PURE__ */ (() => writeForeignTuple(writeForeignBoolean)((() => {
   const $0 = writeForeignFieldsCons({ reflectSymbol: () => "file" })(writeForeignString)(writeForeignFieldsCons({ reflectSymbol: () => "isWarning" })(writeForeignBoolean)(writeForeignFieldsCons({
     reflectSymbol: () => "lineNo"
   })(writeForeignInt)(writeForeignFieldsCons({ reflectSymbol: () => "message" })(writeForeignString)(writeForeignFieldsNilRowR)()()())()()())()()())()()();
-  return (xs) => arrayMap((rec) => $0.writeImplFields($$Proxy)(rec)({}))(xs);
-})();
-var validate$p = (fp) => fromAff(_bind(runValidationT2(validate2(fp)))((v) => _pure(write4(v._1))));
+  return { writeImpl: (xs) => arrayMap((rec) => $0.writeImplFields($$Proxy)(rec)({}))(xs) };
+})()).writeImpl)();
+var validate$p = (opts2) => fromAff((() => {
+  const path2 = opts2.targetPath;
+  const onlyErrors = opts2.onlyErrors;
+  const gendp = opts2.generateDP;
+  return _bind(runValidationT2(validate2(path2)))((v) => {
+    const $0 = v._1;
+    const msgsToShow = onlyErrors ? filterImpl((x) => !x.isWarning, $0) : $0;
+    return _bind((() => {
+      const $1 = (() => {
+        if (v._2.tag === "Just") {
+          const $12 = v._2._1._2.length === 0;
+          const $2 = _bind(generateDataPackage(path2)(v._2._1._1)(v._2._1._2))((datapackage) => toAff3(writeTextFile)(UTF8)(concat3([
+            path2,
+            "datapackage.json"
+          ]))(_unsafePrettyStringify(4)(writeDataPackage(datapackage))));
+          if (!$12) {
+            return $2;
+          }
+          if ($12) {
+            return _pure();
+          }
+          fail();
+        }
+        if (v._2.tag === "Nothing") {
+          return _pure();
+        }
+        fail();
+      })();
+      if (gendp) {
+        return $1;
+      }
+      return _pure();
+    })())(() => _pure(write4($Tuple(!hasError($0), msgsToShow))));
+  });
+})());
 var runMain = (opts2) => {
   const path2 = opts2.targetPath;
   const noWarning = opts2.noWarning;
