@@ -33,7 +33,6 @@ import Node.Path (FilePath)
 import Partial.Unsafe (unsafePartial)
 import Utils (getFiles)
 
-
 -- | read all files
 readAllFileInfoForValidation :: FilePath -> Array FilePath -> Validation Messages (Array FileInfo)
 readAllFileInfoForValidation root fs = do
@@ -50,7 +49,6 @@ readAllFileInfoForValidation root fs = do
 
   pure ddfFiles
 
-
 -- | read datapackage and get all resources
 readDataPackageResources :: FilePath -> ValidationT Messages Aff (Array Resource)
 readDataPackageResources path = do
@@ -66,7 +64,6 @@ readDataPackageResources path = do
           emitErrorsAndContinue issues
           pure []
         Right res -> pure res
-
 
 -- | main validation process
 validate :: FilePath -> ValidationT Messages Aff (Tuple DataSet (Array Resource))

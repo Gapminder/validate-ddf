@@ -1,3 +1,4 @@
+-- FIXME: CSV Header should not be part of the DDF specification.
 module Data.DDF.Atoms.Header where
 
 import Prelude

@@ -31,11 +31,36 @@ import Options.Applicative (execParser)
 import Partial.Unsafe (unsafePartial)
 import Yoga.JSON as JSON
 
--- | js promise for the validation
-validate' :: FilePath -> Effect (Promise Foreign)
-validate' fp = Promise.fromAff do
-  (Tuple msgs _) <- runValidationT $ VFN.validate fp
-  pure $ JSON.write msgs
+-- | validation options
+type ValidateOptions = { onlyErrors :: Boolean, generateDP :: Boolean, targetPath :: FilePath }
+
+-- | validation function to be exposed to javascript side.
+validate' :: ValidateOptions -> Effect (Promise Foreign)
+validate' opts = Promise.fromAff do
+  let
+    path = opts.targetPath
+    onlyErrors = opts.onlyErrors
+    gendp = opts.generateDP
+
+  (Tuple msgs res) <- runValidationT $ VFN.validate path
+  let
+    msgsToShow =
+      if onlyErrors then Arr.filter (\x -> not $ _.isWarning x) msgs
+      else msgs
+
+  when gendp do
+    case res of
+      Just (Tuple dataset resources) -> do
+        unless (Arr.null resources) do
+          datapackage <- generateDataPackage path dataset resources
+          let
+            dpPath = Path.concat [ path, "datapackage.json" ]
+          writeTextFile Encoding.UTF8 dpPath $ JSON.writePrettyJSON 4 $ writeDataPackage datapackage
+      Nothing -> pure unit
+
+  let
+    success = not $ hasError msgs
+  pure $ JSON.write $ Tuple success msgsToShow
 
 -- | a function that accepts cli options and run the validation
 runMain :: CliOptions -> Effect Unit
