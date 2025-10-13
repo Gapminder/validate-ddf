@@ -1,4 +1,4 @@
-module App.DataPackage where
+module Data.DataPackage where
 
 import Prelude
 

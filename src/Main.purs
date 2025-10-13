@@ -4,7 +4,7 @@ import Prelude
 
 import App.Cli (CliOptions, ValidationMode(..))
 import App.Cli as Cli
-import App.DataPackage (generateDataPackage)
+import Data.DataPackage (generateDataPackage)
 import App.Validation.DataPackageBased as VDP
 import App.Validation.FileNameBased as VFN
 import Control.Promise (Promise)
