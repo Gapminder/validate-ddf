@@ -4,12 +4,12 @@ import Prelude
 
 import App.Cli (CliOptions, ValidationMode(..))
 import App.Cli as Cli
-import Data.DataPackage (generateDataPackage)
 import App.Validation.DataPackageBased as VDP
 import App.Validation.FileNameBased as VFN
 import Control.Promise (Promise)
 import Control.Promise as Promise
 import Data.Array as Arr
+import Data.DataPackage (generateDataPackage)
 import Data.JSON.DataPackage (writeDataPackage)
 import Data.JSON.StableStringify (stableStringify)
 import Data.Maybe (Maybe(..), fromJust)
@@ -71,7 +71,7 @@ runMain opts = launchAff_ do
     mode = _.mode opts
     gendp = _.generateDP opts
 
-  liftEffect $ log "v0.1.7"
+  liftEffect $ log "v0.1.8"
   (Tuple msgs res) <- case mode of
     FileNameBased -> runValidationT $ VFN.validate path
     DataPackageBased -> runValidationT $ VDP.validate path
