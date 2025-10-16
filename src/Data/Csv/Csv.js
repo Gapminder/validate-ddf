@@ -37,9 +37,9 @@ export function parseCsvImpl(path) {
         }
       };
       return {
-        headers: headers,
-        columns: records,
-        index: index,
+        headers: headers || [],
+        columns: records || [],
+        index: index || [],
         badrows: badrows
       };
     };
