@@ -19,7 +19,8 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.String as Str
 import Data.String.NonEmpty (NonEmptyString, toString)
 import Data.Tuple (Tuple(..))
-import Data.Validation.Issue (Issues, Issue(..))
+import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, withConcept, withConceptField)
+import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, andThen, invalid)
 import Safe.Coerce (coerce)
 
@@ -141,6 +142,13 @@ type ConceptInput =
   , _info :: Maybe ItemInfo
   }
 
+-- | ConceptInput with props converted to Map Identifier String
+type ConceptInput' =
+  { conceptId :: String
+  , props :: Map Identifier String
+  , _info :: Maybe ItemInfo
+  }
+
 -- | convert a ConceptInput into valid Concept or errors
 parseConcept :: ConceptInput -> V Issues Concept
 parseConcept input =
@@ -148,17 +156,18 @@ parseConcept input =
     -- coerce Header to Identifier because they are both string
     -- FIXME: double check the Header -> Identifier convertion.
     props = mapKeys coerce input.props :: Map Identifier String
+    input' = { conceptId: input.conceptId, props: props, _info: input._info }
   in
-    hasFieldAndPopValue "concept_type" props
+    hasFieldAndPopValue input' "concept_type"
       `andThen`
-        ( \(Tuple conceptTypeStr props') ->
+        ( \(Tuple conceptTypeStr input'') ->
             concept
               <$>
                 ( notReserved input.conceptId
                     `andThen` Id.parseId
                 )
               <*> parseConceptType conceptTypeStr
-              <*> pure props'
+              <*> pure input''.props
         )
       `andThen`
         checkMandatoryField
@@ -171,13 +180,17 @@ parseConcept input =
 -- | for example if concept type is entity_set, then it
 -- | must have non empty domain.
 checkMandatoryField :: Concept -> V Issues Concept
-checkMandatoryField input@(Concept c) = case c.conceptType of
-  EntitySetC -> ado
-    hasFieldAndGetValue "domain" c.props
-      `andThen`
-        nonEmptyField "domain"
-    in input
-  _ -> pure input
+checkMandatoryField input@(Concept c) =
+  let
+    input' = { conceptId: Id.value c.conceptId, props: c.props, _info: c._info }
+  in
+    case c.conceptType of
+      EntitySetC -> ado
+        hasFieldAndGetValue input' "domain"
+          `andThen`
+            nonEmptyField input' "domain"
+        in input
+      _ -> pure input
 
 -- | some concept type has restricted possible concept ID values
 -- | for example if concept type is time, then concept ID must
@@ -191,31 +204,29 @@ checkRestrictedConecptIds input@(Concept c) = case c.conceptType of
       case c.conceptId `elem` possibleTimeConcepts of
         true -> pure input
         false -> invalid
-          [ Issue
-              $ "time concept MUST be one of following: year, month, day, week, quarter, time, but "
-                  <> Id.value c.conceptId
-                  <> " is provided."
+          [ mkIssue E_CONCEPT_TIME_INVALID
+              # withConcept (Id.value c.conceptId)
           ]
   _ -> pure input
 
-hasFieldAndGetValue :: String -> Props -> V Issues String
-hasFieldAndGetValue field input =
-  case M.lookup (Id.unsafeCreate field) input of
-    Nothing -> invalid [ Issue $ "field " <> field <> " MUST exist for concept" ]
+hasFieldAndGetValue :: ConceptInput' -> String -> V Issues String
+hasFieldAndGetValue input field =
+  case M.lookup (Id.unsafeCreate field) input.props of
+    Nothing -> invalid [ mkIssue E_CONCEPT_FIELD_MISSING # withConceptField input.conceptId field ]
     Just v -> pure v
 
-hasFieldAndPopValue :: String -> Props -> V Issues (Tuple String Props)
-hasFieldAndPopValue field input =
-  case M.pop (Id.unsafeCreate field) input of
-    Nothing -> invalid [ Issue $ "field " <> field <> " MUST exist for concept" ]
-    Just x -> pure x
+hasFieldAndPopValue :: ConceptInput' -> String -> V Issues (Tuple String ConceptInput')
+hasFieldAndPopValue input field =
+  case M.pop (Id.unsafeCreate field) input.props of
+    Nothing -> invalid [ mkIssue E_CONCEPT_FIELD_MISSING # withConceptField input.conceptId field ]
+    Just (Tuple v props') -> pure $ Tuple v (input { props = props' })
 
-nonEmptyField :: String -> String -> V Issues String
-nonEmptyField field input =
-  if Str.null input then
-    invalid [ Issue $ "field " <> field <> " MUST not be empty" ]
+nonEmptyField :: ConceptInput' -> String -> String -> V Issues String
+nonEmptyField input field value =
+  if Str.null value then
+    invalid [ mkIssue E_CONCEPT_FIELD_EMPTY # withConceptField input.conceptId field ]
   else
-    pure input
+    pure value
 
 hasProp :: String -> Props -> Boolean
 hasProp f props = M.member (Id.unsafeCreate f) props
@@ -231,7 +242,7 @@ conceptIdTooLong conc@(Concept c) = ado
 notReserved :: String -> V Issues String
 notReserved conceptId =
   if conceptId `elem` reservedConcepts_ then
-    invalid [ Issue $ conceptId <> " can not be use as concept Id" ]
+    invalid [ mkIssue E_CONCEPT_ID_RESERVED # withConcept conceptId ]
   else
     pure conceptId
   where
@@ -239,6 +250,7 @@ notReserved conceptId =
 
 -- TODO:
 -- parseConceptWithValueParsers :: create valid concept, then parse property columns.
+-- checkCustomTypeConcept -> get a warning if there is a custom concept type.
 
 -- | unsafe create, useful for testing.
 unsafeCreate :: String -> String -> Map String String -> ItemInfo -> Concept

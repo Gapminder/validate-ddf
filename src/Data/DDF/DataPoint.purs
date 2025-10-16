@@ -32,7 +32,8 @@ import Data.String.NonEmpty (NonEmptyString, fromString, join1With, joinWith, to
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.Traversable (sequence, traverse)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Validation.Issue (Issue(..), Issues, withRowInfo)
+import Data.Validation.Issue (Issue(..), Issues, mkIssueWithMessage, withRowInfo)
+import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, andThen, invalid)
 import Debug (trace)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
@@ -98,7 +99,7 @@ mergeDataPointsInput inputs =
         Just acc' -> mergeTwoDataPointsInput acc' x
   in
     case Arr.foldr go (Just head) tail of
-      Nothing -> invalid [ Issue "cannot merge datapoints inputs with different indicator id and keys" ]
+      Nothing -> invalid [ mkIssueWithMessage E_GENERAL "cannot merge datapoints inputs with different indicator id and keys" ]
       Just res -> pure res
 
 mergeTwoDataPointsInput :: DataPointsInput -> DataPointsInput -> Maybe DataPointsInput
@@ -123,7 +124,7 @@ headersMatchesData expected actual =
   if expected == actual then
     pure unit
   else
-    invalid [Issue $ "headers mismatch" ]
+    invalid [mkIssueWithMessage E_GENERAL "headers mismatch" ]
 
 -- | checking the DatapointInputs. Rules:
 -- | 1. no duplicated primary keys. (But this checking has been done

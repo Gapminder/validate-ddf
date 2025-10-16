@@ -49,7 +49,8 @@ import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.String.Utils (startsWith)
 import Data.Traversable (class Foldable, sequence, traverse)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Validation.Issue (Issue(..), Issues, updateFilePath)
+import Data.Validation.Issue (Issue(..), Issues, updateFilePath, mkIssue, mkIssueWithMessage, withFileLocation, withHeader, withMessage)
+import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither)
 import Data.Validation.ValidationT (Validation, vError, vWarning)
 import Debug (trace, traceTime)
@@ -166,10 +167,11 @@ notEmptyCsv input =
         if NEA.length hs == NEA.length cs then
           pure { headers: hs, index: input.index, columns: cs }
         else
-          invalid [ InvalidCSV "header length doesn't match column length" ]
+          -- double check why would have this issue?
+          invalid [ mkIssue E_CSV_HEADER_COLUMN_MISMATCH ]
       (Tuple (Just hs) Nothing) ->
         pure { headers: hs, index: input.index, columns: NEA.replicate (NEA.length hs) [] }
-      _ -> invalid [ InvalidCSV "Empty Csv. You should at least put headers in the file." ]
+      _ -> invalid [ mkIssue E_CSV_EMPTY ]
 
 -- | check all columns are valid identifiers
 colsAreValidIds :: NonEmptyRawCsvContent' -> V Issues NonEmptyRawCsvContent
@@ -186,7 +188,7 @@ colsAreValidIds input =
         in
           case is_headers of
             [] -> pure $ input { headers = hs }
-            xs -> invalid [ InvalidCSV $ "these headers are not valid Ids: " <> show xs ]
+            xs -> invalid [ mkIssue E_CSV_HEADER_INVALID # withMessage ("these headers are not valid Ids: " <> show xs) ]
       Left errs -> invalid errs
 
 -- | check all columns are valid headers (including is-- headers)
@@ -209,7 +211,7 @@ headersExists expected csvcontent =
     if hasCols expected actual then
       pure csvcontent
     else
-      invalid [ InvalidCSV $ "file MUST have following field: " <> show expected ]
+      invalid [ mkIssue E_CSV_HEADER_MISSING # withMessage ("file MUST have following field: " <> show expected) ]
 
 -- | check if one and only one of the headers exists. Also return the matched header
 oneOfHeaderExists :: Array String -> NonEmptyRawCsvContent -> V Issues (Tuple String NonEmptyRawCsvContent)
@@ -220,7 +222,7 @@ oneOfHeaderExists expected csvcontent =
     intersection = Arr.intersect expected actual
   in
     if Arr.length intersection /= 1 then
-      invalid [ InvalidCSV $ "file MUST have one and only one of follwoing field: " <> show expected ]
+      invalid [ mkIssue E_CSV_HEADER_MISSING # withMessage ("file MUST have one and only one of follwoing field: " <> show expected) ]
     else
       pure $ Tuple (unsafeIndex intersection 0) csvcontent
 
@@ -231,8 +233,11 @@ noIsDomainHeader domainName csvcontent =
     header = NES.prependString "is--" domainName
     { headers } = csvcontent
   in
-    if header `NEA.elem` (map unwrap headers)
-    then invalid [ InvalidCSV $ "unexpected header: " <> toString header <> " for " <> toString domainName <> " domain."]
+    if header `NEA.elem` (map unwrap headers) then invalid
+      [ mkIssue E_CSV_HEADER_UNEXPECTED
+          # withHeader (toString header)
+          # withMessage ("for " <> toString domainName <> " domain")
+      ]
     else pure csvcontent
 
 -- | check if csv file has duplicated headers
@@ -246,7 +251,7 @@ noDupCols input =
 
       dups = NEA.filter (\x -> (snd x) > 1) counter
     in
-      invalid [ InvalidCSV $ "duplicated headers: " <> show dups ]
+      invalid [ mkIssue E_CSV_HEADER_DUPLICATED # withMessage ("duplicated headers: " <> show dups) ]
 
 -- | check datapoints columns constraints
 constrainsAreMet :: FilePath -> DP -> NonEmptyRawCsvContent -> V Issues NonEmptyRawCsvContent
@@ -268,7 +273,7 @@ constrainsAreMet fp { pkeys, constraints } input@{ headers, columns, index } =
               row = unsafeIndex index i
               msg = "constraint violation: " <> x
             in
-              InvalidItem fp row msg
+              mkIssue E_CSV_ROW_DUPLICATED # withFileLocation fp row # withMessage msg
         in
           invalid $ mkissue <$> xs
 
@@ -300,15 +305,16 @@ noDuplicatedByKey key fileInfo input@{ headers, columns, index } =
   in
     case dups of
       [] -> pure input
-      xs -> invalid $ mkIssue <$> xs
+      xs -> invalid $ makeIssue <$> xs
         where
         fp = FI.filepath fileInfo
-        mkIssue x =
-          InvalidItem fp row msg
-          where
-          val = unsafeIndex (unsafeLookup header columnMap) x
-          row = unsafeIndex index x
-          msg = "Duplicated " <> key <> ": " <> val
+        makeIssue x =
+          let
+            val = unsafeIndex (unsafeLookup header columnMap) x
+            row = unsafeIndex index x
+            msg = "Duplicated " <> key <> ": " <> val
+          in
+            mkIssue E_CSV_ROW_DUPLICATED # withFileLocation fp row # withMessage msg
 
 -- | check duplicated keys in csv.
 noDuplicatedByKeys :: NonEmptyArray String -> FileInfo -> NonEmptyRawCsvContent -> V Issues NonEmptyRawCsvContent
@@ -320,16 +326,17 @@ noDuplicatedByKeys keys fileInfo input@{ headers, columns, index } =
   in
     case dups of
       [] -> pure input
-      xs -> invalid $ mkIssue <$> xs
+      xs -> invalid $ makeIssue <$> xs
         where
         fp = FI.filepath fileInfo
-        mkIssue x =
-          InvalidItem fp row msg
-          where
-          row = unsafeIndex index x
-          vals = map (\col -> unsafeIndex col x) $ map (\k -> unsafeLookup k columnMap) keyHeaders
-          valsStr = Str.joinWith "," $ NEA.toArray vals
-          msg = "Duplicated key combination: " <> valsStr
+        makeIssue x =
+          let
+            row = unsafeIndex index x
+            vals = map (\col -> unsafeIndex col x) $ map (\k -> unsafeLookup k columnMap) keyHeaders
+            valsStr = Str.joinWith "," $ NEA.toArray vals
+            msg = "Duplicated key combination: " <> valsStr
+          in
+            mkIssue E_CSV_ROW_DUPLICATED # withFileLocation fp row # withMessage msg
 
 findDupsForColumns :: NonEmptyArray Header -> Map Header (Array String) -> Array Int
 findDupsForColumns headers values =
@@ -429,7 +436,7 @@ parseCsvFile { fileInfo, csvContent } =
           -- validate base on the inner fileinfo.
           ( \fi -> case FI.collection fi of
               -- invalid: translation of translation
-              Translations _ -> invalid [ Issue $ FI.filepath fileInfo <> ": translation of translation is not allowed" ]
+              Translations _ -> invalid [ mkIssueWithMessage E_GENERAL (FI.filepath fileInfo <> ": translation of translation is not allowed") ]
               _ -> parseCsvFile { fileInfo: fi, csvContent: csvContent }
           )
         `andThen` -- we will use the parsed csv content and the original fileinfo

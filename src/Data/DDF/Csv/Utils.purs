@@ -2,8 +2,7 @@ module Data.DDF.Csv.Utils
   ( createConceptInput
   , createDataPointsInput
   , createEntityInput
-  )
-  where
+  ) where
 
 import Prelude
 
@@ -17,7 +16,7 @@ import Data.DDF.Atoms.Header as Hd
 import Data.DDF.Atoms.Identifier (Identifier, parseId')
 import Data.DDF.Atoms.Identifier as Id
 import Data.DDF.Concept (ConceptInput)
-import Data.DDF.Csv.CsvFile (CsvColumn, CsvFile, CsvContent)
+import Data.DDF.Csv.CsvFile (CsvColumn, CsvContent, CsvFile)
 import Data.DDF.Csv.FileInfo (CollectionInfo(..), FileInfo(..))
 import Data.DDF.Csv.FileInfo as FI
 import Data.DDF.DataPoint (DataPointsInput)
@@ -27,19 +26,19 @@ import Data.List.NonEmpty (NonEmptyList)
 import Data.List.NonEmpty as NEL
 import Data.Map (Map)
 import Data.Map as M
-import Data.Map.Extra (popV, lookupV)
+import Data.Map.Extra (lookupV, popV)
 import Data.Maybe (Maybe(..), fromJust)
 import Data.Set as Set
 import Data.String.NonEmpty (NonEmptyString, toString)
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
-import Data.Validation.Issue (Issue(..), Issues)
+import Data.Validation.Issue (Issue(..), Issues, mkIssueWithMessage)
+import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, andThen, invalid)
 import Partial.Unsafe (unsafePartial)
 import Safe.Coerce (coerce)
 import Utils (unsafeLookup)
-
 
 -- Utils
 
@@ -65,9 +64,8 @@ createConceptInput { fileInfo, csvContent } =
             props = M.delete (Hd.unsafeCreate "concept") rowMap
             _info = Just $ iteminfo fp idx
           in
-            Arr.snoc acc {conceptId, props, _info}
-      _ -> invalid [ Issue $ "can not create concept input for " <> show fileInfo ]
-
+            Arr.snoc acc { conceptId, props, _info }
+      _ -> invalid [ mkIssueWithMessage E_GENERAL $ "can not create concept input for " <> show fileInfo ]
 
 -- | create EntityInput for Entity parsing
 createEntityInput
@@ -78,27 +76,27 @@ createEntityInput { fileInfo, csvContent } =
     FI.Entities { domain, set } ->
       pure $ Arr.foldr go [] rows
       where
-        { headers, index, columns } = csvContent
-        fp = FI.filepath fileInfo
-        rows = Arr.zip index $ (Arr.transpose <<< NEA.toArray) $ columns
+      { headers, index, columns } = csvContent
+      fp = FI.filepath fileInfo
+      rows = Arr.zip index $ (Arr.transpose <<< NEA.toArray) $ columns
 
-        entityCol = case set of
-          Nothing -> Header domain
-          Just s ->
-            if (Header s) `NEA.elem` headers then
-              Header s
-            else
-              Header domain
-        entityDomain = domain
-        entitySet = set
-        go (Tuple i row) acc =
-          let
-            propsMap = M.fromFoldable $ A.zip (NEA.toArray headers) row
-            Tuple entityId props = unsafePartial $ fromJust $ M.pop entityCol propsMap
-            _info = Just $ iteminfo fp i
-          in
-            Arr.snoc acc {entityId, entityDomain, entitySet, props, _info}
-    _ -> invalid [ Issue $ "can not create entity input for " <> show fileInfo ]
+      entityCol = case set of
+        Nothing -> Header domain
+        Just s ->
+          if (Header s) `NEA.elem` headers then
+            Header s
+          else
+            Header domain
+      entityDomain = domain
+      entitySet = set
+      go (Tuple i row) acc =
+        let
+          propsMap = M.fromFoldable $ A.zip (NEA.toArray headers) row
+          Tuple entityId props = unsafePartial $ fromJust $ M.pop entityCol propsMap
+          _info = Just $ iteminfo fp i
+        in
+          Arr.snoc acc { entityId, entityDomain, entitySet, props, _info }
+    _ -> invalid [ mkIssueWithMessage E_GENERAL $ "can not create entity input for " <> show fileInfo ]
 
 -- | create DataPointsInput for DataPoint parsing
 createDataPointsInput
@@ -120,4 +118,4 @@ createDataPointsInput { fileInfo, csvContent } =
         itemInfo = map (\x -> iteminfo fp x) index
       in
         pure { indicatorId, by, itemInfo, values }
-    _ -> invalid [ Issue $ "can not create datapoint input for " <> show fileInfo ]
+    _ -> invalid [ mkIssueWithMessage E_GENERAL $ "can not create datapoint input for " <> show fileInfo ]

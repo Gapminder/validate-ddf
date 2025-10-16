@@ -1,270 +1,373 @@
 -- | Registry module that stores all validation error codes and their descriptions
 -- | This centralizes all error messages for better maintainability and i18n support
--- | Uses typed parameters for type safety
-module Data.Validation.Registry where
+module Data.Validation.Registry
+  ( ErrorCode(..)
+  , ErrorContext
+  , FileContext
+  , ValueContext
+  , ConceptContext
+  , EntityContext
+  , DatapointContext
+  , CsvContext
+  , DatasetContext
+  , emptyContext
+  , mkFileContext
+  , mkValueContext
+  , mkConceptContext
+  , mkConceptContextWithField
+  , mkEntityContext
+  , mkEntityContextWithSet
+  , mkDatapointContext
+  , mkCsvContext
+  , mkDatasetContext
+  , errorCodeToString
+  , errorMessageTemplate
+  , formatErrorMessage
+  , formatError
+  ) where
 
 import Prelude
 
--- | Parameter record types for common error patterns
-type FieldError = { field :: String }
-type ConceptError = { concept :: String }
-type ConceptIdError = { conceptId :: String }
-type DomainError = { domain :: String }
-type SetError = { set :: String }
-type DomainSetError = { domain :: String, set :: String }
-type EntityError = { entity :: String }
-type IndicatorPkeysError = { indicator :: String, pkeys :: String }
-type HeadersError = { headers :: String }
-type HeaderError = { header :: String }
-type HeaderDomainError = { header :: String, domain :: String }
-type FilepathError = { filepath :: String }
-type ParseError = { error :: String }
-type InputError = { input :: String }
-type ValueError = { value :: String }
-type ValueReasonError = { value :: String, reason :: String }
-type ResourcesError = { resources :: String }
-type KeyError = { key :: String }
-type FieldsError = { fields :: String }
+import Data.Maybe (Maybe(..))
+import Data.String (joinWith)
+import Node.Path (FilePath)
+
+-- | Structured context types - each contains required fields (no Maybe inside)
+
+-- | File location context - where in a file the error occurred
+type FileContext =
+  { filepath :: FilePath
+  , lineNo :: Int
+  }
+
+-- | Value context - for errors related to specific values
+type ValueContext =
+  { value :: String
+  }
+
+-- | Concept context - for concept-related errors
+type ConceptContext =
+  { concept :: String
+  , field :: Maybe String -- Optional field name within concept
+  }
+
+-- | Entity context - for entity-related errors
+type EntityContext =
+  { entity :: String
+  , domain :: String
+  , set :: Maybe String -- Sets are optional
+  }
+
+-- | Datapoint context - for datapoint-related errors
+type DatapointContext =
+  { indicator :: String
+  , pkeys :: Array String
+  }
+
+-- | CSV context - for CSV structure errors (headers, columns)
+type CsvContext =
+  { header :: String -- The problematic header
+  }
+
+-- | Dataset context - for dataset-level errors
+type DatasetContext =
+  { message :: String -- Custom dataset-level message
+  }
+
+-- | Main error context - composed of optional sub-contexts
+-- | Only the top-level fields are Maybe, enforcing completeness of sub-contexts
+type ErrorContext =
+  { fileContext :: Maybe FileContext
+  , valueContext :: Maybe ValueContext
+  , conceptContext :: Maybe ConceptContext
+  , entityContext :: Maybe EntityContext
+  , datapointContext :: Maybe DatapointContext
+  , csvContext :: Maybe CsvContext
+  , datasetContext :: Maybe DatasetContext
+  , message :: Maybe String -- Additional freeform message/reason
+  }
+
+-- | Empty error context - use as starting point
+emptyContext :: ErrorContext
+emptyContext =
+  { fileContext: Nothing
+  , valueContext: Nothing
+  , conceptContext: Nothing
+  , entityContext: Nothing
+  , datapointContext: Nothing
+  , csvContext: Nothing
+  , datasetContext: Nothing
+  , message: Nothing
+  }
+
+-- | Helper constructors for creating contexts
+
+mkFileContext :: FilePath -> Int -> FileContext
+mkFileContext filepath lineNo = { filepath, lineNo }
+
+mkValueContext :: String -> ValueContext
+mkValueContext value = { value }
+
+mkConceptContext :: String -> ConceptContext
+mkConceptContext concept = { concept, field: Nothing }
+
+mkConceptContextWithField :: String -> String -> ConceptContext
+mkConceptContextWithField concept field = { concept, field: Just field }
+
+mkEntityContext :: String -> String -> EntityContext
+mkEntityContext entity domain = { entity, domain, set: Nothing }
+
+mkEntityContextWithSet :: String -> String -> String -> EntityContext
+mkEntityContextWithSet entity domain set = { entity, domain, set: Just set }
+
+mkDatapointContext :: String -> Array String -> DatapointContext
+mkDatapointContext indicator pkeys = { indicator, pkeys }
+
+mkCsvContext :: String -> CsvContext
+mkCsvContext header = { header }
+
+mkDatasetContext :: String -> DatasetContext
+mkDatasetContext message = { message }
 
 -- | Error code type representing all possible validation errors
--- | Each error has its required parameters embedded in the constructor
+-- | Simple enum without embedded parameters - all context goes in ErrorContext
 data ErrorCode
-  -- Concept Errors (E1xxx)
-  = E1001_ConceptFieldMustExist FieldError
-  | E1002_ConceptFieldMustNotBeEmpty FieldError
-  | E1003_ReservedConceptId ConceptIdError
-  | E1004_NoConceptsInDataset
-  | E1005_ConceptNotFound ConceptError
-  | E1006_MultipleConceptDefinition ConceptError
-  | E1007_ConceptDomainInvalid DomainError
-  | E1008_ConceptIdTooLong
-  -- Entity Errors (E2xxx)
-  | E2001_EntityMustHaveId
-  | E2002_EntityDomainNotDefined DomainError
-  | E2003_EntityDomainNotValid ConceptError
-  | E2004_EntitySetNotDefined SetError
-  | E2005_EntitySetNoDomain SetError
-  | E2006_EntitySetWrongDomain DomainSetError
-  | E2007_EntitySetNotInConcepts ConceptError
-  | E2008_EntityIsHeaderMustBeTrue DomainError
-  | E2009_MultipleEntityDefinition EntityError
-  | E2010_EntityValueNotUnique
-  -- DataPoint Errors (E3xxx)
-  | E3001_DatapointHeadersMismatch
-  | E3002_DatapointDuplicated
-  | E3003_NoValidCsvForIndicator IndicatorPkeysError
-  -- CSV/File Errors (E4xxx)
-  | E4001_NotCsvFile
-  | E4002_EmptyCsv
-  | E4003_HeaderLengthMismatch
-  | E4004_DuplicatedHeaders HeadersError
-  | E4005_UnexpectedHeader HeaderDomainError
-  | E4006_InvalidHeader HeadersError
-  | E4007_FileMustHaveField FieldError
-  | E4008_FileMustHaveOneOfFields FieldsError
-  | E4009_FileDoesNotExist FilepathError
-  | E4010_ErrorParsingFile ParseError
-  | E4011_BadCsvRow
-  | E4012_TranslationOfTranslationNotAllowed FilepathError
-  | E4013_NotTranslationFile
-  | E4014_HeaderNotInConceptList HeaderError
-  | E4015_EntitySetHeaderNotValid SetError
-  | E4016_EntitySetNotInDomain DomainSetError
-  -- Value Errors (E5xxx)
-  | E5001_ValueMustNotBeEmpty
-  | E5002_NotBooleanValue
-  | E5003_NotNumber InputError
-  | E5004_NotValidTimeValue InputError
-  | E5005_InvalidIdentifier ValueError
-  | E5006_IdentifierTooLong
-  | E5007_InvalidValue ValueReasonError
-  -- DataPackage Errors (E6xxx)
-  | E6001_NoDatapackage
-  | E6002_MissingFileInResourceList ResourcesError
-  | E6003_DuplicatedFilePath FilepathError
-  | E6004_ResourceInconsistent
-  -- General Errors (E7xxx)
-  | E7001_NoDdfCsvFiles
-  | E7002_NoConceptsFile
-  | E7003_KeyNotFound KeyError
+  -- Value Errors
+  = E_VAL_ID
+  | W_VAL_ID
+  | E_VAL_NUM
+  | E_VAL_TIME
+  | E_VAL_JSON
+  | E_VAL_BOOL
+  | E_VAL_STR
+  | E_VAL_CONSTRAINT_FILENAME
+  | E_VAL_CONSTRAINT_DOMAIN
+  | E_VAL_EMPTY
+  -- Concept Errors
+  | E_CONCEPT_ID_RESERVED
+  | E_CONCEPT_ID_INVALID
+  | E_CONCEPT_ID_EMPTY
+  | W_CONCEPT_ID_TOOLONG
+  | E_CONCEPT_TIME_INVALID
+  | E_CONCEPT_FIELD_EMPTY
+  | E_CONCEPT_FIELD_MISSING
+  -- Entity Errors
+  | E_ENTITY_INCONSISTENT_DOMAIN
+  | E_ENTITY_ID_EMPTY
+  -- Datapoints Errors
+  -- other types, e.g. Synonyms and Translations
+  -- Dataset Errors
+  | E_DATASET_NO_CONCEPT
+  | E_DATASET_CONCEPT_DUPLICATED
+  | E_DATASET_CONCEPT_NOT_FOUND
+  | E_DATASET_CONCEPT_INVALID_DOMAIN
+  | E_DATASET_CONCEPT_MISSING_DOMAIN
+  | E_DATASET_ENTITYSET_UNDEFINED
+  | E_DATASET_ENTITY_DRILLUP_INVALID
+  | E_DATASET_ENTITYDOMAIN_INVAILD
+  | E_DATASET_ENTITY_DUPLICATED
+  -- Datapackage Errors
+  | E_DATAPACKAGE_NOT_FOUND
+  | E_DATAPACKAGE_PARSE_ERROR
+  | E_DATAPACKAGE_RESOURCE_MISSING
+  | E_DATAPACKAGE_RESOURCE_DUPLICATED
+  | E_DATAPACKAGE_SCHEMA_MISMATCH
+  -- CSV Errors
+  | E_CSV_EMPTY
+  | E_CSV_HEADER_COLUMN_MISMATCH
+  | E_CSV_HEADER_INVALID
+  | E_CSV_HEADER_MISSING
+  | E_CSV_HEADER_CONFLICT
+  | E_CSV_HEADER_UNEXPECTED
+  | E_CSV_HEADER_DUPLICATED
+  | E_CSV_HEADER_CONSTRAINT
+  | E_CSV_ROW_DUPLICATED
+  | W_CSV_ROW_BAD
+  -- Others
+  | E_GENERAL
+  | W_GENERAL
 
 derive instance eqErrorCode :: Eq ErrorCode
 derive instance ordErrorCode :: Ord ErrorCode
 
 instance showErrorCode :: Show ErrorCode where
-  show = formatError
+  show = errorCodeToString
 
--- | Convert error code to string code (e.g., "E1001")
-errorCodeStr :: ErrorCode -> String
-errorCodeStr = case _ of
-  E1001_ConceptFieldMustExist _ -> "E1001"
-  E1002_ConceptFieldMustNotBeEmpty _ -> "E1002"
-  E1003_ReservedConceptId _ -> "E1003"
-  E1004_NoConceptsInDataset -> "E1004"
-  E1005_ConceptNotFound _ -> "E1005"
-  E1006_MultipleConceptDefinition _ -> "E1006"
-  E1007_ConceptDomainInvalid _ -> "E1007"
-  E1008_ConceptIdTooLong -> "E1008"
-  E2001_EntityMustHaveId -> "E2001"
-  E2002_EntityDomainNotDefined _ -> "E2002"
-  E2003_EntityDomainNotValid _ -> "E2003"
-  E2004_EntitySetNotDefined _ -> "E2004"
-  E2005_EntitySetNoDomain _ -> "E2005"
-  E2006_EntitySetWrongDomain _ -> "E2006"
-  E2007_EntitySetNotInConcepts _ -> "E2007"
-  E2008_EntityIsHeaderMustBeTrue _ -> "E2008"
-  E2009_MultipleEntityDefinition _ -> "E2009"
-  E2010_EntityValueNotUnique -> "E2010"
-  E3001_DatapointHeadersMismatch -> "E3001"
-  E3002_DatapointDuplicated -> "E3002"
-  E3003_NoValidCsvForIndicator _ -> "E3003"
-  E4001_NotCsvFile -> "E4001"
-  E4002_EmptyCsv -> "E4002"
-  E4003_HeaderLengthMismatch -> "E4003"
-  E4004_DuplicatedHeaders _ -> "E4004"
-  E4005_UnexpectedHeader _ -> "E4005"
-  E4006_InvalidHeader _ -> "E4006"
-  E4007_FileMustHaveField _ -> "E4007"
-  E4008_FileMustHaveOneOfFields _ -> "E4008"
-  E4009_FileDoesNotExist _ -> "E4009"
-  E4010_ErrorParsingFile _ -> "E4010"
-  E4011_BadCsvRow -> "E4011"
-  E4012_TranslationOfTranslationNotAllowed _ -> "E4012"
-  E4013_NotTranslationFile -> "E4013"
-  E4014_HeaderNotInConceptList _ -> "E4014"
-  E4015_EntitySetHeaderNotValid _ -> "E4015"
-  E4016_EntitySetNotInDomain _ -> "E4016"
-  E5001_ValueMustNotBeEmpty -> "E5001"
-  E5002_NotBooleanValue -> "E5002"
-  E5003_NotNumber _ -> "E5003"
-  E5004_NotValidTimeValue _ -> "E5004"
-  E5005_InvalidIdentifier _ -> "E5005"
-  E5006_IdentifierTooLong -> "E5006"
-  E5007_InvalidValue _ -> "E5007"
-  E6001_NoDatapackage -> "E6001"
-  E6002_MissingFileInResourceList _ -> "E6002"
-  E6003_DuplicatedFilePath _ -> "E6003"
-  E6004_ResourceInconsistent -> "E6004"
-  E7001_NoDdfCsvFiles -> "E7001"
-  E7002_NoConceptsFile -> "E7002"
-  E7003_KeyNotFound _ -> "E7003"
+-- | Convert error code to string identifier (e.g., "E_VAL_NUM")
+errorCodeToString :: ErrorCode -> String
+errorCodeToString = case _ of
+  E_VAL_ID -> "E_VAL_ID"
+  W_VAL_ID -> "W_VAL_ID"
+  E_VAL_NUM -> "E_VAL_NUM"
+  E_VAL_TIME -> "E_VAL_TIME"
+  E_VAL_JSON -> "E_VAL_JSON"
+  E_VAL_BOOL -> "E_VAL_BOOL"
+  E_VAL_STR -> "E_VAL_STR"
+  E_VAL_CONSTRAINT_FILENAME -> "E_VAL_CONSTRAINT_FILENAME"
+  E_VAL_CONSTRAINT_DOMAIN -> "E_VAL_CONSTRAINT_DOMAIN"
+  E_VAL_EMPTY -> "E_VAL_EMPTY"
+  E_CONCEPT_ID_RESERVED -> "E_CONCEPT_ID_RESERVED"
+  E_CONCEPT_ID_INVALID -> "E_CONCEPT_ID_INVALID"
+  E_CONCEPT_ID_EMPTY -> "E_CONCEPT_ID_EMPTY"
+  W_CONCEPT_ID_TOOLONG -> "W_CONCEPT_ID_TOOLONG"
+  E_CONCEPT_TIME_INVALID -> "E_CONCEPT_TIME_INVALID"
+  E_CONCEPT_FIELD_EMPTY -> "E_CONCEPT_FIELD_EMPTY"
+  E_CONCEPT_FIELD_MISSING -> "E_CONCEPT_FIELD_MISSING"
+  E_ENTITY_INCONSISTENT_DOMAIN -> "E_ENTITY_INCONSISTENT_DOMAIN"
+  E_ENTITY_ID_EMPTY -> "E_ENTITY_ID_EMPTY"
+  E_DATASET_NO_CONCEPT -> "E_DATASET_NO_CONCEPT"
+  E_DATASET_CONCEPT_DUPLICATED -> "E_DATASET_CONCEPT_DUPLICATED"
+  E_DATASET_CONCEPT_NOT_FOUND -> "E_DATASET_CONCEPT_NOT_FOUND"
+  E_DATASET_CONCEPT_INVALID_DOMAIN -> "E_DATASET_CONCEPT_INVALID_DOMAIN"
+  E_DATASET_CONCEPT_MISSING_DOMAIN -> "E_DATASET_CONCEPT_MISSING_DOMAIN"
+  E_DATASET_ENTITYSET_UNDEFINED -> "E_DATASET_ENTITYSET_UNDEFINED"
+  E_DATASET_ENTITY_DRILLUP_INVALID -> "E_DATASET_ENTITY_DRILLUP_INVALID"
+  E_DATASET_ENTITYDOMAIN_INVAILD -> "E_DATASET_ENTITYDOMAIN_INVAILD"
+  E_DATASET_ENTITY_DUPLICATED -> "E_DATASET_ENTITY_DUPLICATED"
+  E_DATAPACKAGE_NOT_FOUND -> "E_DATAPACKAGE_NOT_FOUND"
+  E_DATAPACKAGE_PARSE_ERROR -> "E_DATAPACKAGE_PARSE_ERROR"
+  E_DATAPACKAGE_RESOURCE_MISSING -> "E_DATAPACKAGE_RESOURCE_MISSING"
+  E_DATAPACKAGE_RESOURCE_DUPLICATED -> "E_DATAPACKAGE_RESOURCE_DUPLICATED"
+  E_DATAPACKAGE_SCHEMA_MISMATCH -> "E_DATAPACKAGE_SCHEMA_MISMATCH"
+  E_CSV_EMPTY -> "E_CSV_EMPTY"
+  E_CSV_HEADER_COLUMN_MISMATCH -> "E_CSV_HEADER_COLUMN_MISMATCH"
+  E_CSV_HEADER_INVALID -> "E_CSV_HEADER_INVALID"
+  E_CSV_HEADER_MISSING -> "E_CSV_HEADER_MISSING"
+  E_CSV_HEADER_CONFLICT -> "E_CSV_HEADER_CONFLICT"
+  E_CSV_HEADER_UNEXPECTED -> "E_CSV_HEADER_UNEXPECTED"
+  E_CSV_HEADER_DUPLICATED -> "E_CSV_HEADER_DUPLICATED"
+  E_CSV_HEADER_CONSTRAINT -> "E_CSV_HEADER_CONSTRAINT"
+  E_CSV_ROW_DUPLICATED -> "E_CSV_ROW_DUPLICATED"
+  W_CSV_ROW_BAD -> "W_CSV_ROW_BAD"
+  E_GENERAL -> "E_GENERAL"
+  W_GENERAL -> "W_GENERAL"
 
--- | Format an error code into a human-readable message
-formatError :: ErrorCode -> String
-formatError code =
-  errorCodeStr code <> " " <> errorMessage code
+-- | Get the base error message template for an error code (without context)
+errorMessageTemplate :: ErrorCode -> String
+errorMessageTemplate = case _ of
+  E_VAL_ID -> "invalid identifier"
+  W_VAL_ID -> "identifier longer than 64 characters"
+  E_VAL_NUM -> "invalid number value"
+  E_VAL_TIME -> "invalid time value"
+  E_VAL_JSON -> "invalid JSON value"
+  E_VAL_BOOL -> "invalid boolean value"
+  E_VAL_STR -> "invalid string value"
+  E_VAL_CONSTRAINT_FILENAME -> "value violates filename constraint"
+  E_VAL_CONSTRAINT_DOMAIN -> "value violates domain constraint"
+  E_VAL_EMPTY -> "value is empty"
+  E_CONCEPT_ID_RESERVED -> "concept ID is a reserved word"
+  E_CONCEPT_ID_INVALID -> "concept ID contains invalid characters"
+  E_CONCEPT_ID_EMPTY -> "concept ID is empty"
+  W_CONCEPT_ID_TOOLONG -> "concept ID is longer than 64 characters"
+  E_CONCEPT_TIME_INVALID -> "time concept must be one of: year, month, day, week, quarter, time"
+  E_CONCEPT_FIELD_EMPTY -> "concept field is empty"
+  E_CONCEPT_FIELD_MISSING -> "required concept field is missing"
+  E_ENTITY_INCONSISTENT_DOMAIN -> "entity has inconsistent domain"
+  E_ENTITY_ID_EMPTY -> "entity ID is empty"
+  E_DATASET_NO_CONCEPT -> "dataset has no concepts file"
+  E_DATASET_CONCEPT_DUPLICATED -> "duplicate concept found in dataset"
+  E_DATASET_CONCEPT_NOT_FOUND -> "concept not found in dataset"
+  E_DATASET_CONCEPT_INVALID_DOMAIN -> "concept has invalid domain"
+  E_DATASET_CONCEPT_MISSING_DOMAIN -> "concept is missing domain field"
+  E_DATASET_ENTITYSET_UNDEFINED -> "entity set is not defined"
+  E_DATASET_ENTITY_DRILLUP_INVALID -> "entity drill_up is invalid"
+  E_DATASET_ENTITYDOMAIN_INVAILD -> "entity domain is invalid"
+  E_DATASET_ENTITY_DUPLICATED -> "duplicate entity found in dataset"
+  E_DATAPACKAGE_NOT_FOUND -> "datapackage.json not found"
+  E_DATAPACKAGE_PARSE_ERROR -> "failed to parse datapackage.json or its resources"
+  E_DATAPACKAGE_RESOURCE_MISSING -> "resource file missing from datapackage"
+  E_DATAPACKAGE_RESOURCE_DUPLICATED -> "duplicated resource in datapackage"
+  E_DATAPACKAGE_SCHEMA_MISMATCH -> "schema in datapackage differs from actual file"
+  E_CSV_EMPTY -> "CSV file is empty"
+  E_CSV_HEADER_COLUMN_MISMATCH -> "CSV header count doesn't match column count"
+  E_CSV_HEADER_INVALID -> "CSV header is invalid"
+  E_CSV_HEADER_MISSING -> "required CSV header is missing"
+  E_CSV_HEADER_CONFLICT -> "CSV header conflicts with another header"
+  E_CSV_HEADER_UNEXPECTED -> "unexpected CSV header"
+  E_CSV_HEADER_DUPLICATED -> "duplicate CSV header"
+  E_CSV_HEADER_CONSTRAINT -> "CSV header violates constraint"
+  E_CSV_ROW_DUPLICATED -> "duplicate row in CSV"
+  W_CSV_ROW_BAD -> "bad CSV row"
+  E_GENERAL -> "validation error"
+  W_GENERAL -> "validation warning"
 
--- | Get the error message (without the code prefix)
-errorMessage :: ErrorCode -> String
-errorMessage = case _ of
-  E1001_ConceptFieldMustExist { field } -> "field " <> field <> " MUST exist for concept"
-  E1002_ConceptFieldMustNotBeEmpty { field } -> "field " <> field <> " MUST not be empty"
-  E1003_ReservedConceptId { conceptId } -> conceptId <> " can not be use as concept Id"
-  E1004_NoConceptsInDataset -> "Data set must have at least one concept"
-  E1005_ConceptNotFound { concept } -> "no such concept in dataset: " <> concept
-  E1006_MultipleConceptDefinition { concept } -> "Multiple definition found: " <> concept
-  E1007_ConceptDomainInvalid { domain } -> "the domain of the entity set is not a valid domain: " <> domain
-  E1008_ConceptIdTooLong -> "longer than 64 chars"
-  E2001_EntityMustHaveId -> "entity MUST have an entity id"
-  E2002_EntityDomainNotDefined { domain } -> "domain " <> domain <> " is not defined in concepts, but there is a entity domain file for it"
-  E2003_EntityDomainNotValid { concept } -> "concept " <> concept <> " is not an entity domain in dataset"
-  E2004_EntitySetNotDefined { set } -> "the entity set " <> set <> " is not defined in concepts"
-  E2005_EntitySetNoDomain { set } -> "entity set " <> set <> " doesn't belong to any domain"
-  E2006_EntitySetWrongDomain { domain, set } -> "entity set " <> set <> " doesn't belong to " <> domain <> " domain"
-  E2007_EntitySetNotInConcepts { concept } -> "concept " <> concept <> " is not an entity set in dataset"
-  E2008_EntityIsHeaderMustBeTrue { domain } -> "is--" <> domain <> " must be TRUE for " <> domain <> " domain"
-  E2009_MultipleEntityDefinition { entity } -> "Multiple definition found: " <> entity
-  E2010_EntityValueNotUnique -> "entity value is not unique"
-  E3001_DatapointHeadersMismatch -> "headers mismatch"
-  E3002_DatapointDuplicated -> "Duplicated datapoints"
-  E3003_NoValidCsvForIndicator { indicator, pkeys } -> "No valid csv file for " <> indicator <> " by " <> pkeys
-  E4001_NotCsvFile -> "not a csv file"
-  E4002_EmptyCsv -> "Empty Csv. You should at least put headers in the file."
-  E4003_HeaderLengthMismatch -> "header length doesn't match column length"
-  E4004_DuplicatedHeaders { headers } -> "duplicated headers: " <> headers
-  E4005_UnexpectedHeader { header, domain } -> "unexpected header: " <> header <> " for " <> domain <> " domain"
-  E4006_InvalidHeader { headers } -> "these headers are not valid Ids: " <> headers
-  E4007_FileMustHaveField { field } -> "file MUST have following field: " <> field
-  E4008_FileMustHaveOneOfFields { fields } -> "file MUST have one and only one of following field: " <> fields
-  E4009_FileDoesNotExist { filepath } -> filepath <> " does not exist, skipping"
-  E4010_ErrorParsingFile { error } -> "error parsing file: " <> error
-  E4011_BadCsvRow -> "Bad Csv row"
-  E4012_TranslationOfTranslationNotAllowed { filepath } -> filepath <> ": translation of translation is not allowed"
-  E4013_NotTranslationFile -> "not a translation file"
-  E4014_HeaderNotInConceptList { header } -> header <> " is not in concept list but it's in the header"
-  E4015_EntitySetHeaderNotValid { set } -> set <> " is not a valid concept"
-  E4016_EntitySetNotInDomain { domain, set } -> set <> " is not a entity_set in " <> domain <> " domain"
-  E5001_ValueMustNotBeEmpty -> "value must be not empty"
-  E5002_NotBooleanValue -> "not a boolean value"
-  E5003_NotNumber { input } -> input <> " is not a number"
-  E5004_NotValidTimeValue { input } -> input <> " is not a valid time value"
-  E5005_InvalidIdentifier { value } -> "invalid identifier: " <> value
-  E5006_IdentifierTooLong -> "longer than 64 chars"
-  E5007_InvalidValue { value, reason } -> "invalid value " <> value <> ": " <> reason
-  E6001_NoDatapackage -> "no datapackage in this folder"
-  E6002_MissingFileInResourceList { resources } -> "datapackage.json: Missing file in resource list. Expected following resources exist: " <> resources
-  E6003_DuplicatedFilePath { filepath } -> "datapackage.json: duplicated file path: " <> filepath
-  E6004_ResourceInconsistent -> "datapackage.json: resources are inconsistent with local files"
-  E7001_NoDdfCsvFiles -> "No ddf csv files in this folder. Please begin with a ddf--concepts.csv file."
-  E7002_NoConceptsFile -> "No concepts file in folder. Please add ddf--concepts.csv"
-  E7003_KeyNotFound { key } -> "key not found: " <> key
+-- | Format error message with context interpolation
+formatErrorMessage :: ErrorCode -> ErrorContext -> String
+formatErrorMessage code ctx =
+  let
+    baseMsg = errorMessageTemplate code
 
--- | Helper functions for creating parameter records
--- | These make error construction more convenient
+    -- Helper to build context suffix
+    parts = []
 
-fieldError :: String -> FieldError
-fieldError field = { field }
+    -- Add concept context if present
+    withConcept = case ctx.conceptContext of
+      Just { concept, field } ->
+        let
+          conceptPart = "concept: " <> concept
+          fieldPart = case field of
+            Just f -> ", field: " <> f
+            Nothing -> ""
+        in
+          parts <> [ conceptPart <> fieldPart ]
+      Nothing -> parts
 
-conceptError :: String -> ConceptError
-conceptError concept = { concept }
+    -- Add entity context if present
+    withEntity = case ctx.entityContext of
+      Just { entity, domain, set } ->
+        let
+          entityPart = "entity: " <> entity
+          domainPart = ", domain: " <> domain
+          setPart = case set of
+            Just s -> ", set: " <> s
+            Nothing -> ""
+        in
+          withConcept <> [ entityPart <> domainPart <> setPart ]
+      Nothing -> withConcept
 
-conceptIdError :: String -> ConceptIdError
-conceptIdError conceptId = { conceptId }
+    -- Add datapoint context if present
+    withDatapoint = case ctx.datapointContext of
+      Just { indicator, pkeys } ->
+        let
+          indicatorPart = "indicator: " <> indicator
+          pkeysPart = if pkeys == [] then "" else ", pkeys: " <> show pkeys
+        in
+          withEntity <> [ indicatorPart <> pkeysPart ]
+      Nothing -> withEntity
 
-domainError :: String -> DomainError
-domainError domain = { domain }
+    -- Add CSV context if present
+    withCsv = case ctx.csvContext of
+      Just { header } -> withDatapoint <> [ "header: " <> header ]
+      Nothing -> withDatapoint
 
-setError :: String -> SetError
-setError set = { set }
+    -- Add dataset context if present
+    withDataset = case ctx.datasetContext of
+      Just { message: msg } -> withCsv <> [ msg ]
+      Nothing -> withCsv
 
-domainSetError :: String -> String -> DomainSetError
-domainSetError domain set = { domain, set }
+    -- Build context suffix
+    contextSuffix =
+      if withDataset == [] then ""
+      else " (" <> joinWith ", " withDataset <> ")"
 
-entityError :: String -> EntityError
-entityError entity = { entity }
+    -- Add additional message if present
+    messageSuffix = case ctx.message of
+      Just m -> ": " <> m
+      Nothing -> ""
 
-indicatorPkeysError :: String -> String -> IndicatorPkeysError
-indicatorPkeysError indicator pkeys = { indicator, pkeys }
+    -- Special handling for E_GENERAL/W_GENERAL - message overrides template
+    finalMsg = case code of
+      E_GENERAL -> case ctx.message of
+        Just m -> m
+        Nothing -> baseMsg <> contextSuffix
+      W_GENERAL -> case ctx.message of
+        Just m -> m
+        Nothing -> baseMsg <> contextSuffix
+      _ -> baseMsg <> contextSuffix <> messageSuffix
+  in
+    finalMsg
 
-headersError :: String -> HeadersError
-headersError headers = { headers }
-
-headerError :: String -> HeaderError
-headerError header = { header }
-
-headerDomainError :: String -> String -> HeaderDomainError
-headerDomainError header domain = { header, domain }
-
-filepathError :: String -> FilepathError
-filepathError filepath = { filepath }
-
-parseError :: String -> ParseError
-parseError error = { error }
-
-inputError :: String -> InputError
-inputError input = { input }
-
-valueError :: String -> ValueError
-valueError value = { value }
-
-valueReasonError :: String -> String -> ValueReasonError
-valueReasonError value reason = { value, reason }
-
-resourcesError :: String -> ResourcesError
-resourcesError resources = { resources }
-
-keyError :: String -> KeyError
-keyError key = { key }
-
-fieldsError :: String -> FieldsError
-fieldsError fields = { fields }
+-- | Format the full error with code prefix and message
+formatError :: ErrorCode -> ErrorContext -> String
+formatError code ctx =
+  errorCodeToString code <> ": " <> formatErrorMessage code ctx

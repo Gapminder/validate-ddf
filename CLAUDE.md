@@ -81,6 +81,11 @@ The codebase uses `ValidationT Messages Aff a` throughout:
 - `Aff` provides async I/O (file reading)
 - Can emit errors and continue (`emitErrorsAndContinue`) or stop (`emitErrorsAndStop`)
 
+##### Error Handling: Issue vs Message
+
+- **Issue**: Structured error data using centralized error registry (Registry.purs). Used in validation logic with `V Issues a`. Create using helper functions like `mkIssue`, `mkIssueWithValue`, etc.
+- **Message**: Presentation layer for user-facing output. Used in `ValidationT Messages Aff a`. Converted from Issue via `messageFromIssue` only at presentation boundaries.
+
 #### CSV Parsing (`src/Data/Csv/`)
 
 - Uses Node.js `csv-parse` library (FFI via JavaScript)
@@ -144,3 +149,4 @@ const result = await validate("./path/to/dataset", {
 
 - try to avoid very long lines, break it into smaller trunks. For example, use let...in to create some temp variables.
 - perfer the `$` operator to writting in parentheses
+- remember to run `purs-tidy format-in-place "file.purs"` to format file after finishing a task

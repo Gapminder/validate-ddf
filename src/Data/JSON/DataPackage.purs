@@ -19,7 +19,7 @@ import Data.HashSet as HS
 import Data.List (List)
 import Data.List as List
 import Data.List.NonEmpty as NEL
-import Data.Map (SemigroupMap, Map)
+import Data.Map (Map, SemigroupMap)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
@@ -31,7 +31,8 @@ import Data.String as Str
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.String.NonEmpty.Internal as NES
 import Data.Tuple (Tuple(..), snd)
-import Data.Validation.Issue (Issue(..), Issues)
+import Data.Validation.Issue (Issue(..), Issues, mkIssue, withMessage)
+import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, invalid)
 import Debug (trace)
 import Effect (Effect)
@@ -111,7 +112,7 @@ datapackageExists path = do
   if dpExists then
     pure $ pure datapackagePath
   else
-    pure $ invalid [ Issue $ "no datapackage in this folder" ]
+    pure $ invalid [ mkIssue E_DATAPACKAGE_NOT_FOUND ]
 
 -- | create resources objects from csv files. This will also handle conflicting names of resources
 createResources :: FilePath -> Array CsvFile -> Array Resource
@@ -175,9 +176,8 @@ parseDataPackageResources content = do
 
   case runExcept resources of
     Left e -> invalid
-      [ Issue $
-          "failed to read datapackage resources. Reason: "
-            <> joinWith "\n" (Arr.fromFoldable $ map renderHumanError e)
+      [ mkIssue E_DATAPACKAGE_PARSE_ERROR
+          # withMessage (joinWith "\n" (Arr.fromFoldable $ map renderHumanError e))
       ]
     Right x -> pure x
 
@@ -186,9 +186,8 @@ parseDataPackage :: String -> V Issues DataPackage
 parseDataPackage content =
   case JSON.readJSON content of
     Left e -> invalid
-      [ Issue $
-          "failed to read datapackage. Reason: "
-            <> (joinWith "\n" $ Arr.fromFoldable $ map renderHumanError e)
+      [ mkIssue E_DATAPACKAGE_PARSE_ERROR
+          # withMessage (joinWith "\n" $ Arr.fromFoldable $ map renderHumanError e)
       ]
     Right x -> pure x
 
@@ -252,7 +251,8 @@ compareResources expected actual =
         items = Arr.difference expectedPaths actualPaths
         itemsStr = Str.joinWith ", " $ map NES.toString items
       in
-        invalid [ Issue $ "datapackage.json: Missing file in resource list. Expected following resources exist: " <> itemsStr ]
+        invalid
+          [ mkIssue E_DATAPACKAGE_RESOURCE_MISSING # withMessage ("Expected following resources exist: " <> itemsStr) ]
     else
       sequence_ $ Arr.zipWith compareOneResource expectedSorted actualSorted
 
@@ -261,16 +261,16 @@ compareOneResource x y =
   if x.path /= y.path then
     -- NOTE: we shouldn't compare 2 resource with different paths. maybe should use unsafeCrash here.
     invalid
-      [ Issue $
-          "datapackage.json: tried to compare resources with different path: "
-            <> NES.toString x.path
-            <> " and "
-            <> NES.toString y.path
+      [ mkIssue E_GENERAL
+          # withMessage
+              ( "tried to compare resources with different path: " <> NES.toString x.path <> " and " <> NES.toString
+                  y.path
+              )
       ]
   else if x.schema /= y.schema then
     invalid
-      [ Issue $
-          "datapackage.json: schema differs from local file for resource: " <> NES.toString x.path
+      [ mkIssue E_DATAPACKAGE_SCHEMA_MISMATCH
+          # withMessage ("resource: " <> NES.toString x.path)
       ]
   else
     pure unit
@@ -284,8 +284,8 @@ noDuplicatedResources xs =
       items = Arr.nubBy (compare `on` _.path) dups
       issues = map
         ( \x ->
-            Issue $ "datapackage.json: duplicated file path: "
-              <> (NES.toString $ _.path x)
+            mkIssue E_DATAPACKAGE_RESOURCE_DUPLICATED
+              # withMessage (NES.toString $ _.path x)
         )
         items
 

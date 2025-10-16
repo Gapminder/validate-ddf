@@ -20,8 +20,9 @@ import Data.String as Str
 import Data.String.NonEmpty.Internal (NonEmptyString(..), stripPrefix, toString)
 import Data.Traversable (sequence, traverse)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Validation.Issue (Issue(..), Issues)
-import Data.Validation.Semigroup (V, invalid, isValid, andThen)
+import Data.Validation.Issue (Issue(..), Issues, mkIssue, withEntity)
+import Data.Validation.Registry (ErrorCode(..))
+import Data.Validation.Semigroup (V, andThen, invalid, isValid)
 import Debug (trace)
 import Partial.Unsafe (unsafePartial)
 import Safe.Coerce (coerce)
@@ -88,6 +89,7 @@ setInfo _info (Entity e) = Entity (e { _info = _info })
 -- | Entity input from CsvFile
 -- | The entityDomain and entitySet field comes from file name, so they are already nonempty
 -- | entitySet might be absent.
+-- TODO: use a different input type for non-CSV inputs and include validation on domain/set
 type EntityInput =
   { entityId :: String
   , entityDomain :: NonEmptyString
@@ -146,12 +148,12 @@ getEntitySetsFromHeaders lst =
   collectTrueItem (Tuple header value) =
     parseBoolean value
       `andThen`
-      (\v ->
-        if v then
-          pure $ Just header
-        else
-          pure Nothing
-      )
+        ( \v ->
+            if v then
+              pure $ Just header
+            else
+              pure Nothing
+        )
 
 -- | Entity sets prased from csv headers might contains the domain. we should drop that
 -- | also we should validate: is--domain for a domain must be TRUE.
@@ -166,17 +168,17 @@ removeIsDomainProp domain xs =
       in
         parseBoolean (snd val)
           `andThen`
-        (\v ->
-          if v then
-            pure xs'
-          else
-            invalid [ Issue $ "is--" <> toString domain <> " must be TRUE for " <> toString domain <> " domain." ]
-        )
+            ( \v ->
+                if v then
+                  pure xs'
+                else
+                  invalid [ mkIssue E_ENTITY_INCONSISTENT_DOMAIN # withEntity (toString domain) (toString domain) ]
+            )
 
 parseEntity :: EntityInput -> V Issues Entity
 parseEntity { entityId: eid, entityDomain: edm, entitySet: es, props: props, _info } =
   if Str.null eid then
-    invalid [ Issue $ "entity MUST have an entity id" ]
+    invalid [ mkIssue E_ENTITY_ID_EMPTY # withEntity "" (toString edm) ]
   else
     let
       validEdomain = validEntityDomainId edm
@@ -184,7 +186,7 @@ parseEntity { entityId: eid, entityDomain: edm, entitySet: es, props: props, _in
       validEsets =
         -- get all true values from is-- header
         getEntitySetsFromHeaders esets
-        -- combine the sets from filename and sets from file headers.
+          -- combine the sets from filename and sets from file headers.
           `andThen`
             ( \parsed ->
                 case es of

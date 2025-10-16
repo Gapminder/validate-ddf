@@ -6,7 +6,8 @@ import StringParser
 
 import Control.Alt ((<|>))
 import Data.Array.NonEmpty (fromFoldable1)
-import Data.Validation.Issue (Issue(..), Issues)
+import Data.Validation.Issue (Issue(..), Issues, mkIssueWithValue, withMessage)
+import Data.Validation.Registry (ErrorCode(..))
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
@@ -70,10 +71,8 @@ parseId x = case runParser identifier' x of
   Left e -> invalid [ err ]
     where
     pos = show $ e.pos
-
     msg = e.error <> " at pos " <> pos
-
-    err = InvalidValue x msg
+    err = mkIssueWithValue E_VAL_ID x # withMessage msg
 
 -- | parse an id, when the id is non empty string
 parseId' :: NonEmptyString -> V Issues Identifier
@@ -89,7 +88,7 @@ isLongerThan64Chars a =
     case charAt 64 str of
       Nothing -> pure a
       Just _ ->
-        invalid [ InvalidValue trimedstr "longer than 64 chars" ]
+        invalid [ mkIssueWithValue W_VAL_ID trimedstr ]
           where
             trimedstr = (Str.take 15 $ toString str) <> "..."
 

@@ -29,10 +29,11 @@ import Data.String.NonEmpty as NES
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.Traversable (class Traversable, for, sequence, traverse)
 import Data.Tuple (Tuple(..))
-import Data.Validation.Issue (Issue(..), Issues, withRowInfo)
+import Data.Validation.Issue (Issue(..), Issues, mkIssueWithMessage, mkIssueWithValue, withMessage, withRowInfo)
+import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Result (Messages, messageFromIssue, setError, setFile, setLineNo)
 import Data.Validation.Semigroup (andThen, toEither)
-import Data.Validation.ValidationT (ValidationT, Validation, vError, vWarning)
+import Data.Validation.ValidationT (Validation, ValidationT, vError, vWarning)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Node.FS.Sync as PATH
@@ -64,7 +65,6 @@ emitErrorsAndStop issues = do
   where
   msgs = map (setError <<< messageFromIssue) issues
 
-
 -- Validations
 --
 
@@ -74,7 +74,7 @@ validateFileExists fi@{ filepath } = do
   pathExists <- liftEffect $ PATH.exists filepath
   if pathExists then pure $ Just fi
   else do
-    emitWarningsAndContinue $ [ Issue $ filepath <> " does not exist, skipping" ]
+    emitWarningsAndContinue $ [ mkIssueWithMessage W_GENERAL $ filepath <> " does not exist, skipping" ]
     pure Nothing
 
 -- | read csv data from file
@@ -95,7 +95,7 @@ dropAndWarnBadCsvRows fp content = do
       ( setLineNo idx
           <<< setFile fp
           <<< messageFromIssue
-      ) $ Issue "Bad Csv row"
+      ) $ mkIssueWithMessage W_CSV_ROW_BAD "Bad Csv row"
     msgs = map makemsg badIdx
   vWarning msgs
   pure content
@@ -206,13 +206,14 @@ validateBaseDataSet conceptsInput entitiesInput =
       emitErrorsAndStop errs
 
 -- | validate one indicator group (indicator with same primary keys)
-validateDatapointsFileGroup :: NonEmptyString -> NonEmptyList NonEmptyString -> DataSet -> Array CsvFile -> Validation Messages Unit
+validateDatapointsFileGroup
+  :: NonEmptyString -> NonEmptyList NonEmptyString -> DataSet -> Array CsvFile -> Validation Messages Unit
 validateDatapointsFileGroup indicator pkeys ds csvfiles =
   case NEA.fromArray csvfiles of
     Nothing -> do
       vWarning $
         [ messageFromIssue
-            $ Issue
+            $ mkIssueWithMessage W_GENERAL
             $ "No valid csv file for "
                 <> (NES.toString indicator)
                 <> " by "
@@ -287,15 +288,14 @@ validateCsvHeaders dataset@(DataSet ds) { csvContent, fileInfo } = do
               case domainInDataset of
                 Nothing -> vWarning $
                   [ setFile filepath <<< setError <<< messageFromIssue
-                      $ Issue
-                      $ set <> " is not a valid concept."
+                      $ mkIssueWithValue E_DATASET_CONCEPT_NOT_FOUND set
                   ]
                 Just x -> when (NES.toString domain /= x)
                   $ vWarning
                   $
                     [ setFile filepath <<< setError <<< messageFromIssue
-                        $ Issue
-                        $ set <> " is not a entity_set in " <> NES.toString domain <> " domain."
+                        $ mkIssueWithValue E_DATASET_ENTITYSET_UNDEFINED set
+                            # withMessage ("not an entity_set in " <> NES.toString domain <> " domain")
                     ]
             -- it is not valid to have is-- header in other files.
             -- but it's already validated in other steps so no need to emit error here.
@@ -308,8 +308,7 @@ validateCsvHeaders dataset@(DataSet ds) { csvContent, fileInfo } = do
             $ vWarning
             $
               [ setFile filepath <<< setError <<< messageFromIssue
-                  $ Issue
-                  $ hstr <> " is not in concept list but it's in the header."
+                  $ mkIssueWithValue E_DATASET_CONCEPT_NOT_FOUND hstr
               ]
     )
   pure unit

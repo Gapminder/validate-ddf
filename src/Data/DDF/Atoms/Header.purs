@@ -14,14 +14,13 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.String (Pattern(..), take)
-import Data.String.NonEmpty (fromString, join1With, toString, stripPrefix)
+import Data.String.NonEmpty (fromString, join1With, stripPrefix, toString)
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
-import Data.Validation.Issue (Issue(..), Issues)
+import Data.Validation.Issue (Issue(..), Issues, mkIssueWithValue, withMessage)
+import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither)
 
-
-newtype Header
-  = Header NonEmptyString
+newtype Header = Header NonEmptyString
 
 derive instance newtypeHeader :: Newtype Header _
 
@@ -65,10 +64,8 @@ parseGeneralHeader x = case runParser generalHeader x of
   Left e -> invalid [ err ]
     where
     pos = show $ e.pos
-
-    msg = "invalid header: " <> x <> ", " <> e.error <> " at pos " <> pos
-
-    err = InvalidCSV msg
+    msg = e.error <> " at pos " <> pos
+    err = mkIssueWithValue E_CSV_HEADER_INVALID x # withMessage msg
 
 -- | run entity header parser
 parseEntityHeader :: String -> V Issues Header
@@ -77,11 +74,8 @@ parseEntityHeader x = case runParser entityHeader x of
   Left e -> invalid [ err ]
     where
     pos = show $ e.pos
-
-    msg = "invalid header: " <> x <> ", " <> e.error <> " at pos " <> pos
-
-    err = InvalidCSV msg
-
+    msg = e.error <> " at pos " <> pos
+    err = mkIssueWithValue E_CSV_HEADER_INVALID x # withMessage msg
 
 -- | unsafe create an id, because we won't check the string.
 -- | only use this when you know what you are doning

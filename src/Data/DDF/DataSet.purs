@@ -65,7 +65,8 @@ import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.String.Utils as Str
 import Data.Traversable (for, for_, sequence, sequence_, traverse, traverse_)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Validation.Issue (Issue(..), Issues, toInvaildItem, updateMessage, withRowInfo)
+import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, toInvaildItem, updateMessage, withConceptField, withEntity, withFileLocation, withRowInfo)
+import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither, validation)
 import Debug (trace)
 import Node.Path (FilePath)
@@ -190,18 +191,19 @@ parseConcepts input =
 checkNonEmptyConcepts :: ConceptsInput -> V Issues ConceptsInput
 checkNonEmptyConcepts input =
   if Arr.null input then
-    invalid [ Issue $ "Data set must have at least one concept" ]
+    invalid [ mkIssue E_DATASET_NO_CONCEPT ]
   else
     pure input
 
-makeIssue :: String -> Concept -> Issue
-makeIssue msg c =
+makeIssue :: Concept -> Issue
+makeIssue c =
   let
     (Tuple filepath row) = pathAndRow $ Conc.getInfo c
+    conceptId = Id.value $ Conc.getId c
   in
-    InvalidItem filepath row msgWithInfo
-  where
-  msgWithInfo = msg <> (Id.value $ Conc.getId c)
+    mkIssue E_DATASET_CONCEPT_DUPLICATED
+      # withConceptField conceptId "concept"
+      # withFileLocation filepath row
 
 checkDuplicatedConcepts :: ConceptsInput -> V Issues ConceptsInput
 checkDuplicatedConcepts input =
@@ -211,10 +213,7 @@ checkDuplicatedConcepts input =
     if Arr.length dups == 0 then
       pure input
     else
-      let
-        msg = "Multiple definition found: "
-      in
-        invalid (makeIssue msg <$> dups)
+      invalid (makeIssue <$> dups)
 
 checkConceptDomain :: ConceptsInput -> V Issues ConceptsInput
 checkConceptDomain input =
@@ -224,31 +223,36 @@ checkConceptDomain input =
     domainNames = map (Conc.getId >>> Id.value) allDomainConcepts
 
     check c =
-      case Conc.getProp c "domain" of
-        Just domain ->
-          if domain `Arr.elem` domainNames then
-            pure unit
-          else
-            invalid [ InvalidItem fp i msg ]
-          where
-          Tuple fp i = pathAndRow $ Conc.getInfo c
-          msg = "the domain of the entity set is not a vaild domain: " <> domain
-        Nothing ->
-          invalid [ InvalidItem fp i msg ]
-          where
-          Tuple fp i = pathAndRow $ Conc.getInfo c
-          msg = "the entity must have domain property."
+      let
+        Tuple fp i = pathAndRow $ Conc.getInfo c
+        conceptId = Id.value $ Conc.getId c
+      in
+        case Conc.getProp c "domain" of
+          Just domain ->
+            if domain `Arr.elem` domainNames then
+              pure unit
+            else
+              invalid
+                [ mkIssue E_DATASET_CONCEPT_INVALID_DOMAIN # withConceptField conceptId "domain" # withFileLocation fp i
+                ]
+          Nothing ->
+            invalid
+              [ mkIssue E_DATASET_CONCEPT_MISSING_DOMAIN # withConceptField conceptId "domain" # withFileLocation fp i ]
   in
     traverse_ check allSetConcepts `andThen` (\_ -> pure input)
 
 -- FIXME: use a consistent name for Concept.getInfo and Entity.getIteminfo functions
-makeIssue' :: String -> Entity -> Issue
-makeIssue' msg e =
-  InvalidItem filepath row msgWithInfo
-  where
-  info = Ent.getItemInfo e
-  (Tuple filepath row) = pathAndRow info
-  msgWithInfo = msg <> (Id.value $ Ent.getId e)
+makeIssue' :: Entity -> Issue
+makeIssue' e =
+  let
+    info = Ent.getItemInfo e
+    (Tuple filepath row) = pathAndRow info
+    entityId = Id.value $ Ent.getId e
+    domain = Id.value $ Ent.getDomain e
+  in
+    mkIssue E_DATASET_ENTITY_DUPLICATED
+      # withEntity entityId domain
+      # withFileLocation filepath row
 
 -- | parse entity domains from an array of entities. Rules:
 -- | 1. multiple definitions are allowed in different files
@@ -274,10 +278,7 @@ checkDuplicatedEntities input =
     if Arr.length dups == 0 then
       pure input
     else
-      let
-        msg = "Multiple definition found: "
-      in
-        invalid (makeIssue' msg <$> dups)
+      invalid (makeIssue' <$> dups)
 
 basedataset :: ConceptDB -> EntityDB -> DataSet
 basedataset cdb edb = DataSet
@@ -330,12 +331,10 @@ checkDomainAndSetExists concepts entities =
 lookupDomain :: ConceptDB -> String -> V Issues Unit
 lookupDomain concepts x = case HM.lookup x concepts of
   Nothing -> invalid
-    [ Issue $
-        "domain " <> x <> " is not defined in concepts, but there is a entity domain file for it."
-    ]
+    [ mkIssue E_DATASET_ENTITYDOMAIN_INVAILD # withConceptField x "domain" ]
   Just v -> case Conc.getType v of
     Conc.EntityDomainC -> pure unit
-    _ -> invalid [ Issue $ "concept " <> x <> " is not an entity domain in dataset." ]
+    _ -> invalid [ mkIssue E_DATASET_CONCEPT_INVALID_DOMAIN # withConceptField x "concept_type" ]
 
 -- lookupSet :: ConceptDB -> String -> V Issues Unit
 -- lookupSet concepts x = case HM.lookup x concepts of
@@ -349,16 +348,16 @@ lookupSetWithInDomain concepts set domain =
   lookupDomain concepts domain
     `andThen`
       ( \_ -> case HM.lookup set concepts of
-          Nothing -> invalid [ Issue $ "the entity set " <> set <> " is not defined in concepts." ]
+          Nothing -> invalid [ mkIssue E_DATASET_ENTITYSET_UNDEFINED # withConceptField set "entity_set" ]
           Just v -> case Conc.getType v of
             Conc.EntitySetC -> case Conc.getProp v "domain" of
-              Nothing -> invalid [ Issue $ "entity set " <> set <> " doesn't belong to any domain." ]
+              Nothing -> invalid [ mkIssue E_DATASET_CONCEPT_MISSING_DOMAIN # withConceptField set "domain" ]
               Just d ->
                 if d == domain then
                   pure unit
                 else
-                  invalid [ Issue $ "entity set " <> set <> " doesn't belong to " <> domain <> " domain." ]
-            _ -> invalid [ Issue $ "concept " <> set <> " is not an entity set in dataset." ]
+                  invalid [ mkIssue E_DATASET_CONCEPT_INVALID_DOMAIN # withConceptField set "domain" ]
+            _ -> invalid [ mkIssue E_DATASET_CONCEPT_INVALID_DOMAIN # withConceptField set "concept_type" ]
 
       )
 
@@ -438,7 +437,7 @@ getValueParser :: DataSet -> String -> V Issues ValueParser
 getValueParser (DataSet ds) k =
   case HM.lookup k ds._valueParsers of
     Just v -> pure v
-    Nothing -> invalid [ Issue $ "no such concept in dataset: " <> k ]
+    Nothing -> invalid [ mkIssue E_DATASET_CONCEPT_NOT_FOUND # withConceptField k "concept" ]
 
 -- | parseDataPoints based on the concepts and entities in the dataset.
 -- | I thik it's not very necessary to store it into DataSet for validation
@@ -456,7 +455,7 @@ parseDataPoints ds (DataPoints dp) =
 conceptExists :: DataSet -> Identifier -> V Issues Identifier
 conceptExists (DataSet { concepts }) concept =
   case HM.lookup (Id.value concept) concepts of
-    Nothing -> invalid [ Issue $ "concept not found in dataset: " <> (Id.value concept) ]
+    Nothing -> invalid [ mkIssue E_DATASET_CONCEPT_NOT_FOUND # withConceptField (Id.value concept) "concept" ]
     Just _ -> pure concept
 
 parseColumnValues :: ValueParser -> Array String -> Array ItemInfo -> V Issues Unit

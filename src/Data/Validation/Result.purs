@@ -3,22 +3,21 @@ module Data.Validation.Result where
 import Prelude
 
 import Data.Array (find)
-import Data.Validation.Issue (Issue(..))
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Data.String (null)
-
+import Data.Validation.Issue (Issue(..))
 
 -- | message that contains context information and the issue.
-type Message
-  = { message :: String
-    , file :: String
-    , lineNo :: Int
-    -- , suggestions :: String   -- TODO: add this later
-    , isWarning :: Boolean
-    }
+type Message =
+  { message :: String
+  , file :: String
+  , lineNo :: Int
+  -- , suggestions :: String   -- TODO: add this later
+  , isWarning :: Boolean
+  }
 
 type Messages = Array Message
 
@@ -35,7 +34,17 @@ setError :: Message -> Message
 setError m = m { isWarning = false }
 
 messageFromIssue :: Issue -> Message
-messageFromIssue (InvalidItem fp row msg) = { message: msg, file: fp, lineNo: row, isWarning: true }
+messageFromIssue (CodedIssue code ctx) =
+  let
+    msg = show (CodedIssue code ctx)
+    fp = case ctx.fileContext of
+      Just { filepath } -> filepath
+      Nothing -> ""
+    ln = case ctx.fileContext of
+      Just { lineNo } -> lineNo
+      Nothing -> -1
+  in
+    { message: msg, file: fp, lineNo: ln, isWarning: true }
 messageFromIssue issue = { message: show issue, file: "", lineNo: -1, isWarning: true }
 
 hasError :: Array Message -> Boolean
@@ -43,7 +52,6 @@ hasError msgs =
   case find (\msg -> not $ msg.isWarning) msgs of
     Nothing -> false
     Just _ -> true
-
 
 showMessage :: Message -> String
 showMessage { message, file, lineNo, isWarning } =
@@ -54,6 +62,6 @@ showMessage { message, file, lineNo, isWarning } =
     messagestr = message
   in
     if (null filestr) && (null linestr) then
-       statstr <> messagestr
+      statstr <> messagestr
     else
       statstr <> filestr <> linestr <> " " <> messagestr

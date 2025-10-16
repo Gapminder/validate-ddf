@@ -20,7 +20,8 @@ import Data.JSON.DataPackage as DataPackage
 import Data.Maybe (Maybe(..), fromJust, isNothing)
 import Data.Traversable (for, traverse_)
 import Data.Tuple (Tuple(..))
-import Data.Validation.Issue (Issue(..))
+import Data.Validation.Issue (Issue(..), mkIssue, mkIssueWithMessage)
+import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Result (Messages, hasError, messageFromIssue, setError)
 import Data.Validation.Semigroup (toEither)
 import Data.Validation.ValidationT (Validation, ValidationT, getState, vError)
@@ -44,7 +45,8 @@ readAllFileInfoForValidation root fs = do
   when (isNothing $ Arr.head ddfFiles)
     $ vError
         [ (setError <<< messageFromIssue)
-            $ Issue "No ddf csv files in this folder. Please begin with a ddf--concepts.csv file."
+            $ mkIssueWithMessage E_GENERAL
+                "No ddf csv files in this folder. Please begin with a ddf--concepts.csv file."
         ]
 
   pure ddfFiles
@@ -93,7 +95,7 @@ validate path = do
   conceptFileInfos <-
     case HM.lookup FI.CONCEPTS fileMap of
       Nothing ->
-        emitErrorsAndStop [ Issue "No concepts file in folder. Please add ddf--concepts.csv" ]
+        emitErrorsAndStop [ mkIssue E_DATASET_NO_CONCEPT ]
       Just xs -> pure $ NEA.toArray xs
   -- validate csv files, create valid concepts
   conceptCsvFiles <- readAndParseCsvFiles conceptFileInfos

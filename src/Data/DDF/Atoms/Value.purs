@@ -18,13 +18,13 @@ import Data.Show.Generic (genericShow)
 import Data.String as Str
 import Data.String.NonEmpty (NonEmptyString, fromString)
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
-import Data.Validation.Issue (Issue(..), Issues)
+import Data.Validation.Issue (Issue(..), Issues, mkIssueWithValue, withMessage)
+import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, invalid)
 import Foreign (MultipleErrors)
 import Partial.Unsafe (unsafeCrashWith)
 import Yoga.JSON as JSON
 import Yoga.JSON.Error (renderHumanError)
-
 
 -- | types of values, which appear in table cells.
 data Value
@@ -75,43 +75,34 @@ getListValues (JsonListVal x) = x
 getListValues _ = []
 
 -- | check if string is empty
+-- TODO: see if we can trace the field which the value is in
 parseNonEmptyString :: String -> V Issues NonEmptyString
 parseNonEmptyString input =
   case fromString input of
-    Nothing -> invalid [ Issue $ "value must be not empty" ]
+    Nothing -> invalid [ mkIssueWithValue E_VAL_EMPTY input ]
     Just str -> pure str
 
 -- | parse a domain value
 parseDomainVal :: String -> HashSet String -> String -> V Issues Value
-parseDomainVal domainName domain input =
-  let
-    createIssue dn inp = Issue $ show inp
-                                 <> " is not a valid value in "
-                                 <> dn
-                                 <> " domain."
-  in
-    case fromString input of
-      Nothing -> invalid $ [ createIssue domainName input ]
-      Just s ->
-        if HS.member input domain then
-          pure $ DomainVal s
-        else
-          invalid $ [ createIssue domainName input ]
+parseDomainVal _ domain input =
+  case fromString input of
+    Nothing -> invalid $ [ mkIssueWithValue E_VAL_CONSTRAINT_DOMAIN input ]
+    Just s ->
+      if HS.member input domain then
+        pure $ DomainVal s
+      else
+        invalid $ [ mkIssueWithValue E_VAL_CONSTRAINT_DOMAIN input ]
 
 -- | parse a domain value with constrain
 parseConstrainedDomainVal :: HashSet String -> String -> V Issues Value
 parseConstrainedDomainVal constrain input =
-  let
-    createIssue inp = Issue $ show inp
-                              <> " is not a valid value in the constrains set by filename."
-  in
-    case fromString input of
-      Nothing -> invalid $ [ createIssue input ]
-      Just s ->
-        if HS.member input constrain then
-          pure $ DomainVal s
-        else
-          invalid $ [ createIssue input ]
+  case fromString input of
+    Nothing -> invalid $ [ mkIssueWithValue E_VAL_CONSTRAINT_FILENAME input ]
+    Just s ->
+      if HS.member input constrain then
+        pure $ DomainVal s
+      else
+        invalid $ [ mkIssueWithValue E_VAL_CONSTRAINT_FILENAME input ]
 
 parseStrVal :: String -> V Issues Value
 parseStrVal x = pure $ StrVal x
@@ -127,7 +118,7 @@ parseBoolVal "True" = pure $ BoolVal true
 parseBoolVal "FALSE" = pure $ BoolVal false
 parseBoolVal "false" = pure $ BoolVal false
 parseBoolVal "False" = pure $ BoolVal false
-parseBoolVal x = invalid [ Issue $ "not a boolean value: " <> show x ]
+parseBoolVal x = invalid [ mkIssueWithValue E_VAL_BOOL x ]
 
 -- Num.fromString use parseFloat() from js which allows whitespace prefix and other chars at
 -- the end.
@@ -135,7 +126,7 @@ parseBoolVal x = invalid [ Issue $ "not a boolean value: " <> show x ]
 parseNumVal :: String -> V Issues Value
 parseNumVal input =
   case Num.fromString input of
-    Nothing -> invalid [ Issue $ show input <> " is not a number." ]
+    Nothing -> invalid [ mkIssueWithValue E_VAL_NUM input ]
     Just n -> pure $ NumVal n
 
 -- TODO add more complex time parser.
@@ -144,14 +135,15 @@ parseTimeVal input =
   if (inputlen <= 4) && (inputlen >= 3) && (isJust $ Int.fromString input) then
     pure $ TimeVal input
   else
-    invalid [ Issue $ (show input) <> " is not a valid time value." ]
+    invalid [ mkIssueWithValue E_VAL_TIME input ]
   where
-    inputlen = Str.length input
+  inputlen = Str.length input
 
 -- | parse a json list (mostly for drill ups), which is a list of string in Json format.
 parseJsonListVal :: ValueParser
 parseJsonListVal input =
-  if Str.null input then  -- empty string is valid too.
+  if Str.null input then -- empty string is valid too.
+
     pure $ JsonListVal []
   else
     let
@@ -162,5 +154,5 @@ parseJsonListVal input =
         Left errs ->
           invalid $ Arr.fromFoldable issues
           where
-          issues = Issue <<< renderHumanError <$> errs
+          issues = (\err -> mkIssueWithValue E_VAL_JSON input # withMessage (renderHumanError err)) <$> errs
         Right s -> pure $ JsonListVal s

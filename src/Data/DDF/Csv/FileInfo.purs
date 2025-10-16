@@ -21,7 +21,8 @@ import Data.String.NonEmpty (NonEmptyString(..), toString)
 import Data.String.NonEmpty as NES
 import Data.String.Utils as Str
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Validation.Issue (Issue(..), Issues)
+import Data.Validation.Issue (Issue(..), Issues, mkIssueWithMessage)
+import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, andThen, invalid, toEither)
 import Node.Path (FilePath, basename)
 import Node.Path as Path
@@ -258,11 +259,11 @@ translationFile root fp =
           in
             pure $ Translations { path: targetpath, language: language }
         _ -> invalid
-          [ InvalidCSV $
+          [ mkIssueWithMessage E_VAL_CONSTRAINT_FILENAME $
               "not enough segments to extract target language apd target path for translation file " <> fp
           ]
   else
-    invalid [ InvalidCSV "not a translation file" ]
+    invalid [ mkIssueWithMessage E_VAL_CONSTRAINT_FILENAME "not a translation file" ]
 
 isTranslationFile :: FilePath -> FilePath -> Boolean
 isTranslationFile root fp =
@@ -274,7 +275,7 @@ isTranslationFile root fp =
 
 validateFileInfo :: FilePath -> FilePath -> V Issues FileInfo
 validateFileInfo root fp = case getName $ basename fp of
-  Nothing -> invalid [ InvalidCSV "not a csv file" ]
+  Nothing -> invalid [ mkIssueWithMessage E_VAL_CONSTRAINT_FILENAME "not a csv file" ]
   Just fn ->
     if isTranslationFile root fp then
       translationFile root fp
@@ -291,7 +292,7 @@ validateFileInfo root fp = case getName $ basename fp of
       in
         case runParser fileParser fn of
           Right ci -> pure $ makeFileInfo fp ci
-          Left err -> invalid [ InvalidCSV $ "error parsing file: " <> err.error ]
+          Left err -> invalid [ mkIssueWithMessage E_VAL_CONSTRAINT_FILENAME $ "error parsing file: " <> err.error ]
 
 parseFileInfo :: FilePath -> FilePath -> V Issues FileInfo
 parseFileInfo = validateFileInfo
