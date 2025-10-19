@@ -1,0 +1,3 @@
+concept,concept_type,name,domain
+geo,entity_domain,Geography (duplicate),
+country,entity_set,Country,geo

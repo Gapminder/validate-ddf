@@ -1,0 +1,8 @@
+concept,concept_type,name,domain,extra_field
+geo,entity_domain,Geography,,extra1
+country,entity_set,Country,geo,extra2
+name,string,Name,,extra3
+domain,string,Domain,,extra4
+population,measure,Population,,extra5
+year,time,Year,,extra6
+extra_field,string,Extra Field,,

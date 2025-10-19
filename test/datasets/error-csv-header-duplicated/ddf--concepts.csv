@@ -1,0 +1,6 @@
+concept,concept_type,name,name
+geo,entity_domain,Geography,Geography2
+country,entity_set,Country,Country2
+name,string,Name,Name2
+domain,string,Domain,Domain2
+year,time,Year,Year2

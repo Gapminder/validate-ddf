@@ -9,7 +9,7 @@ import Data.Array as Arr
 import Data.Csv (readCsv, readCsv')
 import Data.Csv as Csv
 import Data.DDF.Atoms.Header as Hd
-import Data.DDF.Atoms.Identifier (parseId, isLongerThan64Chars)
+import Data.DDF.Atoms.Identifier (isLongerThan64Chars, parseId)
 import Data.DDF.Atoms.Identifier as Id
 import Data.DDF.Atoms.Value (parseNumVal, parseStrVal, parseTimeVal)
 import Data.DDF.Concept (ConceptInput, parseConcept)
@@ -20,17 +20,17 @@ import Data.DDF.Entity (parseEntity)
 import Data.DDF.Internal (iteminfo)
 import Data.Either (isLeft, isRight)
 import Data.Foldable (for_)
-import Data.List.Lazy (take, repeat)
+import Data.List.Lazy (repeat, take)
 import Data.List.NonEmpty (NonEmptyList(..))
 import Data.List.NonEmpty as NEL
 import Data.Map as Map
-import Data.Maybe (Maybe(..), isJust, isNothing, fromJust)
+import Data.Maybe (Maybe(..), fromJust, isJust, isNothing)
 import Data.String.CodeUnits (fromCharArray)
 import Data.String.NonEmpty (fromString, unsafeFromString)
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
 import Data.Validation.Issue (Issue(..), Issues)
-import Data.Validation.Semigroup (isValid, andThen)
+import Data.Validation.Semigroup (andThen, isValid)
 import Data.Validation.ValidationT (runValidationT, runValidationTEither)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -39,10 +39,20 @@ import Effect.Class.Console (log)
 import Main as M
 import Node.Path (resolve)
 import Partial.Unsafe (unsafePartial)
-import Test.Spec (pending, describe, describeOnly, it, itOnly, Spec)
+import Test.Integration.CsvErrors as CsvErrorsTests
+import Test.Integration.DatapackageErrors as DatapackageErrorsTests
+import Test.Integration.DatasetErrors as DatasetErrorsTests
+import Test.Integration.ValidDatasets as ValidDatasetsTests
+import Test.Spec (Spec, describe, describeOnly, it, itOnly, pending)
 import Test.Spec.Assertions (fail, shouldContain, shouldEqual, shouldNotContain, shouldNotSatisfy, shouldSatisfy)
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (runSpecPure)
+import Test.Unit.Concept as ConceptTests
+import Test.Unit.Entity as EntityTests
+import Test.Unit.FileInfo as FileInfoTests
+import Test.Unit.Header as HeaderTests
+import Test.Unit.Identifier as IdentifierTests
+import Test.Unit.Value as ValueTests
 import Utils (getFiles)
 
 testMain :: Effect Unit
@@ -53,27 +63,26 @@ testMain = do
 main :: Effect Unit
 main = launchAff_ $ runSpecPure [ consoleReporter ] do
   describe "ddf-validation" do
+    describe "Unit Tests" do
+      ValueTests.spec
+      IdentifierTests.spec
+      HeaderTests.spec
+      FileInfoTests.spec
+      ConceptTests.spec
+      EntityTests.spec
+    describe "Integration Tests" do
+      ValidDatasetsTests.spec
+      DatasetErrorsTests.spec
+      CsvErrorsTests.spec
+      DatapackageErrorsTests.spec
+    -- FIXME: move below tests
     describe "low level" do
-      it "value - parse numbers" do
-        let
-          invalidNums = [ "xx", "x1", "?4?" ]
-        for_ invalidNums \s -> do
-          let output = parseNumVal s
-          output `shouldNotSatisfy` isValid
-      it "value - parse time - 3-4 digits" do
-        let
-          validTimes = [ "2023", "999" ]
-        for_ validTimes \s -> do
-          let output = parseTimeVal s
-          output `shouldSatisfy` isValid
-      pending "value - parse time - more complex time"
       it "identifier - v" do
         let
           validIds =
             [ "abc"
             , "a_bc_123"
             , "a"
-            , "AAA"
             ]
         for_ validIds \s -> do
           let output = parseId s
@@ -83,6 +92,7 @@ main = launchAff_ $ runSpecPure [ consoleReporter ] do
             [ ""
             , "c?d"
             , "a-b-c"
+            , "AAA" -- uppercase not allowed
             ]
         for_ inValidIds \s -> do
           let output = parseId s

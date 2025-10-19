@@ -1,0 +1,165 @@
+{
+    "language": {
+        "name": "English",
+        "id": "en-US"
+    },
+    "created": "2025-10-17T07:06:51.004Z",
+    "resources": [
+        {
+            "name": "ddf--concepts",
+            "path": "ddf--concepts.csv",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "concept"
+                    },
+                    {
+                        "name": "concept_type"
+                    },
+                    {
+                        "name": "name"
+                    },
+                    {
+                        "name": "domain"
+                    }
+                ],
+                "primaryKey": [
+                    "concept"
+                ]
+            }
+        },
+        {
+            "name": "ddf--entities--geo--country",
+            "path": "ddf--entities--geo--country.csv",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "geo"
+                    },
+                    {
+                        "name": "name"
+                    },
+                    {
+                        "name": "is--country"
+                    }
+                ],
+                "primaryKey": [
+                    "geo"
+                ]
+            }
+        },
+        {
+            "name": "ddf--datapoints--population--by--geo--year",
+            "path": "ddf--datapoints--population--by--geo--year.csv",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "geo"
+                    },
+                    {
+                        "name": "year"
+                    },
+                    {
+                        "name": "population"
+                    }
+                ],
+                "primaryKey": [
+                    "geo",
+                    "year"
+                ]
+            }
+        }
+    ],
+    "ddfSchema": {
+        "concepts": [
+            {
+                "primaryKey": [
+                    "concept"
+                ],
+                "value": "concept_type",
+                "resources": [
+                    "ddf--concepts"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "concept"
+                ],
+                "value": "domain",
+                "resources": [
+                    "ddf--concepts"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "concept"
+                ],
+                "value": "name",
+                "resources": [
+                    "ddf--concepts"
+                ]
+            }
+        ],
+        "entities": [
+            {
+                "primaryKey": [
+                    "country"
+                ],
+                "value": "is--country",
+                "resources": [
+                    "ddf--entities--geo--country"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "country"
+                ],
+                "value": "name",
+                "resources": [
+                    "ddf--entities--geo--country"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "geo"
+                ],
+                "value": "is--country",
+                "resources": [
+                    "ddf--entities--geo--country"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "geo"
+                ],
+                "value": "name",
+                "resources": [
+                    "ddf--entities--geo--country"
+                ]
+            }
+        ],
+        "datapoints": [
+            {
+                "primaryKey": [
+                    "country",
+                    "year"
+                ],
+                "value": "population",
+                "resources": [
+                    "ddf--datapoints--population--by--geo--year"
+                ]
+            },
+            {
+                "primaryKey": [
+                    "geo",
+                    "year"
+                ],
+                "value": "population",
+                "resources": [
+                    "ddf--datapoints--population--by--geo--year"
+                ]
+            }
+        ],
+        "synonyms": []
+    }
+}
