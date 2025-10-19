@@ -23,9 +23,16 @@ Both bundles must be rebuilt after making changes to PureScript source files.
 
 ### Running the Validator
 
-- `validate-ddf-ng [PATH]` - Validate a DDF dataset (default: current directory)
+**IMPORTANT**: When developing/testing, always use `spago run` to run the current working version:
+- `spago run <path>` - Validate a DDF dataset using current code
+- `spago run -- --no-warning <path>` - Suppress warnings
+- `spago run -- -m datapackage <path>` - Use datapackage mode
+- `spago run -- -p <path>` - Generate `datapackage.json` after successful validation
+
+The globally installed `validate-ddf-ng` command uses the published npm package and should only be used as a fallback when spago build fails:
+- `validate-ddf-ng [PATH]` - Validate using installed version (NOT recommended for development)
 - `validate-ddf-ng --no-warning [PATH]` - Suppress warnings, show only errors
-- `validate-ddf-ng -m datapackage [PATH]` - Use datapackage mode (reads from `datapackage.json`)
+- `validate-ddf-ng -m datapackage [PATH]` - Use datapackage mode
 - `validate-ddf-ng -p [PATH]` - Generate `datapackage.json` after successful validation
 
 ### Publishing
@@ -94,18 +101,87 @@ The codebase uses `ValidationT Messages Aff a` throughout:
 
 Tests are in `test/Main.purs` using `purescript-spec`. The test suite includes:
 
-- **Unit tests**: Low-level parsers (identifiers, values, filenames)
-- **Integration tests**: Full dataset validation against fixtures in `test/fixtures/`
-- **Fixture organization**:
-  - `good-folder-*` - Valid datasets that should pass
-  - `rules-cases/*` - Invalid datasets testing specific error conditions
+- **Unit tests**: Low-level parsers (identifiers, values, filenames) in `test/Test/Unit/`
+  - Test individual parsing/validation functions with mock data
+  - No file I/O, fast and focused
+  - Covers: Value, Identifier, Header, FileInfo, Concept, Entity parsing
+- **Integration tests**: Full dataset validation in `test/Test/Integration/`
+  - Test complete DDF datasets with all files
+  - Validates concepts, entities, datapoints working together
+  - Tests in: `test/datasets/` (new) and `test/fixtures/` (legacy)
 
-Run individual test datasets for debugging:
+### Running Tests
+
+- `npm test` or `spago test` - Run all tests
+- `spago test -- --example TEXT` or `spago test -- -e TEXT` - Run only tests whose names include the given text
+- `spago test -- --example-matches REGEX` or `spago test -- -E REGEX` - Run only tests whose names match the given regex
+
+Note: The `--` separates spago arguments from test runner arguments.
+
+Examples:
+```bash
+spago test -- -e "Identifier"       # Run only Identifier tests
+spago test -- -e "Value Parsing"    # Run only Value Parsing tests
+spago test -- -E "should reject"    # Run all tests matching "should reject"
+spago test -- -e "Integration"      # Run only integration tests
+```
+
+### Creating Integration Test Datasets
+
+Integration tests require full DDF datasets with `datapackage.json`.
+
+#### Creating Valid Test Datasets
+
+1. Create a new directory: `test/datasets/valid-<name>/`
+2. Create DDF CSV files following naming conventions:
+   - `ddf--concepts.csv` - Define all concepts (including column headers like "domain")
+   - `ddf--entities--<domain>[--<set>].csv` - Entity data
+   - `ddf--datapoints--<indicator>--by--<dims>.csv` - Datapoint data
+3. **Generate datapackage.json**: Run `validate-ddf-ng -p test/datasets/valid-<name>/`
+   - This validates the dataset AND generates `datapackage.json` automatically
+   - Fix any validation errors and regenerate until it passes
+
+**Important**:
+- Entity set concepts need a `domain` field pointing to their entity domain
+- All column headers used in CSV files must be defined as concepts
+- Even in FileNameBased mode, `datapackage.json` is required
+
+#### Creating Invalid Test Datasets (for error testing)
+
+1. Copy a valid dataset folder (with datapackage.json): `cp -r test/datasets/valid-minimal test/datasets/error-<specific-error>`
+2. Edit CSV files to introduce the specific error you want to test
+3. Usually no need to modify `datapackage.json` (unless testing datapackage errors)
+
+#### Integration Test Pattern
+
+```purescript
+-- test/Test/Integration/ValidDatasets.purs
+it "valid-minimal: should pass validation" do
+  let path = "test/datasets/valid-minimal"
+  res <- runValidationTEither $ VFN.validate path
+  res `shouldSatisfy` isRight
+
+-- For invalid datasets
+it "error-empty-entity-id: should fail validation" do
+  let path = "test/datasets/error-empty-entity-id"
+  res <- runValidationTEither $ VFN.validate path
+  res `shouldSatisfy` isLeft
+```
+
+### Debugging Individual Datasets
+
+Run validation on a specific dataset:
 
 ```purescript
 testMain = do
-  path <- resolve [] "test/datasets/ddf--test--new"
+  path <- resolve [] "test/datasets/valid-minimal"
   M.runMain { targetPath: path, noWarning: false, mode: FileNameBased, generateDP: true }
+```
+
+Or use the CLI:
+```bash
+spago run test/datasets/valid-minimal        # Validate
+spago run -p test/datasets/valid-minimal     # Validate and generate datapackage.json
 ```
 
 ## DDF Dataset Structure
@@ -144,6 +220,7 @@ const result = await validate("./path/to/dataset", {
 - PureScript uses dot-syntax for record field access but different syntax for updating records
 - The codebase branch is `purescript` (branched from older JavaScript version)
 - npm test will emit many lines, remember to first show the tail to see a summary
+- use https://pursuit.purescript.org to check library API doc
 
 ### coding style
 

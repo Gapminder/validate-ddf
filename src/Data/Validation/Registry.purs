@@ -24,6 +24,7 @@ module Data.Validation.Registry
   , errorMessageTemplate
   , formatErrorMessage
   , formatError
+  , errorSuggestion
   ) where
 
 import Prelude
@@ -371,3 +372,53 @@ formatErrorMessage code ctx =
 formatError :: ErrorCode -> ErrorContext -> String
 formatError code ctx =
   errorCodeToString code <> ": " <> formatErrorMessage code ctx
+
+-- | Get suggestion for an error code
+-- | Returns empty string for now - to be populated later
+errorSuggestion :: ErrorCode -> String
+errorSuggestion = case _ of
+  E_VAL_ID -> ""
+  W_VAL_ID -> ""
+  E_VAL_NUM -> ""
+  E_VAL_TIME -> ""
+  E_VAL_JSON -> ""
+  E_VAL_BOOL -> ""
+  E_VAL_STR -> ""
+  E_VAL_CONSTRAINT_FILENAME -> ""
+  E_VAL_CONSTRAINT_DOMAIN -> ""
+  E_VAL_EMPTY -> ""
+  E_CONCEPT_ID_RESERVED -> ""
+  E_CONCEPT_ID_INVALID -> ""
+  E_CONCEPT_ID_EMPTY -> ""
+  W_CONCEPT_ID_TOOLONG -> ""
+  E_CONCEPT_TIME_INVALID -> ""
+  E_CONCEPT_FIELD_EMPTY -> ""
+  E_CONCEPT_FIELD_MISSING -> ""
+  E_ENTITY_INCONSISTENT_DOMAIN -> ""
+  E_ENTITY_ID_EMPTY -> ""
+  E_DATASET_NO_CONCEPT -> ""
+  E_DATASET_CONCEPT_DUPLICATED -> ""
+  E_DATASET_CONCEPT_NOT_FOUND -> ""
+  E_DATASET_CONCEPT_INVALID_DOMAIN -> ""
+  E_DATASET_CONCEPT_MISSING_DOMAIN -> ""
+  E_DATASET_ENTITYSET_UNDEFINED -> ""
+  E_DATASET_ENTITY_DRILLUP_INVALID -> ""
+  E_DATASET_ENTITYDOMAIN_INVAILD -> ""
+  E_DATASET_ENTITY_DUPLICATED -> ""
+  E_DATAPACKAGE_NOT_FOUND -> ""
+  E_DATAPACKAGE_PARSE_ERROR -> ""
+  E_DATAPACKAGE_RESOURCE_MISSING -> ""
+  E_DATAPACKAGE_RESOURCE_DUPLICATED -> ""
+  E_DATAPACKAGE_SCHEMA_MISMATCH -> ""
+  E_CSV_EMPTY -> ""
+  E_CSV_HEADER_COLUMN_MISMATCH -> ""
+  E_CSV_HEADER_INVALID -> ""
+  E_CSV_HEADER_MISSING -> ""
+  E_CSV_HEADER_CONFLICT -> ""
+  E_CSV_HEADER_UNEXPECTED -> ""
+  E_CSV_HEADER_DUPLICATED -> ""
+  E_CSV_HEADER_CONSTRAINT -> ""
+  E_CSV_ROW_DUPLICATED -> ""
+  W_CSV_ROW_BAD -> ""
+  E_GENERAL -> ""
+  W_GENERAL -> ""

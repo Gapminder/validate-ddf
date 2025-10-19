@@ -184,14 +184,19 @@ parseEntity { entityId: eid, entityDomain: edm, entitySet: es, props: props, _in
       validEdomain = validEntityDomainId edm
       Tuple esets propsLst = splitEntAndProps props
       validEsets =
-        -- get all true values from is-- header
-        getEntitySetsFromHeaders esets
-          -- combine the sets from filename and sets from file headers.
+        -- remove and validate is--domain header
+        removeIsDomainProp edm esets
           `andThen`
-            ( \parsed ->
-                case es of
-                  Nothing -> pure parsed
-                  Just es' -> pure $ Arr.nub $ Arr.cons (coerce es') parsed
+            ( \esetsWithoutDomain ->
+                -- get all true values from is-- header
+                getEntitySetsFromHeaders esetsWithoutDomain
+                  -- combine the sets from filename and sets from file headers.
+                  `andThen`
+                    ( \parsed ->
+                        case es of
+                          Nothing -> pure parsed
+                          Just es' -> pure $ Arr.nub $ Arr.cons (coerce es') parsed
+                    )
             )
       validEid = validEntityId eid
       propsMinusIsHeaders = M.fromFoldable propsLst

@@ -6,20 +6,19 @@ import StringParser
 
 import Control.Alt ((<|>))
 import Data.Array.NonEmpty (fromFoldable1)
-import Data.Validation.Issue (Issue(..), Issues, mkIssueWithValue, withMessage)
-import Data.Validation.Registry (ErrorCode(..))
 import Data.Either (Either(..))
+import Data.Hashable (class Hashable, hash)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
+import Data.String as Str
 import Data.String.NonEmpty.CodeUnits (charAt, fromNonEmptyCharArray)
 import Data.String.NonEmpty.Internal (NonEmptyString(..), fromString, toString)
-import Data.Hashable (class Hashable, hash)
-import Data.String as Str
+import Data.Validation.Issue (Issue(..), Issues, mkIssueWithValue, withMessage)
+import Data.Validation.Registry (ErrorCode(..))
 
 -- | identifiers are strings, but MUST be non empty and
 -- | and consisted with alphanumeric chars and underscores.
-newtype Identifier
-  = Id NonEmptyString
+newtype Identifier = Id NonEmptyString
 
 derive instance newtypeId :: Newtype Identifier _
 
@@ -42,8 +41,8 @@ value1 (Id x) = x
 -- | parse lower case alphanum strings
 alphaNum :: Parser Char
 alphaNum =
-  anyLetter <|> anyDigit
-    <?> "expect alphanumeric value"
+  lowerCaseChar <|> anyDigit
+    <?> "expect lowercase alphanumeric value"
 
 -- | parse lower case alphanum strings also allow underscores inside
 alphaNumAnd_ :: Parser Char
@@ -89,8 +88,8 @@ isLongerThan64Chars a =
       Nothing -> pure a
       Just _ ->
         invalid [ mkIssueWithValue W_VAL_ID trimedstr ]
-          where
-            trimedstr = (Str.take 15 $ toString str) <> "..."
+        where
+        trimedstr = (Str.take 15 $ toString str) <> "..."
 
 -- | parse an id, return Either instead
 create :: String -> Either Issues Identifier
