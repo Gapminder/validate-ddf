@@ -41,6 +41,7 @@ import Node.Path (resolve)
 import Partial.Unsafe (unsafePartial)
 import Test.Integration.CsvErrors as CsvErrorsTests
 import Test.Integration.DatapackageErrors as DatapackageErrorsTests
+import Test.Integration.DatapointErrors as DatapointErrorsTests
 import Test.Integration.DatasetErrors as DatasetErrorsTests
 import Test.Integration.ValidDatasets as ValidDatasetsTests
 import Test.Spec (Spec, describe, describeOnly, it, itOnly, pending)
@@ -75,6 +76,7 @@ main = launchAff_ $ runSpecPure [ consoleReporter ] do
       DatasetErrorsTests.spec
       CsvErrorsTests.spec
       DatapackageErrorsTests.spec
+      DatapointErrorsTests.spec
     -- FIXME: move below tests
     describe "low level" do
       it "identifier - v" do

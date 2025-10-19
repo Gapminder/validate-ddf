@@ -1,0 +1,8 @@
+concept,concept_type,name,domain,is--invalid
+geo,entity_domain,Geography,,value1
+country,entity_set,Country,geo,value2
+name,string,Name,,value3
+domain,string,Domain,,value4
+population,measure,Population,,value5
+year,time,Year,,value6
+is--invalid,string,Invalid Header,,
