@@ -26,10 +26,15 @@ export function parseCsvImpl(path) {
           numColumns = headers.length;
           records = Array(numColumns).fill().map(() => []);
         } else {
+          // Store the actual CSV file line number (count + 1, since count starts at 0 for the header)
+          // Line 1: header row (count=0)
+          // Line 2: first data row (count=1, so lineNumber=2)
+          // Line 3: second data row (count=2, so lineNumber=3), etc.
+          const lineNumber = count + 1;
           if (record.length !== numColumns) {
-            badrows.push(count)
+            badrows.push(lineNumber)
           } else {
-            index.push(count)
+            index.push(lineNumber)
             for (let i = 0; i < numColumns; i++) {
               records[i].push(record[i])
             }

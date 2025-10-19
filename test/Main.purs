@@ -49,6 +49,7 @@ import Test.Spec.Assertions (fail, shouldContain, shouldEqual, shouldNotContain,
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (runSpecPure)
 import Test.Unit.Concept as ConceptTests
+import Test.Unit.Csv as CsvTests
 import Test.Unit.Entity as EntityTests
 import Test.Unit.FileInfo as FileInfoTests
 import Test.Unit.Header as HeaderTests
@@ -71,6 +72,7 @@ main = launchAff_ $ runSpecPure [ consoleReporter ] do
       FileInfoTests.spec
       ConceptTests.spec
       EntityTests.spec
+      CsvTests.spec
     describe "Integration Tests" do
       ValidDatasetsTests.spec
       DatasetErrorsTests.spec
