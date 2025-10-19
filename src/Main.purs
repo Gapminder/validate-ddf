@@ -71,7 +71,7 @@ runMain opts = launchAff_ do
     mode = _.mode opts
     gendp = _.generateDP opts
 
-  liftEffect $ log "v0.1.8"
+  liftEffect $ log "v0.1.9"
   (Tuple msgs res) <- case mode of
     FileNameBased -> runValidationT $ VFN.validate path
     DataPackageBased -> runValidationT $ VDP.validate path

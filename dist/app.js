@@ -9344,10 +9344,11 @@ function parseCsvImpl(path2) {
           numColumns = headers.length;
           records = Array(numColumns).fill().map(() => []);
         } else {
+          const lineNumber = count + 1;
           if (record.length !== numColumns) {
-            badrows.push(count);
+            badrows.push(lineNumber);
           } else {
-            index4.push(count);
+            index4.push(lineNumber);
             for (let i = 0; i < numColumns; i++) {
               records[i].push(record[i]);
             }
@@ -9452,6 +9453,7 @@ var E_CONCEPT_ID_RESERVED = /* @__PURE__ */ $ErrorCode("E_CONCEPT_ID_RESERVED");
 var E_CONCEPT_TIME_INVALID = /* @__PURE__ */ $ErrorCode("E_CONCEPT_TIME_INVALID");
 var E_CONCEPT_FIELD_EMPTY = /* @__PURE__ */ $ErrorCode("E_CONCEPT_FIELD_EMPTY");
 var E_CONCEPT_FIELD_MISSING = /* @__PURE__ */ $ErrorCode("E_CONCEPT_FIELD_MISSING");
+var E_ENTITY_INCONSISTENT_DOMAIN = /* @__PURE__ */ $ErrorCode("E_ENTITY_INCONSISTENT_DOMAIN");
 var E_ENTITY_ID_EMPTY = /* @__PURE__ */ $ErrorCode("E_ENTITY_ID_EMPTY");
 var E_DATASET_NO_CONCEPT = /* @__PURE__ */ $ErrorCode("E_DATASET_NO_CONCEPT");
 var E_DATASET_CONCEPT_DUPLICATED = /* @__PURE__ */ $ErrorCode("E_DATASET_CONCEPT_DUPLICATED");
@@ -9475,6 +9477,144 @@ var E_CSV_ROW_DUPLICATED = /* @__PURE__ */ $ErrorCode("E_CSV_ROW_DUPLICATED");
 var W_CSV_ROW_BAD = /* @__PURE__ */ $ErrorCode("W_CSV_ROW_BAD");
 var E_GENERAL = /* @__PURE__ */ $ErrorCode("E_GENERAL");
 var W_GENERAL = /* @__PURE__ */ $ErrorCode("W_GENERAL");
+var errorSuggestion = (v) => {
+  if (v === "E_VAL_ID") {
+    return "";
+  }
+  if (v === "W_VAL_ID") {
+    return "";
+  }
+  if (v === "E_VAL_NUM") {
+    return "";
+  }
+  if (v === "E_VAL_TIME") {
+    return "";
+  }
+  if (v === "E_VAL_JSON") {
+    return "";
+  }
+  if (v === "E_VAL_BOOL") {
+    return "";
+  }
+  if (v === "E_VAL_STR") {
+    return "";
+  }
+  if (v === "E_VAL_CONSTRAINT_FILENAME") {
+    return "";
+  }
+  if (v === "E_VAL_CONSTRAINT_DOMAIN") {
+    return "";
+  }
+  if (v === "E_VAL_EMPTY") {
+    return "";
+  }
+  if (v === "E_CONCEPT_ID_RESERVED") {
+    return "";
+  }
+  if (v === "E_CONCEPT_ID_INVALID") {
+    return "";
+  }
+  if (v === "E_CONCEPT_ID_EMPTY") {
+    return "";
+  }
+  if (v === "W_CONCEPT_ID_TOOLONG") {
+    return "";
+  }
+  if (v === "E_CONCEPT_TIME_INVALID") {
+    return "";
+  }
+  if (v === "E_CONCEPT_FIELD_EMPTY") {
+    return "";
+  }
+  if (v === "E_CONCEPT_FIELD_MISSING") {
+    return "";
+  }
+  if (v === "E_ENTITY_INCONSISTENT_DOMAIN") {
+    return "";
+  }
+  if (v === "E_ENTITY_ID_EMPTY") {
+    return "";
+  }
+  if (v === "E_DATASET_NO_CONCEPT") {
+    return "";
+  }
+  if (v === "E_DATASET_CONCEPT_DUPLICATED") {
+    return "";
+  }
+  if (v === "E_DATASET_CONCEPT_NOT_FOUND") {
+    return "";
+  }
+  if (v === "E_DATASET_CONCEPT_INVALID_DOMAIN") {
+    return "";
+  }
+  if (v === "E_DATASET_CONCEPT_MISSING_DOMAIN") {
+    return "";
+  }
+  if (v === "E_DATASET_ENTITYSET_UNDEFINED") {
+    return "";
+  }
+  if (v === "E_DATASET_ENTITY_DRILLUP_INVALID") {
+    return "";
+  }
+  if (v === "E_DATASET_ENTITYDOMAIN_INVAILD") {
+    return "";
+  }
+  if (v === "E_DATASET_ENTITY_DUPLICATED") {
+    return "";
+  }
+  if (v === "E_DATAPACKAGE_NOT_FOUND") {
+    return "";
+  }
+  if (v === "E_DATAPACKAGE_PARSE_ERROR") {
+    return "";
+  }
+  if (v === "E_DATAPACKAGE_RESOURCE_MISSING") {
+    return "";
+  }
+  if (v === "E_DATAPACKAGE_RESOURCE_DUPLICATED") {
+    return "";
+  }
+  if (v === "E_DATAPACKAGE_SCHEMA_MISMATCH") {
+    return "";
+  }
+  if (v === "E_CSV_EMPTY") {
+    return "";
+  }
+  if (v === "E_CSV_HEADER_COLUMN_MISMATCH") {
+    return "";
+  }
+  if (v === "E_CSV_HEADER_INVALID") {
+    return "";
+  }
+  if (v === "E_CSV_HEADER_MISSING") {
+    return "";
+  }
+  if (v === "E_CSV_HEADER_CONFLICT") {
+    return "";
+  }
+  if (v === "E_CSV_HEADER_UNEXPECTED") {
+    return "";
+  }
+  if (v === "E_CSV_HEADER_DUPLICATED") {
+    return "";
+  }
+  if (v === "E_CSV_HEADER_CONSTRAINT") {
+    return "";
+  }
+  if (v === "E_CSV_ROW_DUPLICATED") {
+    return "";
+  }
+  if (v === "W_CSV_ROW_BAD") {
+    return "";
+  }
+  if (v === "E_GENERAL") {
+    return "";
+  }
+  if (v === "W_GENERAL") {
+    return "";
+  }
+  fail();
+};
 var errorMessageTemplate = (v) => {
   if (v === "E_VAL_ID") {
     return "invalid identifier";
@@ -10132,29 +10272,6 @@ var elem3 = /* @__PURE__ */ (() => {
   })());
   return (x) => any1(($0) => x === $0);
 })();
-var upperCaseChar = (s) => {
-  const $0 = anyChar(s);
-  const v1 = (() => {
-    if ($0.tag === "Left") {
-      const $1 = $0._1;
-      return (v) => $Either("Left", $1);
-    }
-    if ($0.tag === "Right") {
-      const $1 = $0._1;
-      return (f) => f($1);
-    }
-    fail();
-  })()((v12) => {
-    if (elem3(toCharCode(v12.result))(rangeImpl(65, 90))) {
-      return $Either("Right", { result: v12.result, suffix: v12.suffix });
-    }
-    return $Either("Left", { pos: v12.suffix.position, error: "Expected an upper case character but found " + showCharImpl(v12.result) });
-  });
-  if (v1.tag === "Left") {
-    return $Either("Left", { pos: s.position, error: v1._1.error });
-  }
-  return v1;
-};
 var string2 = (pattern) => (v) => {
   const length3 = toCodePointArray(pattern).length;
   const v1 = splitAt2(length3)(v.substring);
@@ -10191,23 +10308,6 @@ var eof = (s) => {
     return $Either("Left", { pos: s.position, error: "Expected EOF" });
   }
   return $Either("Right", { result: void 0, suffix: s });
-};
-var anyLetter = (s) => {
-  const v2 = lowerCaseChar(s);
-  if (v2.tag === "Left") {
-    if (s.position === v2._1.pos) {
-      const v2$1 = upperCaseChar(s);
-      if (v2$1.tag === "Left") {
-        if (s.position === v2$1._1.pos) {
-          return $Either("Left", { pos: s.position, error: "Expected a letter" });
-        }
-        return $Either("Left", { error: v2$1._1.error, pos: v2$1._1.pos });
-      }
-      return v2$1;
-    }
-    return $Either("Left", { error: v2._1.error, pos: v2._1.pos });
-  }
-  return v2;
 };
 var anyDigit = (s) => {
   const $0 = anyChar(s);
@@ -10309,13 +10409,13 @@ var eqId = { eq: (x) => (y) => x === y };
 var hashableId = { hash: (v) => hashString(v), Eq0: () => eqId };
 var ordId = { compare: (x) => (y) => ordString.compare(x)(y), Eq0: () => eqId };
 var alphaNum = (s) => {
-  const v2 = anyLetter(s);
+  const v2 = lowerCaseChar(s);
   if (v2.tag === "Left") {
     if (s.position === v2._1.pos) {
       const v2$1 = anyDigit(s);
       if (v2$1.tag === "Left") {
         if (s.position === v2$1._1.pos) {
-          return $Either("Left", { pos: s.position, error: "expect alphanumeric value" });
+          return $Either("Left", { pos: s.position, error: "expect lowercase alphanumeric value" });
         }
         return $Either("Left", { error: v2$1._1.error, pos: v2$1._1.pos });
       }
@@ -14149,6 +14249,41 @@ var splitEntAndProps = (props) => {
     arrayMap((v1) => $Tuple(v1._1 === "" ? "undefined_id" : v1._1, v1._2))(v.no)
   );
 };
+var removeIsDomainProp = (domain) => (xs) => {
+  const v = findIndexImpl(Just, Nothing, (v2) => v2 === domain, arrayMap((x) => x._1)(xs));
+  if (v.tag === "Nothing") {
+    return applicativeV2.pure(xs);
+  }
+  if (v.tag === "Just") {
+    const $0 = _deleteAt(Just, Nothing, v._1, xs);
+    const xs$p = (() => {
+      if ($0.tag === "Just") {
+        return $0._1;
+      }
+      fail();
+    })();
+    const $1 = parseBoolean(xs[v._1]._2);
+    if ($1.tag === "Left") {
+      return $Either("Left", $1._1);
+    }
+    if ($1.tag === "Right") {
+      if ($1._1) {
+        return applicativeV2.pure(xs$p);
+      }
+      return $Either(
+        "Left",
+        [
+          $Issue(
+            "CodedIssue",
+            E_ENTITY_INCONSISTENT_DOMAIN,
+            { ...emptyContext, entityContext: $Maybe("Just", { entity: domain, domain, set: Nothing }) }
+          )
+        ]
+      );
+    }
+  }
+  fail();
+};
 var getEntitySetsFromHeaders = (lst) => {
   const $0 = traverse((v) => {
     const $02 = parseBoolean(v._2);
@@ -14196,16 +14331,22 @@ var parseEntity = (v) => {
     }
     fail();
   })())(applicativeV2.pure(v.entityDomain)))((() => {
-    const $02 = getEntitySetsFromHeaders(v1._1);
+    const $02 = removeIsDomainProp(v.entityDomain)(v1._1);
     if ($02.tag === "Left") {
       return $Either("Left", $02._1);
     }
     if ($02.tag === "Right") {
-      if (v.entitySet.tag === "Nothing") {
-        return applicativeV2.pure($02._1);
+      const $1 = getEntitySetsFromHeaders($02._1);
+      if ($1.tag === "Left") {
+        return $Either("Left", $1._1);
       }
-      if (v.entitySet.tag === "Just") {
-        return applicativeV2.pure(nubBy(ordId.compare)([v.entitySet._1, ...$02._1]));
+      if ($1.tag === "Right") {
+        if (v.entitySet.tag === "Nothing") {
+          return applicativeV2.pure($1._1);
+        }
+        if (v.entitySet.tag === "Just") {
+          return applicativeV2.pure(nubBy(ordId.compare)([v.entitySet._1, ...$1._1]));
+        }
       }
     }
     fail();
@@ -14912,15 +15053,16 @@ var showMessage = (v) => {
   const statstr = v.isWarning ? "[WARN] " : "[ERR] ";
   const linestr = v.lineNo === -1 ? "" : showIntImpl(v.lineNo) + ":";
   const filestr = v.file === "" ? "" : v.file + ":";
+  const codestr = v.errorCode === "" ? "" : v.errorCode + ": ";
   if (filestr === "" && linestr === "") {
-    return statstr + v.message;
+    return statstr + codestr + v.message;
   }
-  return statstr + filestr + linestr + " " + v.message;
+  return statstr + filestr + linestr + " " + codestr + v.message;
 };
 var messageFromIssue = (v) => {
   if (v.tag === "CodedIssue") {
     return {
-      message: formatIssue(v._1)(v._2),
+      message: formatErrorMessage(v._1)(v._2),
       file: (() => {
         if (v._2.fileContext.tag === "Just") {
           return v._2.fileContext._1.filepath;
@@ -14939,6 +15081,8 @@ var messageFromIssue = (v) => {
         }
         fail();
       })(),
+      errorCode: errorCodeToString(v._1),
+      suggestions: errorSuggestion(v._1),
       isWarning: true
     };
   }
@@ -14954,6 +15098,8 @@ var messageFromIssue = (v) => {
     })(),
     file: "",
     lineNo: -1,
+    errorCode: "",
+    suggestions: "",
     isWarning: true
   };
 };
@@ -16341,7 +16487,7 @@ var runMain = (opts2) => {
     ffiUtil,
     (() => {
       const gendp = opts2.generateDP;
-      return _bind(_liftEffect(log2("v0.1.8")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v0.1.9")))(() => _bind((() => {
         if (mode === "FileNameBased") {
           return runValidationT2(validate2(path2));
         }
