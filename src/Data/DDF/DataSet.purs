@@ -315,26 +315,51 @@ checkDomainAndSetExists concepts entities =
   let
     run :: String -> Array Entity -> V Issues Unit
     run domain ents =
-      lookupDomain concepts domain
-        `andThen`
-          ( \_ -> for_ ents \e ->
-              let
-                sets = Id.value <$> Ent.getEntitySets e
-                Tuple fp i = pathAndRow $ Ent.getItemInfo e
-              in
-                traverse_ (\x -> withRowInfo fp i $ lookupSetWithInDomain concepts x domain) sets
-          )
+      let
+        -- Get file context from first entity in the domain
+        -- Use line 1 (header line) since domain comes from filename/header
+        firstEntity = Arr.head ents
+        mbFileContext = case firstEntity of
+          Just e ->
+            let
+              Tuple fp _ = pathAndRow $ Ent.getItemInfo e
+            in
+              Just $ Tuple fp 1
+          Nothing -> Nothing
+      in
+        lookupDomain concepts domain mbFileContext
+          `andThen`
+            ( \_ -> for_ ents \e ->
+                let
+                  sets = Id.value <$> Ent.getEntitySets e
+                  Tuple fp i = pathAndRow $ Ent.getItemInfo e
+                in
+                  traverse_ (\x -> withRowInfo fp i $ lookupSetWithInDomain concepts x domain) sets
+            )
   in
     (sequence $ HM.toArrayBy run entities)
       `andThen` (\_ -> pure entities)
 
-lookupDomain :: ConceptDB -> String -> V Issues Unit
-lookupDomain concepts x = case HM.lookup x concepts of
-  Nothing -> invalid
-    [ mkIssue E_DATASET_ENTITYDOMAIN_INVAILD # withConceptField x "domain" ]
+lookupDomain :: ConceptDB -> String -> Maybe (Tuple FilePath Int) -> V Issues Unit
+lookupDomain concepts x mbFileContext = case HM.lookup x concepts of
+  Nothing ->
+    let
+      issue = mkIssue E_DATASET_ENTITYDOMAIN_INVAILD # withConceptField x "domain"
+      issueWithContext = case mbFileContext of
+        Just (Tuple fp i) -> issue # withFileLocation fp i
+        Nothing -> issue
+    in
+      invalid [ issueWithContext ]
   Just v -> case Conc.getType v of
     Conc.EntityDomainC -> pure unit
-    _ -> invalid [ mkIssue E_DATASET_CONCEPT_INVALID_DOMAIN # withConceptField x "concept_type" ]
+    _ ->
+      let
+        issue = mkIssue E_DATASET_CONCEPT_INVALID_DOMAIN # withConceptField x "concept_type"
+        issueWithContext = case mbFileContext of
+          Just (Tuple fp i) -> issue # withFileLocation fp i
+          Nothing -> issue
+      in
+        invalid [ issueWithContext ]
 
 -- lookupSet :: ConceptDB -> String -> V Issues Unit
 -- lookupSet concepts x = case HM.lookup x concepts of
@@ -345,7 +370,7 @@ lookupDomain concepts x = case HM.lookup x concepts of
 
 lookupSetWithInDomain :: ConceptDB -> String -> String -> V Issues Unit
 lookupSetWithInDomain concepts set domain =
-  lookupDomain concepts domain
+  lookupDomain concepts domain Nothing
     `andThen`
       ( \_ -> case HM.lookup set concepts of
           Nothing -> invalid [ mkIssue E_DATASET_ENTITYSET_UNDEFINED # withConceptField set "entity_set" ]
