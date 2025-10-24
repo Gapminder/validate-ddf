@@ -14513,17 +14513,30 @@ var makeIssue = (c) => {
     }
   );
 };
-var lookupDomain = (concepts) => (x) => {
+var lookupDomain = (concepts) => (x) => (mbFileContext) => {
   const v = lookup5(x)(concepts);
   if (v.tag === "Nothing") {
+    const issue = $Issue(
+      "CodedIssue",
+      E_DATASET_ENTITYDOMAIN_INVAILD,
+      { ...emptyContext, conceptContext: $Maybe("Just", { concept: x, field: $Maybe("Just", "domain") }) }
+    );
     return $Either(
       "Left",
       [
-        $Issue(
-          "CodedIssue",
-          E_DATASET_ENTITYDOMAIN_INVAILD,
-          { ...emptyContext, conceptContext: $Maybe("Just", { concept: x, field: $Maybe("Just", "domain") }) }
-        )
+        (() => {
+          if (mbFileContext.tag === "Just") {
+            return $Issue(
+              "CodedIssue",
+              issue._1,
+              { ...issue._2, fileContext: $Maybe("Just", { filepath: mbFileContext._1._1, lineNo: mbFileContext._1._2 }) }
+            );
+          }
+          if (mbFileContext.tag === "Nothing") {
+            return issue;
+          }
+          fail();
+        })()
       ]
     );
   }
@@ -14531,21 +14544,34 @@ var lookupDomain = (concepts) => (x) => {
     if (v._1.conceptType.tag === "EntityDomainC") {
       return applicativeV3.pure();
     }
+    const issue = $Issue(
+      "CodedIssue",
+      E_DATASET_CONCEPT_INVALID_DOMAIN,
+      { ...emptyContext, conceptContext: $Maybe("Just", { concept: x, field: $Maybe("Just", "concept_type") }) }
+    );
     return $Either(
       "Left",
       [
-        $Issue(
-          "CodedIssue",
-          E_DATASET_CONCEPT_INVALID_DOMAIN,
-          { ...emptyContext, conceptContext: $Maybe("Just", { concept: x, field: $Maybe("Just", "concept_type") }) }
-        )
+        (() => {
+          if (mbFileContext.tag === "Just") {
+            return $Issue(
+              "CodedIssue",
+              issue._1,
+              { ...issue._2, fileContext: $Maybe("Just", { filepath: mbFileContext._1._1, lineNo: mbFileContext._1._2 }) }
+            );
+          }
+          if (mbFileContext.tag === "Nothing") {
+            return issue;
+          }
+          fail();
+        })()
       ]
     );
   }
   fail();
 };
 var lookupSetWithInDomain = (concepts) => ($$set) => (domain) => {
-  const $0 = lookupDomain(concepts)(domain);
+  const $0 = lookupDomain(concepts)(domain)(Nothing);
   if ($0.tag === "Left") {
     return $Either("Left", $0._1);
   }
@@ -14878,7 +14904,44 @@ var checkDrillup = (concepts) => {
 };
 var checkDomainAndSetExists = (concepts) => (entities) => {
   const $0 = sequence3(toArrayBy((domain) => (ents) => {
-    const $02 = lookupDomain(concepts)(domain);
+    if (0 < ents.length) {
+      const $03 = lookupDomain(concepts)(domain)($Maybe(
+        "Just",
+        $Tuple(
+          (() => {
+            if (ents[0]._info.tag === "Nothing") {
+              return "";
+            }
+            if (ents[0]._info.tag === "Just") {
+              return ents[0]._info._1._1;
+            }
+            fail();
+          })(),
+          1
+        )
+      ));
+      if ($03.tag === "Left") {
+        return $Either("Left", $03._1);
+      }
+      if ($03.tag === "Right") {
+        return for_22(ents)((e) => {
+          const $1 = (() => {
+            if (e._info.tag === "Nothing") {
+              return $ItemInfo("", -1);
+            }
+            if (e._info.tag === "Just") {
+              return e._info._1;
+            }
+            fail();
+          })();
+          const $2 = $1._1;
+          const $3 = $1._2;
+          return traverse_2((x) => withRowInfo($2)($3)(lookupSetWithInDomain(concepts)(x)(domain)))(arrayMap(value)(e.entitySets));
+        });
+      }
+      fail();
+    }
+    const $02 = lookupDomain(concepts)(domain)(Nothing);
     if ($02.tag === "Left") {
       return $Either("Left", $02._1);
     }
@@ -16098,6 +16161,7 @@ var $$for2 = /* @__PURE__ */ (() => {
 var traverse_4 = /* @__PURE__ */ traverse_(applicativeVT2)(foldableArray);
 var getState3 = /* @__PURE__ */ getState(monadAff)(monoidArray);
 var compare13 = /* @__PURE__ */ (() => ordMaybe(ordTuple(ordString)(ordNonEmpty2(ordString))).compare)();
+var emitWarningsAndContinue2 = /* @__PURE__ */ emitWarningsAndContinue(monadAff);
 var readDataPackageResources2 = (path2) => bindVT3.bind(liftEffect3(datapackageExists(path2)))((datapackage) => {
   if (datapackage.tag === "Left") {
     return bindVT3.bind(emitErrorsAndContinue3(datapackage._1))(() => applicativeVT2.pure([]));
@@ -16145,7 +16209,7 @@ var readAllFileInfoForValidation2 = (root) => (fs2) => (dictMonad) => {
     }
   ]))(() => applicativeVT1.pure(ddfFiles));
 };
-var validate2 = (path2) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("reading file list..."))))(() => bindVT3.bind(monadtransVT.lift(monadAff)(getFiles(path2)([
+var validate2 = (path2) => (dpIssueAsWarning) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("reading file list..."))))(() => bindVT3.bind(monadtransVT.lift(monadAff)(getFiles(path2)([
   ".git",
   "etl",
   "assets",
@@ -16235,7 +16299,10 @@ var validate2 = (path2) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(
               return bindVT3.bind(readDataPackageResources2(path2))((expectedResources) => bindVT3.bind((() => {
                 const $0 = compareResources(expectedResources)(actualResources);
                 if ($0.tag === "Left") {
-                  return emitErrorsAndContinue3($0._1);
+                  if (dpIssueAsWarning) {
+                    return emitWarningsAndContinue2($0._1);
+                  }
+                  return emitErrorsAndStop3($0._1);
                 }
                 if ($0.tag === "Right") {
                   return applicativeVT2.pure();
@@ -16487,9 +16554,9 @@ var runMain = (opts2) => {
     ffiUtil,
     (() => {
       const gendp = opts2.generateDP;
-      return _bind(_liftEffect(log2("v0.1.9")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v0.1.10")))(() => _bind((() => {
         if (mode === "FileNameBased") {
-          return runValidationT2(validate2(path2));
+          return runValidationT2(validate2(path2)(gendp));
         }
         if (mode === "DataPackageBased") {
           return runValidationT2(validate(path2));
