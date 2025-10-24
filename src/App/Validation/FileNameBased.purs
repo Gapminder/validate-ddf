@@ -68,8 +68,9 @@ readDataPackageResources path = do
         Right res -> pure res
 
 -- | main validation process
-validate :: FilePath -> ValidationT Messages Aff (Tuple DataSet (Array Resource))
-validate path = do
+-- | dpIssueAsWarning: if true, datapackage errors are reported as warnings instead of errors
+validate :: FilePath -> Boolean -> ValidationT Messages Aff (Tuple DataSet (Array Resource))
+validate path dpIssueAsWarning = do
   lift $ liftEffect $ log "reading file list..."
 
   let
@@ -201,7 +202,11 @@ validate path = do
       actualResources = conceptResources <> entityResources <> datapointResources <> synonymResources
     expectedResources <- readDataPackageResources path
     case toEither $ DataPackage.compareResources expectedResources actualResources of
-      Left issues -> emitErrorsAndContinue issues
+      Left issues ->
+        if dpIssueAsWarning then
+          emitWarningsAndContinue issues
+        else
+          emitErrorsAndStop issues
       Right _ -> pure unit
 
     pure (Tuple ds actualResources)

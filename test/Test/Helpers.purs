@@ -14,7 +14,7 @@ import Test.Spec.Assertions (shouldContain, shouldSatisfy)
 -- | Helper function to expect a valid dataset
 expectValid :: String -> Aff Unit
 expectValid path = do
-  Tuple msgs res <- runValidationT $ VFN.validate path
+  Tuple msgs res <- runValidationT $ VFN.validate path false
   let
     hasErrors = Arr.any (\m -> not m.isWarning) msgs
   hasErrors `shouldSatisfy` (_ == false)
@@ -22,7 +22,7 @@ expectValid path = do
 -- | Helper function to expect a specific error code in dataset validation
 expectError :: ErrorCode -> String -> Aff Unit
 expectError expectedCode path = do
-  Tuple msgs res <- runValidationT $ VFN.validate path
+  Tuple msgs res <- runValidationT $ VFN.validate path false
   let
     errorCodes = map _.errorCode msgs
     expectedCodeStr = errorCodeToString expectedCode

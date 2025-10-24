@@ -222,7 +222,7 @@ main = launchAff_ $ runSpecPure [ consoleReporter ] do
             , "test/fixtures/rules-cases/entity-value-as-entity-name"
             ]
         for_ goodDatasets \p -> do
-          res <- runValidationTEither $ VFN.validate p
+          res <- runValidationTEither $ VFN.validate p false
           res `shouldSatisfy` isRight
 
       -- below are bad datasets
@@ -230,15 +230,15 @@ main = launchAff_ $ runSpecPure [ consoleReporter ] do
       -- general
       it "synonym key duplication" do
         let dirname = "test/fixtures/rules-cases/duplicated-synonym-key"
-        res <- runValidationTEither $ VFN.validate dirname
+        res <- runValidationTEither $ VFN.validate dirname false
         res `shouldSatisfy` isLeft
       it "inconsistent synonym key" do
         let dirname = "test/fixtures/rules-cases/inconsistent-synonym-key"
-        res <- runValidationTEither $ VFN.validate dirname
+        res <- runValidationTEither $ VFN.validate dirname false
         res `shouldSatisfy` isLeft
       it "identifier" do
         let dirname = "test/fixtures/rules-cases/incorrect-identifier"
-        res <- runValidationTEither $ VFN.validate dirname
+        res <- runValidationTEither $ VFN.validate dirname false
         res `shouldSatisfy` isLeft
       pending "json field"
       pending "unexpected data"
@@ -249,7 +249,7 @@ main = launchAff_ $ runSpecPure [ consoleReporter ] do
             [ "test/fixtures/rules-cases/empty-entity-id"
             ]
         for_ dirnames \dirname -> do
-          res <- runValidationTEither $ VFN.validate dirname
+          res <- runValidationTEither $ VFN.validate dirname false
           res `shouldSatisfy` isLeft
       pending "incorrect boolean entity"
       --  FIXME: "test/fixtures/rules-cases/incorrect-boolean-entity" boolean value raised warnings, not errors
@@ -260,7 +260,7 @@ main = launchAff_ $ runSpecPure [ consoleReporter ] do
             [ "test/fixtures/rules-cases/non-unique-entity-value"
             ]
         for_ dirnames \dirname -> do
-          res <- runValidationTEither $ VFN.validate dirname
+          res <- runValidationTEither $ VFN.validate dirname false
           res `shouldSatisfy` isLeft
       it "wrong entity is-- header" do
         let
@@ -269,7 +269,7 @@ main = launchAff_ $ runSpecPure [ consoleReporter ] do
             , "test/fixtures/rules-cases/wrong-entity-is-header-2"
             ]
         for_ dirnames \dirname -> do
-          res <- runValidationTEither $ VFN.validate dirname
+          res <- runValidationTEither $ VFN.validate dirname false
           res `shouldSatisfy` isLeft
       it "wrong entity is-- header value" do
         let
@@ -277,7 +277,7 @@ main = launchAff_ $ runSpecPure [ consoleReporter ] do
             [ "test/fixtures/rules-cases/empty-entity-id"
             ]
         for_ dirnames \dirname -> do
-          res <- runValidationTEither $ VFN.validate dirname
+          res <- runValidationTEither $ VFN.validate dirname false
           res `shouldSatisfy` isLeft
       pending "unexisting constraint value"
       -- datapoint
@@ -309,7 +309,7 @@ main = launchAff_ $ runSpecPure [ consoleReporter ] do
             [ "test/fixtures/rules-cases/datapackage-confused-fields"
             ]
         for_ dirnames \dirname -> do
-          res <- runValidationTEither $ VFN.validate dirname
+          res <- runValidationTEither $ VFN.validate dirname false
           res `shouldSatisfy` isLeft
       pending "incorrect field"
       pending "incorrect file"
