@@ -470,11 +470,24 @@ parseDataPoints :: DataSet -> DataPoints -> V Issues Unit
 parseDataPoints ds (DataPoints dp) =
   let
     conceptsInDp = NEA.snoc dp.by dp.indicatorId
+    -- Get file path from first item for error reporting
+    mbFileContext = case Arr.head dp.itemInfo of
+      Just info ->
+        let
+          Tuple fp _ = pathAndRow info
+        in
+          Just $ Tuple fp 1 -- Line 1 because concepts come from filename/header
+      Nothing -> Nothing
   in
     for_ conceptsInDp \c ->
-      getValueParser ds (Id.value c)
-        `andThen`
-          (\vp -> parseColumnValues vp (unsafeLookup c dp.values) (dp.itemInfo))
+      let
+        validateConcept = getValueParser ds (Id.value c)
+          `andThen`
+            (\vp -> parseColumnValues vp (unsafeLookup c dp.values) (dp.itemInfo))
+      in
+        case mbFileContext of
+          Just (Tuple fp ln) -> withRowInfo fp ln validateConcept
+          Nothing -> validateConcept
 
 -- | check if concept exists in the dataset
 conceptExists :: DataSet -> Identifier -> V Issues Identifier

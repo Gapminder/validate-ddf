@@ -29,7 +29,7 @@ import Data.String.NonEmpty as NES
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.Traversable (class Traversable, for, sequence, traverse)
 import Data.Tuple (Tuple(..))
-import Data.Validation.Issue (Issue(..), Issues, mkIssueWithMessage, mkIssueWithValue, withMessage, withRowInfo)
+import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, mkIssueWithValue, withConceptField, withFileLocation, withMessage, withRowInfo, withValue)
 import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Result (Messages, messageFromIssue, setError, setFile, setLineNo)
 import Data.Validation.Semigroup (andThen, toEither)
@@ -266,7 +266,7 @@ validateCsvFileWithDataSet ds csvfile =
         emitWarningsAndContinue errs
       Right _ -> pure unit
 
--- | check Csv Headers are not in concept list
+-- | check all Csv Headers are in concept list
 validateCsvHeaders :: DataSet -> CsvFile -> Validation Messages Unit
 validateCsvHeaders dataset@(DataSet ds) { csvContent, fileInfo } = do
   let
@@ -287,15 +287,16 @@ validateCsvHeaders dataset@(DataSet ds) { csvContent, fileInfo } = do
                 domainInDataset = DataSet.getDomainForEntitySet dataset set
               case domainInDataset of
                 Nothing -> vWarning $
-                  [ setFile filepath <<< setError <<< messageFromIssue
-                      $ mkIssueWithValue E_DATASET_CONCEPT_NOT_FOUND set
+                  [ setError <<< messageFromIssue
+                      $ mkIssueWithValue E_DATASET_CONCEPT_NOT_FOUND hstr
+                          # withFileLocation filepath 1
                   ]
                 Just x -> when (NES.toString domain /= x)
                   $ vWarning
                   $
                     [ setFile filepath <<< setError <<< messageFromIssue
-                        $ mkIssueWithValue E_DATASET_ENTITYSET_UNDEFINED set
-                            # withMessage ("not an entity_set in " <> NES.toString domain <> " domain")
+                        $ mkIssueWithValue E_DATASET_ENTITYSET_UNDEFINED hstr
+                            # withMessage (set <> " is not an entity_set in " <> NES.toString domain <> " domain")
                     ]
             -- it is not valid to have is-- header in other files.
             -- but it's already validated in other steps so no need to emit error here.
@@ -307,8 +308,9 @@ validateCsvHeaders dataset@(DataSet ds) { csvContent, fileInfo } = do
           when (not predicate)
             $ vWarning
             $
-              [ setFile filepath <<< setError <<< messageFromIssue
+              [ setError <<< messageFromIssue
                   $ mkIssueWithValue E_DATASET_CONCEPT_NOT_FOUND hstr
+                      # withFileLocation filepath 1
               ]
     )
   pure unit
