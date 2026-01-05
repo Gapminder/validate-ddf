@@ -161,7 +161,8 @@ generateDataPackage root dataset resources = do
         [ "concept" ] -> pure schemaAcc { concepts = (Arr.fromFoldable schema) <> schemaAcc.concepts }
         [ _ ] -> pure schemaAcc { entities = (Arr.fromFoldable schema) <> schemaAcc.entities }
         [ a, b ]
-          | (a == "synonym" || b == "synonym") -> pure schemaAcc { synonyms = (Arr.fromFoldable schema) <> schemaAcc.synonyms }
+          | (a == "synonym" || b == "synonym") -> pure schemaAcc
+              { synonyms = (Arr.fromFoldable schema) <> schemaAcc.synonyms }
         otherwise -> pure schemaAcc { datapoints = (Arr.fromFoldable schema) <> schemaAcc.datapoints }
 
   ddfSchema' <- Arr.foldM func ddfSchema resources

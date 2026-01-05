@@ -44,7 +44,6 @@ import Partial.Unsafe (unsafePartial)
 import Utils (findDupsL, unsafeLookup)
 import Yoga.JSON as JSON
 
-
 -- | we will use array of columns to store csv data
 type CsvColumn = Array String
 
@@ -88,35 +87,42 @@ readAndParseCsv fp = do
 -- | iter each row on a function
 iterRows :: forall a. CsvContent -> ((Map String String) -> a) -> Array a
 iterRows { headers, columns, index } func =
-  let
-    func' i =
+  case Arr.length index of
+    0 -> [] -- empty file, return empty array
+    n ->
       let
-        xs = map (\c -> unsafePartial $ Arr.unsafeIndex c i) columns
-        rowmap = Map.fromFoldable $ Arr.zip headers xs
+        func' i =
+          let
+            xs = map (\c -> unsafePartial $ Arr.unsafeIndex c i) columns
+            rowmap = Map.fromFoldable $ Arr.zip headers xs
+          in
+            func rowmap
+        idxs = Arr.range 0 (n - 1)
       in
-        func rowmap
-    idxs = Arr.range 0 $ (Arr.length index) - 1
-  in
-    map func' idxs
+        map func' idxs
 
 -- | fold over each row
 foldRows :: forall a. CsvContent -> ((Map String String) -> a -> a) -> a -> a
 foldRows { headers, columns, index } func a =
-  let
-    func' i acc =
+  case Arr.length index of
+    0 -> a -- empty file, return initial accumulator
+    n ->
       let
-        xs = map (\c -> unsafePartial $ Arr.unsafeIndex c i) columns
-        rowmap = Map.fromFoldable $ Arr.zip headers xs
+        func' i acc =
+          let
+            xs = map (\c -> unsafePartial $ Arr.unsafeIndex c i) columns
+            rowmap = Map.fromFoldable $ Arr.zip headers xs
+          in
+            func rowmap acc
+        idxs = Arr.range 0 (n - 1)
       in
-        func rowmap acc
-    idxs = Arr.range 0 $ (Arr.length index) - 1
-  in
-    Arr.foldr func' a idxs
+        Arr.foldr func' a idxs
 
 -- TODO: good to implement some common operators, such as drop duplicates
 
 -- for testing
 myTest :: Effect Unit
 myTest = launchAff_ do
-  c <- readCsv "/home/semio/src/work/gapminder/datasets/repo/github.com/open-numbers/ddf--open_numbers/ddf--synonyms--geo.csv"
+  c <- readCsv
+    "/home/semio/src/work/gapminder/datasets/repo/github.com/open-numbers/ddf--open_numbers/ddf--synonyms--geo.csv"
   liftEffect $ logShow c.badrows

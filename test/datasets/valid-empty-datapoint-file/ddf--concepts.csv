@@ -1,0 +1,7 @@
+concept,concept_type,domain,name
+domain,string,,Domain
+name,string,,Name
+geo,entity_domain,,Geographic Location
+country,entity_set,geo,Country
+year,time,,Year
+population,measure,,Population
