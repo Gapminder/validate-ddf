@@ -16,3 +16,4 @@ _results-test
 /.spago
 *.log
 .aider*
+.claude
