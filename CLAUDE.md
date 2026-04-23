@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is `ddf-validation-ng`, a validator for DDF (Data Description Format) datasets written in PureScript. It validates DDF datasets (structured data with concepts, entities, and datapoints) and can optionally generate `datapackage.json` files.
+This is `validate-ddf`, a validator for DDF (Data Description Format) datasets written in PureScript. It validates DDF datasets (structured data with concepts, entities, and datapoints) and can optionally generate `datapackage.json` files.
 
 ## Key Commands
 
@@ -28,12 +28,13 @@ Both bundles must be rebuilt after making changes to PureScript source files.
 - `spago run -- --no-warning <path>` - Suppress warnings
 - `spago run -- -m datapackage <path>` - Use datapackage mode
 - `spago run -- -p <path>` - Generate `datapackage.json` after successful validation
+- `spago run -- --fix <path>` - Auto-fix BOM/CRLF format issues in CSV files
 
-The globally installed `validate-ddf-ng` command uses the published npm package and should only be used as a fallback when spago build fails:
-- `validate-ddf-ng [PATH]` - Validate using installed version (NOT recommended for development)
-- `validate-ddf-ng --no-warning [PATH]` - Suppress warnings, show only errors
-- `validate-ddf-ng -m datapackage [PATH]` - Use datapackage mode
-- `validate-ddf-ng -p [PATH]` - Generate `datapackage.json` after successful validation
+The globally installed `validate-ddf` command uses the published npm package and should only be used as a fallback when spago build fails:
+- `validate-ddf [PATH]` - Validate using installed version (NOT recommended for development)
+- `validate-ddf --no-warning [PATH]` - Suppress warnings, show only errors
+- `validate-ddf -m datapackage [PATH]` - Use datapackage mode
+- `validate-ddf -p [PATH]` - Generate `datapackage.json` after successful validation
 
 ### Publishing
 
@@ -137,7 +138,7 @@ Integration tests require full DDF datasets with `datapackage.json`.
    - `ddf--concepts.csv` - Define all concepts (including column headers like "domain")
    - `ddf--entities--<domain>[--<set>].csv` - Entity data
    - `ddf--datapoints--<indicator>--by--<dims>.csv` - Datapoint data
-3. **Generate datapackage.json**: Run `validate-ddf-ng -p test/datasets/valid-<name>/`
+3. **Generate datapackage.json**: Run `validate-ddf -p test/datasets/valid-<name>/`
    - This validates the dataset AND generates `datapackage.json` automatically
    - Fix any validation errors and regenerate until it passes
 
@@ -158,13 +159,13 @@ Integration tests require full DDF datasets with `datapackage.json`.
 -- test/Test/Integration/ValidDatasets.purs
 it "valid-minimal: should pass validation" do
   let path = "test/datasets/valid-minimal"
-  res <- runValidationTEither $ VFN.validate path
+  res <- runValidationTEither $ VFN.validate path false false
   res `shouldSatisfy` isRight
 
 -- For invalid datasets
 it "error-empty-entity-id: should fail validation" do
   let path = "test/datasets/error-empty-entity-id"
-  res <- runValidationTEither $ VFN.validate path
+  res <- runValidationTEither $ VFN.validate path false false
   res `shouldSatisfy` isLeft
 ```
 
@@ -175,7 +176,7 @@ Run validation on a specific dataset:
 ```purescript
 testMain = do
   path <- resolve [] "test/datasets/valid-minimal"
-  M.runMain { targetPath: path, noWarning: false, mode: FileNameBased, generateDP: true }
+  M.runMain { targetPath: path, noWarning: false, mode: FileNameBased, generateDP: true, fixFormat: false }
 ```
 
 Or use the CLI:
@@ -203,7 +204,7 @@ The validator ignores folders: `.git`, `etl`, `assets`, `langsplit`
 The library exports a `validate` function (defined in `src/index.js`):
 
 ```javascript
-import { validate } from "ddf-validation-ng";
+import { validate } from "validate-ddf";
 
 const result = await validate("./path/to/dataset", {
   onlyErrors: false, // true to hide warnings

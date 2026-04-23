@@ -1,17 +1,17 @@
-# ddf-validation-ng
+# validate-ddf
 
 ## how to run validation
 
-1. install ddf-validation-ng
-   - `npm install -g ddf-validation-ng`
-2. run ddf-validation-ng on target path
+1. install
+   - `npm install -g @gapminder/validate-ddf`
+2. run validate-ddf on target path
 
 ``` shell
-$ validate-ddf-ng -h
+$ validate-ddf -h
 validate-ddf - DDF dataset validator
 
-Usage: validate-ddf-ng [--no-warning] [PATH] [-m|--mode ARG]
-                       [-p|--generate-datapackage]
+Usage: validate-ddf [--no-warning] [PATH] [-m|--mode ARG]
+                       [-p|--generate-datapackage] [-f|--fix]
   validate DDF dataset at PATH (default to current working dir)
 
 Available options:
@@ -22,6 +22,7 @@ Available options:
   -p,--generate-datapackage
                            whether to generate a datapackage.json after
                            validation. (default false)
+  -f,--fix                 auto-fix format issues (BOM, CRLF) in CSV files
   -h,--help                Show this help text
 ```
 
@@ -34,20 +35,21 @@ validator will read all files in the resources list in datapackage.json.
 
 1. install purescript and spago
     - `npm install -g purescript`
-    - `npm install -g spago@next`
-2. to install dependencies
+    - `npm install -g spago`
+2. install dependencies in the project folder
    - `npm install`
    - `spago install`
 3. run `npm run build` (which will run `spago build`)
+4. build and create bundles `npm run bundle`
 
 ### run test
 
-- run `npm run test`
+- run `npm test`
 
 ### create new version
-1. `npm version patch`
-2. update the version string in src/Main.purs
-3. build the app and module bundle
-    - `npm run bundle-app`
-    - `npm run bundle-module`
+
+### create new version
+1. update version in package.json
+2. update version in src/Main.purs
+3. build the app and module bundles: `npm run bundle`, see if tests look good `npm test` 
 4. `npm publish`

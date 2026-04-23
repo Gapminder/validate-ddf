@@ -1,20 +1,44 @@
 {
-  "name": "ddf-validation-ng",
-  "version": "0.1.10",
+  "name": "@gapminder/validate-ddf",
+  "version": "2.0.0",
   "description": "DDF validion tool",
-  "author": "Semio Zheng <semio@gapminder.org>",
-  "license": "GPL-3.0",
+  "author": {
+    "name": "Semio Zheng and others at Gapminder Foundation",
+    "url": "https://www.gapminder.org",
+    "email": "info@gapminder.org"
+  },
+  "contributors": [
+    {
+      "name": "Semio Zheng",
+      "url": "https://github.com/semio",
+      "email": "semio@gapminder.org"
+    },
+    {
+      "name": "Angie Hjort",
+      "url": "https://github.com/angiehjort",
+      "email": "angie@gapminder.org"
+    }
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gapminder/validate-ddf"
+  },
   "type": "module",
   "main": "src/index.js",
   "bin": {
-    "validate-ddf-ng": "src/cli.js"
+    "validate-ddf": "src/cli.js"
   },
   "scripts": {
-    "clean": "rm -rf node_modules output .spago dist/*.js *.lock .cache",
+    "clean": "rm -rf node_modules output output-es .spago dist/*.js *.lock .cache",
     "build": "spago build",
     "test": "spago test",
-    "bundle-app": "spago build && purs-backend-es bundle-app --platform=node --to dist/app.js",
-    "bundle-module": "spago build && purs-backend-es bundle-module --platform=node --to dist/lib.js"
+    "bundle": "npm run build && npm run bundle-app && npm run bundle-module",
+    "bundle-app": "purs-backend-es bundle-app --platform=node --to dist/app.js",
+    "bundle-module": "purs-backend-es bundle-module --platform=node --to dist/lib.js"
   },
   "files": [
     "dist",
@@ -27,6 +51,7 @@
   },
   "devDependencies": {
     "esbuild": "^0.24.2",
-    "purs-backend-es": "^1.4.2"
+    "purs-backend-es": "^1.4.2",
+    "purs-tidy": "^0.11.1"
   }
 }

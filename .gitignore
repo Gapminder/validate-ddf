@@ -1,14 +1,7 @@
 node_modules
 npm-debug.log
-coverage
-_results
-_results-test
-/bower_components/
-/node_modules/
-/.pulp-cache/
 /output/
 /output-es/
-/generated-docs/
 /.psc-package/
 /.psc*
 /.purs*
@@ -17,3 +10,4 @@ _results-test
 *.log
 .aider*
 .claude
+.tidyrc.json

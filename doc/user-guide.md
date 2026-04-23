@@ -1,4 +1,4 @@
-# ddf-validation User's guide
+# validate-ddf User's guide
 
 ## Console utility usage
 

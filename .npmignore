@@ -1,4 +1,1 @@
-*.ts
-*.js.map
-!*.d.ts
 test

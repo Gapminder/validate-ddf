@@ -71,7 +71,7 @@ runMain opts = launchAff_ do
     mode = _.mode opts
     gendp = _.generateDP opts -- when true, emit warnings for datapackage errors
 
-  liftEffect $ log "v0.1.10"
+  liftEffect $ log "v2.0.0"
   (Tuple msgs res) <- case mode of
     FileNameBased -> runValidationT $ VFN.validate path gendp
     DataPackageBased -> runValidationT $ VDP.validate path

@@ -40,7 +40,7 @@ package:
     - unordered-collections
     - validation
     - yoga-json
-  name: ddf-validation-ng
+  name: validate-ddf
 workspace:
   packageSet:
     registry: 66.8.0

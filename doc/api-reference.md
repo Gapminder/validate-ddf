@@ -1,6 +1,6 @@
-First of all you should install this package: `npm i ddf-validation`
+First of all you should install this package: `npm i validate-ddf`
 
-`ddf-validation` can be used via an API in three different ways:
+`validate-ddf` can be used via an API in three different ways:
 
  * JSON based validator (`JSONValidator`)
  * Stream based validator (`StreamValidator`)
@@ -13,7 +13,7 @@ Some examples of API using:
 Simple example
 
 ```
-const api = require('ddf-validation');
+const api = require('validate-ddf');
 const JSONValidator = api.JSONValidator;
 const jsonValidator = new JSONValidator('path to ddf dataset');
 
@@ -30,7 +30,7 @@ And for this reason it's not suitable for huge DDF datasets.
 ### StreamValidator
 
 ```
-const api = require('ddf-validation');
+const api = require('validate-ddf');
 const StreamValidator = api.StreamValidator;
 const streamValidator = new StreamValidator('path to ddf dataset', custom parameters);
 // custom parameters should be explained a little bit later
@@ -56,7 +56,7 @@ According to the state of the dataset (valid or not) this validator returns only
 This is the fastest validator among given here.
 
 ```
-const api = require('ddf-validation');
+const api = require('validate-ddf');
 const SimpleValidator = api.SimpleValidator;
 const simpleValidator = new SimpleValidator('./test/fixtures/good-folder-indexed', custom parameters);
 // custom parameters should be explained a little bit later
@@ -98,7 +98,7 @@ Notes.
 Here is an example:
 
 ```
-const api = require('ddf-validation');
+const api = require('validate-ddf');
 const expectedRules = 'INCORRECT_FILE CONCEPTS_NOT_FOUND';
 const StreamValidator = api.StreamValidator;
 const streamValidator = new StreamValidator(path, {
@@ -133,7 +133,7 @@ Otherwise, `createDataPackage` behavior is next: if `datapackage.json` exists th
  and new one will be created as `datapackage.json.TIME_LABEL`.
 
 ```
-const api = require('ddf-validation');
+const api = require('validate-ddf');
 
 const ddfRootFolder = '.';
 

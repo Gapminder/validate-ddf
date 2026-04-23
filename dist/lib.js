@@ -9430,11 +9430,13 @@ var readCsv = (path2) => _bind(_bind(_liftEffect(parseCsvImpl(path2)))(toAff$p(c
 var readCsv$p = (x) => readCsv(x.filepath);
 var readAndParseCsv = (fp) => _bind(readCsv(fp))((csv) => _pure({ headers: csv.headers, index: csv.index, columns: csv.columns }));
 var foldRows = (v) => (func) => (a) => {
-  const $0 = v.columns;
-  const $1 = v.headers;
-  return foldrArray((i) => (acc) => func(fromFoldable4(zipWithImpl(Tuple, $1, arrayMap((c) => c[i])($0))))(acc))(a)(rangeImpl(
+  const v1 = v.index.length;
+  if (v1 === 0) {
+    return a;
+  }
+  return foldrArray((i) => (acc) => func(fromFoldable4(zipWithImpl(Tuple, v.headers, arrayMap((c) => c[i])(v.columns))))(acc))(a)(rangeImpl(
     0,
-    v.index.length - 1 | 0
+    v1 - 1 | 0
   ));
 };
 
@@ -14732,16 +14734,32 @@ var parseCsvFileValues = (ds) => (v) => {
     zipWithImpl(Tuple, arrayMap(unsafeCoerce)(v.csvContent.headers), v.csvContent.columns)
   ));
 };
-var parseDataPoints2 = (ds) => (v) => for_1(snoc(v.by)(v.indicatorId))((c) => {
-  const $0 = getValueParser(ds)(c);
-  if ($0.tag === "Left") {
-    return $Either("Left", $0._1);
+var parseDataPoints2 = (ds) => (v) => {
+  if (0 < v.itemInfo.length) {
+    return for_1(snoc(v.by)(v.indicatorId))((c) => {
+      const $0 = getValueParser(ds)(c);
+      return withRowInfo(v.itemInfo[0]._1)(1)((() => {
+        if ($0.tag === "Left") {
+          return $Either("Left", $0._1);
+        }
+        if ($0.tag === "Right") {
+          return parseColumnValues($0._1)(unsafeLookup(showId)(ordId)(c)(v.values))(v.itemInfo);
+        }
+        fail();
+      })());
+    });
   }
-  if ($0.tag === "Right") {
-    return parseColumnValues($0._1)(unsafeLookup(showId)(ordId)(c)(v.values))(v.itemInfo);
-  }
-  fail();
-});
+  return for_1(snoc(v.by)(v.indicatorId))((c) => {
+    const $0 = getValueParser(ds)(c);
+    if ($0.tag === "Left") {
+      return $Either("Left", $0._1);
+    }
+    if ($0.tag === "Right") {
+      return parseColumnValues($0._1)(unsafeLookup(showId)(ordId)(c)(v.values))(v.itemInfo);
+    }
+    fail();
+  });
+};
 var getEntities = (v) => (v1) => (v2) => {
   if (v2.tag === "Nothing") {
     return lookup5(v1)(v.entities);
@@ -15356,9 +15374,8 @@ var validateCsvHeaders = (v) => (v1) => (dictMonad) => {
               ...messageFromIssue($Issue(
                 "CodedIssue",
                 E_DATASET_CONCEPT_NOT_FOUND,
-                { ...emptyContext, valueContext: $Maybe("Just", { value: $$set }) }
+                { ...emptyContext, fileContext: $Maybe("Just", { filepath, lineNo: 1 }), valueContext: $Maybe("Just", { value: h }) }
               )),
-              file: filepath,
               isWarning: false
             }
           ]);
@@ -15371,8 +15388,8 @@ var validateCsvHeaders = (v) => (v1) => (dictMonad) => {
                 E_DATASET_ENTITYSET_UNDEFINED,
                 {
                   ...emptyContext,
-                  message: $Maybe("Just", "not an entity_set in " + $0.collectionInfo._1.domain + " domain"),
-                  valueContext: $Maybe("Just", { value: $$set })
+                  message: $Maybe("Just", $$set + " is not an entity_set in " + $0.collectionInfo._1.domain + " domain"),
+                  valueContext: $Maybe("Just", { value: h })
                 }
               )),
               file: filepath,
@@ -15393,9 +15410,8 @@ var validateCsvHeaders = (v) => (v1) => (dictMonad) => {
         ...messageFromIssue($Issue(
           "CodedIssue",
           E_DATASET_CONCEPT_NOT_FOUND,
-          { ...emptyContext, valueContext: $Maybe("Just", { value: h }) }
+          { ...emptyContext, fileContext: $Maybe("Just", { filepath, lineNo: 1 }), valueContext: $Maybe("Just", { value: h }) }
         )),
-        file: filepath,
         isWarning: false
       }
     ]);

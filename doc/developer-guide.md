@@ -1,4 +1,4 @@
-# ddf-validation Developer's guide 
+# validate-ddf Developer's guide 
 
 ## Registry of issues types
 
@@ -25,7 +25,7 @@ exports.descriptions = {
 
 ## Types of rules
 
-There are 5 types of rules supported by `ddf-validation`:
+There are 5 types of rules supported by `validate-ddf`:
 
 * General rules
 * DataPackage rules
@@ -245,7 +245,7 @@ module.exports = {
 };
 ```
 
-More information regarding `ddf-validation` solution is placed in the test folder.
+More information regarding `validate-ddf` solution is placed in the test folder.
 
 
 # Testing
