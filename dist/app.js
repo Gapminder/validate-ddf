@@ -16465,13 +16465,17 @@ var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(l
 
 // output-es/Utils.Progress/foreign.js
 var ESC_CLEAR = "\r\x1B[K";
-var progress = (msg) => () => {
+var defaultHandler = (msg) => {
   if (process.stdout.isTTY) {
     process.stdout.write(ESC_CLEAR + msg);
   }
 };
+var currentHandler = defaultHandler;
+var progress = (msg) => () => {
+  currentHandler(msg);
+};
 var clearProgress = () => {
-  if (process.stdout.isTTY) {
+  if (currentHandler === defaultHandler && process.stdout.isTTY) {
     process.stdout.write(ESC_CLEAR);
   }
 };

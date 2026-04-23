@@ -35,7 +35,8 @@
   "scripts": {
     "clean": "rm -rf node_modules output output-es .spago dist/*.js *.lock .cache",
     "build": "spago build",
-    "test": "spago test",
+    "test": "spago test && npm run test:js",
+    "test:js": "node --test test/js-api.test.js",
     "bundle": "npm run build && npm run bundle-app && npm run bundle-module",
     "bundle-app": "purs-backend-es bundle-app --platform=node --to dist/app.js",
     "bundle-module": "purs-backend-es bundle-module --platform=node --to dist/lib.js"

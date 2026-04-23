@@ -29,10 +29,21 @@ import Node.Path as Path
 import Node.Process (setExitCode)
 import Options.Applicative (execParser)
 import Partial.Unsafe (unsafePartial)
+import Utils.Progress (resetProgressHandler, setProgressHandler)
 import Yoga.JSON as JSON
 
 -- | validation options
 type ValidateOptions = { onlyErrors :: Boolean, generateDP :: Boolean, targetPath :: FilePath }
+
+-- | Set a custom progress callback for use by the JS API.
+-- | The callback receives a progress message string (e.g. "validating datapoints: 3/30 indicator groups").
+-- | Call resetProgressCallback when done.
+setProgressCallback :: (String -> Effect Unit) -> Effect Unit
+setProgressCallback = setProgressHandler
+
+-- | Reset the progress handler back to the default TTY behaviour.
+resetProgressCallback :: Effect Unit
+resetProgressCallback = resetProgressHandler
 
 -- | validation function to be exposed to javascript side.
 validate' :: ValidateOptions -> Effect (Promise Foreign)

@@ -1,6 +1,8 @@
 # validate-ddf
 
-## how to run validation
+`validate-ddf` is a **DDF dataset validator** written in **PureScript**. It reads a directory of CSV files structured according to the DDF (Data Description Format) naming conventions, parses and validates them in layers (concepts → entities → datapoints → synonyms → datapackage), and reports structured errors and warnings.
+
+# CLI usage
 
 1. install
    - `npm install -g @gapminder/validate-ddf`
@@ -31,6 +33,22 @@ validator will enumerate all files in a given folder and try to find
 all the filenames that match ddf standard. In datapackage mode, the
 validator will read all files in the resources list in datapackage.json.
 
+# JS usage in another app
+`npm install @gapminder/validate-ddf`
+
+``` js
+import { validate } from "@gapminder/validate-ddf";
+
+const { success, errors } = await validate("/path/to/dataset", {
+  onlyErrors: false,
+  generateDP: false,
+  onProgress: (msg) => console.log(msg),
+  // e.g. "checking format: 12/245"
+  // e.g. "validating datapoints: 7/30 indicator groups"
+});
+```
+
+
 ## how to build
 
 1. install purescript and spago
@@ -45,8 +63,6 @@ validator will read all files in the resources list in datapackage.json.
 ### run test
 
 - run `npm test`
-
-### create new version
 
 ### create new version
 1. update version in package.json

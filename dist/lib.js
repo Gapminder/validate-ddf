@@ -16526,13 +16526,23 @@ var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(l
 
 // output-es/Utils.Progress/foreign.js
 var ESC_CLEAR = "\r\x1B[K";
-var progress = (msg) => () => {
+var defaultHandler = (msg) => {
   if (process.stdout.isTTY) {
     process.stdout.write(ESC_CLEAR + msg);
   }
 };
+var currentHandler = defaultHandler;
+var setProgressHandler = (fn) => () => {
+  currentHandler = (msg) => fn(msg)();
+};
+var resetProgressHandler = () => {
+  currentHandler = defaultHandler;
+};
+var progress = (msg) => () => {
+  currentHandler(msg);
+};
 var clearProgress = () => {
-  if (process.stdout.isTTY) {
+  if (currentHandler === defaultHandler && process.stdout.isTTY) {
     process.stdout.write(ESC_CLEAR);
   }
 };
@@ -17001,6 +17011,7 @@ var validate$p = (opts2) => fromAff((() => {
     })())(() => _pure(write4($Tuple(!hasError($0), msgsToShow))));
   });
 })());
+var setProgressCallback = setProgressHandler;
 var runMain = (opts2) => {
   const path2 = opts2.targetPath;
   const noWarning = opts2.noWarning;
@@ -17050,6 +17061,7 @@ var runMain = (opts2) => {
     fiber.run();
   };
 };
+var resetProgressCallback = resetProgressHandler;
 var main = () => {
   const a$p = getArgs();
   const $0 = handleParseResult(execParserPure(defaultPrefs)(opts)(a$p))();
@@ -17057,8 +17069,10 @@ var main = () => {
 };
 export {
   main,
+  resetProgressCallback,
   runMain,
   runValidationT2 as runValidationT,
+  setProgressCallback,
   validate$p,
   write4 as write
 };
