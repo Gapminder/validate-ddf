@@ -1569,6 +1569,9 @@ var mapWithIndexArray = function(f) {
   };
 };
 
+// output-es/Data.FunctorWithIndex/index.js
+var functorWithIndexArray = { mapWithIndex: mapWithIndexArray, Functor0: () => functorArray };
+
 // output-es/Data.Eq/foreign.js
 var refEq = function(r1) {
   return function(r2) {
@@ -3934,6 +3937,44 @@ var monoidDual2 = /* @__PURE__ */ (() => {
   const semigroupDual1 = { append: (v) => (v1) => $0.append(v1)(v) };
   return { mempty: monoidEndo2.mempty, Semigroup0: () => semigroupDual1 };
 })();
+var traverseWithIndex_ = (dictApplicative) => {
+  const $0 = dictApplicative.Apply0();
+  return (dictFoldableWithIndex) => (f) => dictFoldableWithIndex.foldrWithIndex((i) => {
+    const $1 = f(i);
+    return (x) => {
+      const $2 = $1(x);
+      return (b) => $0.apply($0.Functor0().map((v) => identity)($2))(b);
+    };
+  })(dictApplicative.pure());
+};
+var forWithIndex_ = (dictApplicative) => {
+  const traverseWithIndex_1 = traverseWithIndex_(dictApplicative);
+  return (dictFoldableWithIndex) => {
+    const $0 = traverseWithIndex_1(dictFoldableWithIndex);
+    return (b) => (a) => $0(a)(b);
+  };
+};
+var foldableWithIndexArray = {
+  foldrWithIndex: (f) => (z) => {
+    const $0 = foldrArray((v) => {
+      const $02 = v._1;
+      const $12 = v._2;
+      return (y) => f($02)($12)(y);
+    })(z);
+    const $1 = mapWithIndexArray(Tuple);
+    return (x) => $0($1(x));
+  },
+  foldlWithIndex: (f) => (z) => {
+    const $0 = foldlArray((y) => (v) => f(v._1)(y)(v._2))(z);
+    const $1 = mapWithIndexArray(Tuple);
+    return (x) => $0($1(x));
+  },
+  foldMapWithIndex: (dictMonoid) => {
+    const mempty = dictMonoid.mempty;
+    return (f) => foldableWithIndexArray.foldrWithIndex((i) => (x) => (acc) => dictMonoid.Semigroup0().append(f(i)(x))(acc))(mempty);
+  },
+  Foldable0: () => foldableArray
+};
 var foldlWithIndexDefault = (dictFoldableWithIndex) => {
   const foldMapWithIndex1 = dictFoldableWithIndex.foldMapWithIndex(monoidDual2);
   return (c) => (u) => (xs) => foldMapWithIndex1((i) => {
@@ -3965,27 +4006,27 @@ var keys = Object.keys || toArrayWithKey(function(k) {
 });
 
 // output-es/Node.Process/foreign.js
-import process from "process";
-var abortImpl = process.abort ? () => process.abort() : null;
-var argv = () => process.argv.slice();
-var channelRefImpl = process.channel && process.channel.ref ? () => process.channel.ref() : null;
-var channelUnrefImpl = process.channel && process.channel.unref ? () => process.channel.unref() : null;
-var debugPort = process.debugPort;
-var disconnectImpl = process.disconnect ? () => process.disconnect() : null;
-var exitImpl = (code) => process.exit(code);
+import process2 from "process";
+var abortImpl = process2.abort ? () => process2.abort() : null;
+var argv = () => process2.argv.slice();
+var channelRefImpl = process2.channel && process2.channel.ref ? () => process2.channel.ref() : null;
+var channelUnrefImpl = process2.channel && process2.channel.unref ? () => process2.channel.unref() : null;
+var debugPort = process2.debugPort;
+var disconnectImpl = process2.disconnect ? () => process2.disconnect() : null;
+var exitImpl = (code) => process2.exit(code);
 var setExitCodeImpl = (code) => {
-  process.exitCode = code;
+  process2.exitCode = code;
 };
-var pid = process.pid;
-var platformStr = process.platform;
-var ppid = process.ppid;
-var stdin = process.stdin;
-var stdout = process.stdout;
-var stderr = process.stderr;
-var stdinIsTTY = process.stdinIsTTY;
-var stdoutIsTTY = process.stdoutIsTTY;
-var stderrIsTTY = process.stderrIsTTY;
-var version = process.version;
+var pid = process2.pid;
+var platformStr = process2.platform;
+var ppid = process2.ppid;
+var stdin = process2.stdin;
+var stdout = process2.stdout;
+var stderr = process2.stderr;
+var stdinIsTTY = process2.stdinIsTTY;
+var stdoutIsTTY = process2.stdoutIsTTY;
+var stderrIsTTY = process2.stderrIsTTY;
+var version = process2.version;
 
 // output-es/Node.Stream/foreign.js
 var writeStringImpl = (w, str, enc) => w.write(str, enc);
@@ -4043,6 +4084,20 @@ var minimum = (dictOrd) => {
     }
   };
   return (dictFoldable1) => dictFoldable1.foldMap1(semigroupMin)(unsafeCoerce);
+};
+
+// output-es/Data.TraversableWithIndex/index.js
+var traversableWithIndexArray = {
+  traverseWithIndex: (dictApplicative) => {
+    const sequence12 = traversableWithIndexArray.Traversable2().sequence(dictApplicative);
+    return (f) => {
+      const $0 = traversableWithIndexArray.FunctorWithIndex0().mapWithIndex(f);
+      return (x) => sequence12($0(x));
+    };
+  },
+  FunctorWithIndex0: () => functorWithIndexArray,
+  FoldableWithIndex1: () => foldableWithIndexArray,
+  Traversable2: () => traversableArray
 };
 
 // output-es/Data.Array.NonEmpty.Internal/foreign.js
@@ -16408,6 +16463,19 @@ var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(l
   }))));
 }))));
 
+// output-es/Utils.Progress/foreign.js
+var ESC_CLEAR = "\r\x1B[K";
+var progress = (msg) => () => {
+  if (process.stdout.isTTY) {
+    process.stdout.write(ESC_CLEAR + msg);
+  }
+};
+var clearProgress = () => {
+  if (process.stdout.isTTY) {
+    process.stdout.write(ESC_CLEAR);
+  }
+};
+
 // output-es/App.Validation.FileNameBased/index.js
 var bindVT3 = /* @__PURE__ */ bindExceptT({
   Applicative0: () => applicativeStateT(monadAff),
@@ -16419,7 +16487,7 @@ var applicativeVT2 = /* @__PURE__ */ applicativeExceptT({
   Applicative0: () => applicativeStateT(monadAff),
   Bind1: () => bindStateT(monadAff)
 });
-var traverse_4 = /* @__PURE__ */ traverse_(applicativeVT2)(foldableArray);
+var forWithIndex_2 = /* @__PURE__ */ forWithIndex_(applicativeVT2)(foldableWithIndexArray);
 var checkAndFixFileFormat2 = /* @__PURE__ */ checkAndFixFileFormat(monadAff)(monadEffectAff);
 var fromArrayBy3 = /* @__PURE__ */ (() => fromArrayPurs(eqCollectionConstant.eq, hashableCollectionConstant.hash))();
 var identity21 = (x) => x;
@@ -16429,8 +16497,13 @@ var $$for2 = /* @__PURE__ */ (() => {
   const traverse22 = traversableArray.traverse(applicativeVT2);
   return (x) => (f) => traverse22(f)(x);
 })();
+var traverse_4 = /* @__PURE__ */ traverse_(applicativeVT2)(foldableArray);
 var getState3 = /* @__PURE__ */ getState(monadAff)(monoidArray);
 var compare13 = /* @__PURE__ */ (() => ordMaybe(ordTuple(ordString)(ordNonEmpty2(ordString))).compare)();
+var forWithIndex = /* @__PURE__ */ (() => {
+  const $0 = traversableWithIndexArray.traverseWithIndex(applicativeVT2);
+  return (b) => (a) => $0(a)(b);
+})();
 var emitWarningsAndContinue2 = /* @__PURE__ */ emitWarningsAndContinue(monadAff);
 var readDataPackageResources2 = (path2) => bindVT3.bind(liftEffect3(datapackageExists(path2)))((datapackage) => {
   if (datapackage.tag === "Left") {
@@ -16484,108 +16557,116 @@ var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(mon
   "etl",
   "assets",
   "langsplit"
-])))((fs2) => bindVT3.bind(traverse_4(checkAndFixFileFormat2(fixFormat))(filterImpl((f) => stripSuffix(".csv")(f).tag !== "Nothing", fs2)))(() => bindVT3.bind(readAllFileInfoForValidation2(path2)(fs2)(monadAff))((ddfFiles) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
-  const fileMap = fromArrayBy3((x) => getCollectionType((() => {
-    if (0 < x.length) {
-      return x[0].collectionInfo;
-    }
-    fail();
-  })()))(identity21)(groupAllBy((x) => (y) => ordCollectionConstant.compare(getCollectionType(x.collectionInfo))(getCollectionType(y.collectionInfo)))(ddfFiles));
-  return bindVT3.bind((() => {
-    const v = lookup8(CONCEPTS)(fileMap);
-    if (v.tag === "Nothing") {
-      return emitErrorsAndStop3([$Issue("CodedIssue", E_DATASET_NO_CONCEPT, emptyContext)]);
-    }
-    if (v.tag === "Just") {
-      return applicativeVT2.pure(v._1);
-    }
-    fail();
-  })())((conceptFileInfos) => bindVT3.bind(readAndParseCsvFiles(conceptFileInfos))((conceptCsvFiles) => bindVT3.bind($$for2(conceptCsvFiles)((x) => validateConcepts(x)(monadAff)))((concepts) => {
-    const conceptResources = createResources(path2)(conceptCsvFiles);
+])))((fs2) => {
+  const csvFiles = filterImpl((f) => stripSuffix(".csv")(f).tag !== "Nothing", fs2);
+  const totalCsvFiles = csvFiles.length;
+  return bindVT3.bind(forWithIndex_2(csvFiles)((i) => (f) => bindVT3.bind(liftEffect3(progress("checking format: " + showIntImpl(i + 1 | 0) + "/" + showIntImpl(totalCsvFiles))))(() => checkAndFixFileFormat2(fixFormat)(f))))(() => bindVT3.bind(liftEffect3(clearProgress))(() => bindVT3.bind(readAllFileInfoForValidation2(path2)(fs2)(monadAff))((ddfFiles) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
+    const fileMap = fromArrayBy3((x) => getCollectionType((() => {
+      if (0 < x.length) {
+        return x[0].collectionInfo;
+      }
+      fail();
+    })()))(identity21)(groupAllBy((x) => (y) => ordCollectionConstant.compare(getCollectionType(x.collectionInfo))(getCollectionType(y.collectionInfo)))(ddfFiles));
     return bindVT3.bind((() => {
-      const v = lookup8(ENTITIES)(fileMap);
+      const v = lookup8(CONCEPTS)(fileMap);
       if (v.tag === "Nothing") {
-        return applicativeVT2.pure([]);
+        return emitErrorsAndStop3([$Issue("CodedIssue", E_DATASET_NO_CONCEPT, emptyContext)]);
       }
       if (v.tag === "Just") {
         return applicativeVT2.pure(v._1);
       }
       fail();
-    })())((entityFileInfos) => bindVT3.bind(readAndParseCsvFiles(entityFileInfos))((entityCsvFiles) => bindVT3.bind($$for2(entityCsvFiles)((x) => validateEntities(x)(monadAff)))((entities) => {
-      const entityResources = createResources(path2)(entityCsvFiles);
-      return bindVT3.bind(validateBaseDataSet(concat(concepts))(concat(entities))(monadAff))((ds) => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(getState3)((msgs) => {
-        if (hasError(msgs)) {
-          return applicativeVT2.pure($Tuple(ds, []));
+    })())((conceptFileInfos) => bindVT3.bind(readAndParseCsvFiles(conceptFileInfos))((conceptCsvFiles) => bindVT3.bind($$for2(conceptCsvFiles)((x) => validateConcepts(x)(monadAff)))((concepts) => {
+      const conceptResources = createResources(path2)(conceptCsvFiles);
+      return bindVT3.bind((() => {
+        const v = lookup8(ENTITIES)(fileMap);
+        if (v.tag === "Nothing") {
+          return applicativeVT2.pure([]);
         }
-        return bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind((() => {
-          const v = lookup8(DATAPOINTS)(fileMap);
-          if (v.tag === "Nothing") {
-            return applicativeVT2.pure([]);
+        if (v.tag === "Just") {
+          return applicativeVT2.pure(v._1);
+        }
+        fail();
+      })())((entityFileInfos) => bindVT3.bind(readAndParseCsvFiles(entityFileInfos))((entityCsvFiles) => bindVT3.bind($$for2(entityCsvFiles)((x) => validateEntities(x)(monadAff)))((entities) => {
+        const entityResources = createResources(path2)(entityCsvFiles);
+        return bindVT3.bind(validateBaseDataSet(concat(concepts))(concat(entities))(monadAff))((ds) => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(getState3)((msgs) => {
+          if (hasError(msgs)) {
+            return applicativeVT2.pure($Tuple(ds, []));
           }
-          if (v.tag === "Just") {
-            const $0 = v._1;
-            return bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating datapoints..."))))(() => applicativeVT2.pure($0));
-          }
-          fail();
-        })())((datapointFiles) => bindVT3.bind($$for2(groupAllBy((x) => (y) => compare13(x.collectionInfo.tag === "DataPoints" ? $Maybe("Just", $Tuple(x.collectionInfo._1.indicator, x.collectionInfo._1.pkeys)) : Nothing)(y.collectionInfo.tag === "DataPoints" ? $Maybe("Just", $Tuple(y.collectionInfo._1.indicator, y.collectionInfo._1.pkeys)) : Nothing))(datapointFiles))((group3) => {
-          const $0 = (() => {
-            if (0 < group3.length) {
-              return group3[0];
-            }
-            fail();
-          })();
-          if ($0.collectionInfo.tag === "DataPoints") {
-            const $1 = $0.collectionInfo._1.indicator;
-            const $2 = $0.collectionInfo._1.pkeys;
-            return bindVT3.bind(readAndParseCsvFiles(group3))((dpscsvFiles) => bindVT3.bind(validateDatapointsFileGroup($1)($2)(ds)(dpscsvFiles)(monadAff))(() => applicativeVT2.pure(createResources(path2)(dpscsvFiles))));
-          }
-          fail();
-        }))((datapointResources_) => {
-          const datapointResources = concat(datapointResources_);
-          return bindVT3.bind((() => {
-            const v = lookup8(SYNONYMS)(fileMap);
+          return bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind((() => {
+            const v = lookup8(DATAPOINTS)(fileMap);
             if (v.tag === "Nothing") {
               return applicativeVT2.pure([]);
             }
             if (v.tag === "Just") {
               const $0 = v._1;
-              return bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating synonym files..."))))(() => applicativeVT2.pure($0));
+              return bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating datapoints..."))))(() => applicativeVT2.pure($0));
             }
             fail();
-          })())((synonymFileInfos) => bindVT3.bind(readAndParseCsvFiles(synonymFileInfos))((synonymCsvFiles) => bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(synonymCsvFiles))(() => {
-            const synonymResources = createResources(path2)(synonymCsvFiles);
-            return bindVT3.bind((() => {
-              const v = lookup8(TRANSLATIONS)(fileMap);
-              if (v.tag === "Nothing") {
-                return applicativeVT2.pure([]);
-              }
-              if (v.tag === "Just") {
-                const $0 = v._1;
-                return bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating translation files..."))))(() => applicativeVT2.pure($0));
-              }
-              fail();
-            })())((translationFileInfos) => bindVT3.bind(readAndParseCsvFiles(translationFileInfos))((translationCsvFiles) => bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(translationCsvFiles))(() => {
-              const actualResources = [...conceptResources, ...entityResources, ...datapointResources, ...synonymResources];
-              return bindVT3.bind(readDataPackageResources2(path2))((expectedResources) => bindVT3.bind((() => {
-                const $0 = compareResources(expectedResources)(actualResources);
-                if ($0.tag === "Left") {
-                  if (dpIssueAsWarning) {
-                    return emitWarningsAndContinue2($0._1);
-                  }
-                  return emitErrorsAndStop3($0._1);
-                }
-                if ($0.tag === "Right") {
-                  return applicativeVT2.pure();
+          })())((datapointFiles) => {
+            const datapointFileGroups = groupAllBy((x) => (y) => compare13(x.collectionInfo.tag === "DataPoints" ? $Maybe("Just", $Tuple(x.collectionInfo._1.indicator, x.collectionInfo._1.pkeys)) : Nothing)(y.collectionInfo.tag === "DataPoints" ? $Maybe("Just", $Tuple(y.collectionInfo._1.indicator, y.collectionInfo._1.pkeys)) : Nothing))(datapointFiles);
+            const total = datapointFileGroups.length;
+            return bindVT3.bind(forWithIndex(datapointFileGroups)((i) => (group3) => bindVT3.bind(liftEffect3(progress("validating datapoints: " + showIntImpl(i + 1 | 0) + "/" + showIntImpl(total) + " indicator groups")))(() => {
+              const $0 = (() => {
+                if (0 < group3.length) {
+                  return group3[0];
                 }
                 fail();
-              })())(() => applicativeVT2.pure($Tuple(ds, actualResources))));
-            })));
+              })();
+              if ($0.collectionInfo.tag === "DataPoints") {
+                const $1 = $0.collectionInfo._1.indicator;
+                const $2 = $0.collectionInfo._1.pkeys;
+                return bindVT3.bind(readAndParseCsvFiles(group3))((dpscsvFiles) => bindVT3.bind(validateDatapointsFileGroup($1)($2)(ds)(dpscsvFiles)(monadAff))(() => applicativeVT2.pure(createResources(path2)(dpscsvFiles))));
+              }
+              fail();
+            })))((datapointResources_) => bindVT3.bind(liftEffect3(clearProgress))(() => {
+              const datapointResources = concat(datapointResources_);
+              return bindVT3.bind((() => {
+                const v = lookup8(SYNONYMS)(fileMap);
+                if (v.tag === "Nothing") {
+                  return applicativeVT2.pure([]);
+                }
+                if (v.tag === "Just") {
+                  const $0 = v._1;
+                  return bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating synonym files..."))))(() => applicativeVT2.pure($0));
+                }
+                fail();
+              })())((synonymFileInfos) => bindVT3.bind(readAndParseCsvFiles(synonymFileInfos))((synonymCsvFiles) => bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(synonymCsvFiles))(() => {
+                const synonymResources = createResources(path2)(synonymCsvFiles);
+                return bindVT3.bind((() => {
+                  const v = lookup8(TRANSLATIONS)(fileMap);
+                  if (v.tag === "Nothing") {
+                    return applicativeVT2.pure([]);
+                  }
+                  if (v.tag === "Just") {
+                    const $0 = v._1;
+                    return bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating translation files..."))))(() => applicativeVT2.pure($0));
+                  }
+                  fail();
+                })())((translationFileInfos) => bindVT3.bind(readAndParseCsvFiles(translationFileInfos))((translationCsvFiles) => bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(translationCsvFiles))(() => {
+                  const actualResources = [...conceptResources, ...entityResources, ...datapointResources, ...synonymResources];
+                  return bindVT3.bind(readDataPackageResources2(path2))((expectedResources) => bindVT3.bind((() => {
+                    const $0 = compareResources(expectedResources)(actualResources);
+                    if ($0.tag === "Left") {
+                      if (dpIssueAsWarning) {
+                        return emitWarningsAndContinue2($0._1);
+                      }
+                      return emitErrorsAndStop3($0._1);
+                    }
+                    if ($0.tag === "Right") {
+                      return applicativeVT2.pure();
+                    }
+                    fail();
+                  })())(() => applicativeVT2.pure($Tuple(ds, actualResources))));
+                })));
+              })));
+            }));
           })));
         }))));
-      }))));
+      })));
     })));
-  })));
-})))));
+  }))));
+}));
 
 // output-es/Data.DataPackage/index.js
 var valueIsSymbol = { reflectSymbol: () => "value" };

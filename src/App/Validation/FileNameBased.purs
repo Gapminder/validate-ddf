@@ -19,7 +19,9 @@ import Data.JSON.DataPackage (Resource, datapackageExists)
 import Data.JSON.DataPackage as DataPackage
 import Data.Maybe (Maybe(..), fromJust, isNothing)
 import Data.String as Str
+import Data.FoldableWithIndex (forWithIndex_)
 import Data.Traversable (for, traverse_)
+import Data.TraversableWithIndex (forWithIndex)
 import Data.Tuple (Tuple(..))
 import Data.Validation.Issue (Issue(..), mkIssue, mkIssueWithMessage)
 import Data.Validation.Registry (ErrorCode(..))
@@ -34,6 +36,7 @@ import Node.FS.Aff (readTextFile)
 import Node.Path (FilePath)
 import Partial.Unsafe (unsafePartial)
 import Utils (getFiles)
+import Utils.Progress (clearProgress, progress)
 
 -- | read all files
 readAllFileInfoForValidation :: FilePath -> Array FilePath -> Validation Messages (Array FileInfo)
@@ -81,7 +84,11 @@ validate path dpIssueAsWarning fixFormat = do
 
   -- check (and optionally fix) byte-level format issues on CSV files only
   let csvFiles = Arr.filter (\f -> Str.stripSuffix (Str.Pattern ".csv") f /= Nothing) fs
-  traverse_ (checkAndFixFileFormat fixFormat) csvFiles
+  let totalCsvFiles = Arr.length csvFiles
+  forWithIndex_ csvFiles \i f -> do
+    liftEffect $ progress $ "checking format: " <> show (i + 1) <> "/" <> show totalCsvFiles
+    checkAndFixFileFormat fixFormat f
+  liftEffect clearProgress
 
   ddfFiles <- readAllFileInfoForValidation path fs
 
@@ -157,7 +164,11 @@ validate path dpIssueAsWarning fixFormat = do
       -- If we will change this line, be sure to also double check the unsafePartial line below.
       datapointFileGroups = Arr.groupAllBy (compare `on` getIndicatorAndPkey) datapointFiles
 
-    datapointResources_ <- for datapointFileGroups \group -> do
+    let
+      total = Arr.length datapointFileGroups
+
+    datapointResources_ <- forWithIndex datapointFileGroups \i group -> do
+      liftEffect $ progress $ "validating datapoints: " <> show (i + 1) <> "/" <> show total <> " indicator groups"
       let
         -- we have veritified on last step so we can use the fromJust function.
         (Tuple indicator pkeys) = unsafePartial $ fromJust $ getIndicatorAndPkey $ NEA.head group
@@ -173,6 +184,7 @@ validate path dpIssueAsWarning fixFormat = do
       dpscsvFiles <- readAndParseCsvFiles $ NEA.toArray group
       validateDatapointsFileGroup indicator pkeys ds dpscsvFiles
       pure $ DataPackage.createResources path dpscsvFiles
+    liftEffect clearProgress
     let
       datapointResources = Arr.concat datapointResources_
 
