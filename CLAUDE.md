@@ -4,200 +4,312 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is `validate-ddf`, a validator for DDF (Data Description Format) datasets written in PureScript. It validates DDF datasets (structured data with concepts, entities, and datapoints) and can optionally generate `datapackage.json` files.
+`validate-ddf` is a **DDF dataset validator** written in **PureScript**. It reads a directory of CSV files structured according to the DDF (Data Description Format) naming conventions, parses and validates them in layers (concepts → entities → datapoints → synonyms → datapackage), and reports structured errors and warnings.
+
+The validator implements a **"parse, don't validate"** philosophy: rather than checking a pre-built structure, it builds the dataset from scratch and reports every structural or semantic problem found along the way.
+
+**Key DDF concepts** (see `doc/` for full specs):
+- **Concepts**: every column header used anywhere must be declared in `ddf--concepts.csv` with a `concept_type`
+- **Entities**: single-dimensional lookups; entity domains enumerate all possible values; entity sets are named subsets
+- **DataPoints**: multi-dimensional measurements — indicator values keyed by one or more entity/time dimensions
+- **Identifiers**: must match `[A-Za-z0-9_]+`, max 64 chars; column headers follow the same rule plus the `is--<id>` prefix form for entity set membership
+
+---
 
 ## Key Commands
 
 ### Build & Development
 
-- `npm run build` - Build the project (runs `spago build`)
-- `npm run test` - Run tests (runs `spago test`)
-- `npm run clean` - Clean build artifacts
+```bash
+npm run build          # spago build
+npm run test           # spago test
+npm run clean          # rm -rf node_modules output .spago dist/*.js *.lock .cache
+```
 
 ### Bundling for Distribution
 
-- `npm run bundle-app` - Build CLI application bundle (outputs to `dist/app.js`)
-- `npm run bundle-module` - Build library module bundle (outputs to `dist/lib.js`)
+```bash
+npm run bundle-app     # → dist/app.js  (CLI entry point)
+npm run bundle-module  # → dist/lib.js  (JS library)
+```
 
-Both bundles must be rebuilt after making changes to PureScript source files.
+**Always rebuild bundles after changing PureScript source files.**
 
 ### Running the Validator
 
-**IMPORTANT**: When developing/testing, always use `spago run` to run the current working version:
-- `spago run <path>` - Validate a DDF dataset using current code
-- `spago run -- --no-warning <path>` - Suppress warnings
-- `spago run -- -m datapackage <path>` - Use datapackage mode
-- `spago run -- -p <path>` - Generate `datapackage.json` after successful validation
-- `spago run -- --fix <path>` - Auto-fix BOM/CRLF format issues in CSV files
+**During development — use `spago run` (runs current source, not installed package):**
 
-The globally installed `validate-ddf` command uses the published npm package and should only be used as a fallback when spago build fails:
-- `validate-ddf [PATH]` - Validate using installed version (NOT recommended for development)
-- `validate-ddf --no-warning [PATH]` - Suppress warnings, show only errors
-- `validate-ddf -m datapackage [PATH]` - Use datapackage mode
-- `validate-ddf -p [PATH]` - Generate `datapackage.json` after successful validation
+```bash
+spago run -- <path>                    # validate a dataset
+spago run -- --no-warning <path>       # errors only
+spago run -- -m datapackage <path>     # datapackage mode
+spago run -- -p <path>                 # validate + generate datapackage.json
+spago run -- --fix <path>              # validate + auto-fix BOM/CRLF issues
+```
+
+The globally installed `validate-ddf` command uses the published npm package — only use it as a fallback.
 
 ### Publishing
 
-When creating a new version:
-
 1. `npm version patch` (or `minor`/`major`)
-2. Update version string in `src/Main.purs` (line 74)
+2. Update version string in `src/Main.purs` (search for the version literal)
 3. `npm run bundle-app && npm run bundle-module`
 4. `npm publish`
+
+---
+
+## Project Structure
+
+```
+src/
+├── Main.purs                              # CLI entry: arg parsing, runMain, JS API export
+├── cli.js                                 # Shebang wrapper → imports dist/app.js
+├── index.js                               # npm library entry → exports validate() from dist/lib.js
+├── App/
+│   ├── Cli.purs                           # CLI option parsing (options-applicative)
+│   └── Validation/
+│       ├── FileNameBased.purs             # Main validation pipeline (the orchestrator)
+│       ├── DataPackageBased.purs          # Datapackage-first validation mode
+│       └── Common.purs                    # Shared helpers: readCsvs, checkFormat, emit*
+├── Utils/                                 # getFiles, arrayOfRight, path utilities
+└── Data/
+    ├── Csv/
+    │   ├── Csv.purs / Csv.js              # CSV reading FFI (csv-parse/sync); RawCsvContent type
+    │   └── FileCheck.purs / FileCheck.js  # BOM/CRLF/UTF-8 byte-level detection and fixing
+    ├── DDF/
+    │   ├── Atoms/
+    │   │   ├── Identifier.purs            # Identifier newtype + parser (alphanumeric + _)
+    │   │   ├── Header.purs                # Header parser (identifier or is--<identifier>)
+    │   │   ├── Boolean.purs               # "TRUE"/"FALSE"/"true"/"false" validator
+    │   │   └── Value.purs                 # Value parsing (string, number, time, JSON)
+    │   ├── Csv/
+    │   │   ├── FileInfo.purs              # Filename parser → CollectionInfo (Concepts/Entities/DataPoints/...)
+    │   │   ├── CsvFile.purs               # CsvFile type; parseCsvFile (headers × rows)
+    │   │   └── Utils.purs                 # createConceptInput / createEntityInput / createDataPointsInput
+    │   ├── Concept.purs                   # Concept type + parseConcept + reservedConcepts
+    │   ├── Entity.purs                    # Entity type + parseEntity
+    │   ├── DataPoint.purs                 # DataPoints type + parseDataPoints + merge
+    │   ├── DataSet.purs                   # DataSet (concepts+entities HashMap) + parseBaseDataSet
+    │   ├── Internal.purs                  # Shared internal helpers (pathAndRow, etc.)
+    │   └── Metadata.purs                  # (stub)
+    ├── DataPackage/
+    │   └── DataPackage.purs               # generateDataPackage (builds datapackage.json from DataSet)
+    ├── JSON/
+    │   └── DataPackage.purs               # datapackageExists; parseDataPackageResources; writeDataPackage
+    ├── Validation/
+    │   ├── Registry.purs                  # ALL error codes (ErrorCode enum) + message templates
+    │   ├── Issue.purs                     # Issue type (CodedIssue ErrorCode ErrorContext); mkIssue helpers
+    │   ├── Result.purs                    # Message type (presentation layer); messageFromIssue; setError
+    │   ├── ValidationT.purs               # ValidationT monad transformer; runValidationT; vWarning/vError
+    │   └── Env.purs                       # Env helpers
+    └── Map/Extra.purs                     # mapKeys / mapKeysWith
+test/
+├── Main.purs                              # Test suite entry (purescript-spec)
+├── Test/
+│   ├── Unit/                              # Unit tests: Identifier, Header, FileInfo, Concept, Entity, Value, Csv
+│   ├── Integration/                       # Integration tests: ValidDatasets, CsvErrors, DatasetErrors, DatapackageErrors, DatapointErrors
+│   └── Helpers/                           # Shared test helpers
+└── datasets/                              # Integration test DDF datasets
+    ├── valid-minimal/                     # Smallest passing dataset
+    ├── valid-*/                           # Other valid datasets
+    └── error-*/                           # Datasets with specific intentional errors
+doc/
+├── 00 - DDF documentation index.md       # DDF overview (from Google Docs)
+├── 01 - DDF Data Model.md                # DDF conceptual model
+├── 02 - DDFcsv format.md                 # DDFcsv file format spec (MUST/SHOULD language)
+├── api-reference.md                       # OLD JS API — ignore, not relevant to this codebase
+├── developer-guide.md                     # OLD JS dev guide — ignore
+└── user-guide.md                          # OLD JS CLI guide — ignore
+```
+
+---
 
 ## Architecture
 
 ### Language & Build System
 
-- Written in **PureScript**
-- Build tool: **Spago** (use the spago@next package)
-- PureScript files are in `src/` and `test/`, JavaScript shims are in `src/` for Node.js interop
-- Uses `purs-backend-es` for bundling PureScript to optimized ES modules
+- **PureScript** with **Spago 1.x** (`spago.yaml`, registry-based — no `spago.dhall`)
+- **purs-backend-es** for bundling optimised ES modules
+- **Node.js v24**, `"type": "module"` in `package.json`
+- FFI: two files — `Csv.js` (csv-parse) and `FileCheck.js` (BOM/CRLF/UTF-8 byte detection)
+- `npm run bundle-*` works because npm adds `node_modules/.bin` (esbuild) to PATH
 
 ### Entry Points
 
-- **CLI**: `src/cli.js` → imports `dist/app.js` (compiled from `src/Main.purs`)
-- **JS API**: `src/index.js` → exports `validate` function from `dist/lib.js`
+- **CLI**: `src/cli.js` → `dist/app.js` (compiled from `src/Main.purs`)
+- **JS API** (`src/index.js` → `dist/lib.js`):
+  ```javascript
+  import { validate } from "validate-ddf";
+  const result = await validate("./path/to/dataset", { onlyErrors: false, generateDP: false });
+  // result.success / result.errors
+  ```
 
-### Core Architecture
+### Main Validation Pipeline (`App/Validation/FileNameBased.purs`)
 
-#### Main Validation Flow (`src/App/Validation/FileNameBased.purs`)
+```
+1. File discovery     getFiles path (ignoring: .git, etl, assets, langsplit)
+2. Filename parsing   FI.fromFilePath → CollectionInfo (Concepts | Entities | DataPoints | ...)
+3. Format check       checkAndFixFileFormat per CSV (BOM/CRLF/encoding)
+4. Concept files      readCsv → parseCsvFile → parseConcept → build HashMap
+5. Entity files       readCsv → parseCsvFile → parseEntity → build HashMap
+6. BaseDataSet        parseBaseDataSet (cross-validates concepts × entities)
+7. DataPoint files    readCsv → parseCsvFile → parseDataPoints (using BaseDataSet)
+8. Synonyms           (validated using BaseDataSet)
+9. DataPackage        verify existing datapackage.json; optionally generate new one
+```
 
-The validation flow is based on the idea of "Parse, not validate". We parse the entire dataset from ground up.
+### Validation System
 
-The validator processes DDF datasets in this order:
+Two tiers, used in different contexts:
 
-1. **File Discovery**: Find all DDF CSV files matching naming conventions (e.g., `ddf--concepts.csv`, `ddf--entities--geo.csv`)
-2. **CSV file parsing**: read csv files. this will ignore bad csv rows. and check if the headers in csv matches those indicated by filename.
-3. **Concepts Validation**: Parse and validate concept definitions (required, must exist)
-4. **Entities Validation**: Parse and validate entity domains and sets
-5. **Concepts/Entities Validation within dataset**: Parse a `BaseDataset` using concepts/entities from above steps. For example, even though a concept is good on its own, it may be incorrect in a dataset because some of its property fields is not defined as concept.
-6. **Datapoints Validation**: Parse datapoint files using the concept/entities info from a BaseDataset.
-7. **Synonyms & Translations**: Validate supplementary files with info from BaseDataSet
-8. **DataPackage Verification**: Check if the existing datapackage.json is correct, optionally create a new datapackage.json
+**`V Issues a`** (from `Data.Validation.Semigroup`) — pure, accumulating
+- Used at the leaf level: parsing a single value, identifier, concept, entity record
+- Chain results with `andThen`; combine independent checks with `ado ... in`
 
-#### Validation System (`src/Data/Validation/`)
+**`ValidationT Messages Aff a`** — effectful, stateful
+- Used at the file/dataset/pipeline level
+- `vWarning msgs` — appends to state, continues execution
+- `vError msgs` — throws (stops this branch), appends to state
+- `emitErrorsAndContinue` — marks issues as errors but doesn't stop
+- `emitWarningsAndContinue` — marks issues as warnings and continues
+- `runValidationT` → `Aff (Tuple Messages (Maybe a))`
+- `runValidationTEither` → `Aff (Either Messages a)` (used in tests)
 
-We used serval data structure for the validation process.
+### Error System
 
-- **V type**: This is the applicative style validation, we use it for indivadual checkings for its pure nature. For example parsing a single value in csv is done using `V`
-- **ValidationT monad transformer**: When combining multiple validations, we need more flexible way to control the behaviour, that's when a monad transformer shines. For example we will want to emit some errors but continue with the validation process. This can not be done using `V`
+**`Issue`** (internal) — structured, typed:
+```purescript
+data Issue = CodedIssue ErrorCode ErrorContext | NotImplemented
 
-The codebase uses `ValidationT Messages Aff a` throughout:
+type ErrorContext =
+  { fileContext      :: Maybe FileContext       -- filepath + lineNo
+  , valueContext     :: Maybe ValueContext       -- the bad value string
+  , conceptContext   :: Maybe ConceptContext     -- concept + optional field
+  , entityContext    :: Maybe EntityContext      -- entity + domain + optional set
+  , datapointContext :: Maybe DatapointContext   -- indicator + pkeys
+  , csvContext       :: Maybe CsvContext         -- problematic header string
+  , datasetContext   :: Maybe DatasetContext     -- freeform message
+  , message          :: Maybe String             -- additional detail
+  }
+```
 
-- `ValidationT` accumulates validation messages (errors/warnings)
-- `Aff` provides async I/O (file reading)
-- Can emit errors and continue (`emitErrorsAndContinue`) or stop (`emitErrorsAndStop`)
+Create with helpers: `mkIssue`, `mkIssueWithValue`, `mkIssueWithMessage`, then pipe through `withFileLocation`, `withValue`, `withMessage`, `withConceptField`, etc.
 
-##### Error Handling: Issue vs Message
+**`Message`** (presentation) — flat record for output:
+```purescript
+type Message =
+  { message :: String, file :: String, lineNo :: Int
+  , errorCode :: String, suggestions :: String, isWarning :: Boolean }
+```
 
-- **Issue**: Structured error data using centralized error registry (Registry.purs). Used in validation logic with `V Issues a`. Create using helper functions like `mkIssue`, `mkIssueWithValue`, etc.
-- **Message**: Presentation layer for user-facing output. Used in `ValidationT Messages Aff a`. Converted from Issue via `messageFromIssue` only at presentation boundaries.
+Convert `Issue → Message` via `messageFromIssue` **only at presentation boundaries**. `messageFromIssue` always produces `isWarning: true`; call `setError` to make it fatal.
 
-#### CSV Parsing (`src/Data/Csv/`)
+**All error codes** live in `Data.Validation.Registry` as the `ErrorCode` enum. The prefix tells you the category:
+- `E_VAL_*` — value parsing errors (identifier, number, time, boolean, JSON)
+- `E_CONCEPT_*` / `W_CONCEPT_*` — concept-level errors
+- `E_ENTITY_*` — entity-level errors
+- `E_DATASET_*` — cross-file dataset errors
+- `E_DATAPACKAGE_*` — datapackage.json errors
+- `E_CSV_*` / `W_CSV_FORMAT_*` — CSV structure and byte-format errors
+- `E_GENERAL` / `W_GENERAL` — catch-all
 
-- Uses Node.js `csv-parse` library (FFI via JavaScript)
+---
 
 ## Testing
 
-Tests are in `test/Main.purs` using `purescript-spec`. The test suite includes:
-
-- **Unit tests**: Low-level parsers (identifiers, values, filenames) in `test/Test/Unit/`
-  - Test individual parsing/validation functions with mock data
-  - No file I/O, fast and focused
-  - Covers: Value, Identifier, Header, FileInfo, Concept, Entity parsing
-- **Integration tests**: Full dataset validation in `test/Test/Integration/`
-  - Test complete DDF datasets with all files
-  - Validates concepts, entities, datapoints working together
-  - Tests in: `test/datasets/` (new) and `test/fixtures/` (legacy)
-
 ### Running Tests
 
-- `npm test` or `spago test` - Run all tests
-- `spago test -- --example TEXT` or `spago test -- -e TEXT` - Run only tests whose names include the given text
-- `spago test -- --example-matches REGEX` or `spago test -- -E REGEX` - Run only tests whose names match the given regex
-
-Note: The `--` separates spago arguments from test runner arguments.
-
-Examples:
 ```bash
-spago test -- -e "Identifier"       # Run only Identifier tests
-spago test -- -e "Value Parsing"    # Run only Value Parsing tests
-spago test -- -E "should reject"    # Run all tests matching "should reject"
-spago test -- -e "Integration"      # Run only integration tests
+npm test                                  # all tests
+spago test -- -e "Identifier"             # filter by name substring
+spago test -- -E "should reject"          # filter by regex
 ```
 
-### Creating Integration Test Datasets
+### Test Structure
 
-Integration tests require full DDF datasets with `datapackage.json`.
+- **Unit** (`test/Test/Unit/`): pure parser tests — no file I/O, fast
+  - `Identifier.purs`, `Header.purs`, `FileInfo.purs`, `Concept.purs`, `Entity.purs`, `Value.purs`, `Csv.purs`
+- **Integration** (`test/Test/Integration/`): full dataset validation
+  - `ValidDatasets.purs` — datasets that should pass
+  - `CsvErrors.purs`, `DatasetErrors.purs`, `DatapackageErrors.purs`, `DatapointErrors.purs` — datasets with specific errors
 
-#### Creating Valid Test Datasets
-
-1. Create a new directory: `test/datasets/valid-<name>/`
-2. Create DDF CSV files following naming conventions:
-   - `ddf--concepts.csv` - Define all concepts (including column headers like "domain")
-   - `ddf--entities--<domain>[--<set>].csv` - Entity data
-   - `ddf--datapoints--<indicator>--by--<dims>.csv` - Datapoint data
-3. **Generate datapackage.json**: Run `validate-ddf -p test/datasets/valid-<name>/`
-   - This validates the dataset AND generates `datapackage.json` automatically
-   - Fix any validation errors and regenerate until it passes
-
-**Important**:
-- Entity set concepts need a `domain` field pointing to their entity domain
-- All column headers used in CSV files must be defined as concepts
-- Even in FileNameBased mode, `datapackage.json` is required
-
-#### Creating Invalid Test Datasets (for error testing)
-
-1. Copy a valid dataset folder (with datapackage.json): `cp -r test/datasets/valid-minimal test/datasets/error-<specific-error>`
-2. Edit CSV files to introduce the specific error you want to test
-3. Usually no need to modify `datapackage.json` (unless testing datapackage errors)
-
-#### Integration Test Pattern
+### Integration Test Pattern
 
 ```purescript
--- test/Test/Integration/ValidDatasets.purs
+-- valid dataset
 it "valid-minimal: should pass validation" do
   let path = "test/datasets/valid-minimal"
   res <- runValidationTEither $ VFN.validate path false false
   res `shouldSatisfy` isRight
 
--- For invalid datasets
-it "error-empty-entity-id: should fail validation" do
+-- invalid dataset
+it "error-empty-entity-id: should detect E_ENTITY_ID_EMPTY" do
   let path = "test/datasets/error-empty-entity-id"
   res <- runValidationTEither $ VFN.validate path false false
   res `shouldSatisfy` isLeft
 ```
 
-### Debugging Individual Datasets
+### Creating Integration Test Datasets
 
-Run validation on a specific dataset:
+**Valid dataset:**
+1. Create `test/datasets/valid-<name>/` with DDF CSV files
+2. Run `spago run -- -p test/datasets/valid-<name>/` to validate and auto-generate `datapackage.json`
+3. Fix errors, regenerate until clean
 
-```purescript
-testMain = do
-  path <- resolve [] "test/datasets/valid-minimal"
-  M.runMain { targetPath: path, noWarning: false, mode: FileNameBased, generateDP: true, fixFormat: false }
-```
+**Invalid dataset (for error testing):**
+1. `cp -r test/datasets/valid-minimal test/datasets/error-<specific-error>`
+2. Edit CSV to introduce the specific defect — no need to modify `datapackage.json` unless testing datapackage errors
 
-Or use the CLI:
-```bash
-spago run test/datasets/valid-minimal        # Validate
-spago run -p test/datasets/valid-minimal     # Validate and generate datapackage.json
-```
+**Important constraints:**
+- Every column header used anywhere must be declared as a concept in `ddf--concepts.csv`
+- Entity set concepts need `domain` pointing to their entity domain
+- `datapackage.json` is required even in FileNameBased mode
 
-## DDF Dataset Structure
+---
 
-here is a base description of DDF Dataset Structure
+## DDF Format Reference
 
-A DDF dataset consists of CSV files following naming conventions:
+The `doc/` folder has the full specs. Quick reference for what the validator checks:
 
-- `ddf--concepts.csv` - Defines all concepts (dimensions, measures, metadata)
-- `ddf--entities--{domain}[--{set}].csv` - Entity instances
-- `ddf--datapoints--{indicator}--by--{dims}.csv` - Indicator values
-- `ddf--synonyms--{domain}.csv` - Alternative names for entities
-- Translation files (language subdirectories)
+### File naming conventions
 
-The validator ignores folders: `.git`, `etl`, `assets`, `langsplit`
+| Collection | Filename pattern |
+|------------|-----------------|
+| Concepts | `ddf--concepts.csv` or `ddf--concepts--<tag>.csv` |
+| Entity domain | `ddf--entities--<domain>.csv` |
+| Entity set | `ddf--entities--<domain>--<set>.csv` |
+| DataPoints | `ddf--datapoints--<indicators>--by--<dimensions>.csv` |
+| Synonyms | `ddf--synonyms--<synonym_set>.csv` |
+
+Files not matching any pattern emit `W_GENERAL` and are skipped.
+
+### Identifiers
+
+`[A-Za-z0-9_]+`, max 64 characters. Applies to concept IDs, entity IDs, column headers, and filename segments.  
+Column headers may additionally use the `is--<identifier>` form (entity set membership columns).
+
+### Concept types
+
+`string`, `measure`, `boolean`, `interval`, `time`, `entity_domain`, `entity_set`, `role`, `composite`, or any custom string.  
+`entity_set` concepts must have a `domain` property pointing to an `entity_domain` concept.
+
+### DataPoints
+
+Key = two or more entity/time dimensions, value = one or more indicators. One file can only contain datapoints with the same key (same set of dimensions).
+
+### Encoding / format
+
+UTF-8 required; BOM not recommended (warning); CRLF not recommended (warning); missing values = empty field.
+
+---
+
+## Coding Style
+
+- Avoid long lines — use `let ... in` to break up expressions
+- Prefer `$` over nested parentheses
+- After completing a task, format the file: `npx purs-tidy format-in-place "src/Foo.purs"`
+- Check the [Pursuit docs](https://pursuit.purescript.org) for library APIs
+
 
 ## JavaScript API
 
