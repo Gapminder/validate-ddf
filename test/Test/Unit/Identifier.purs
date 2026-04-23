@@ -4,10 +4,15 @@ import Prelude
 
 import Data.Array as Arr
 import Data.DDF.Atoms.Identifier (isLongerThan64Chars, parseId)
+import Data.Either (fromLeft)
 import Data.Foldable (for_)
 import Data.List.Lazy (repeat, take)
+import Data.Maybe (Maybe(..))
+import Data.String (contains)
 import Data.String.CodeUnits (fromCharArray)
-import Data.Validation.Semigroup (andThen, isValid)
+import Data.String.Pattern (Pattern(..))
+import Data.Validation.Issue (Issues)
+import Data.Validation.Semigroup (andThen, isValid, toEither)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldNotSatisfy, shouldSatisfy)
 
@@ -121,3 +126,37 @@ spec =
           id100 = fromCharArray $ Arr.fromFoldable $ take 100 $ repeat 'x'
           output = parseId id100 `andThen` isLongerThan64Chars
         output `shouldNotSatisfy` isValid
+
+    describe "Error Messages" do
+      let
+        getMsg :: String -> String
+        getMsg s =
+          let
+            issues = fromLeft [] $ toEither $ parseId s
+          in
+            case Arr.head issues of
+              Nothing -> ""
+              Just issue -> show issue
+
+      it "should report the offending character and its position" do
+        -- uppercase in the middle: 2584R015 — 'R' is at position 5
+        getMsg "2584R015" `shouldSatisfy` contains (Pattern "unexpected character 'R' at position 5")
+        -- uppercase at start: ABC — 'A' is at position 1
+        getMsg "ABC" `shouldSatisfy` contains (Pattern "unexpected character 'A' at position 1")
+        -- hyphen: kebab-case — '-' is at position 6
+        getMsg "kebab-case" `shouldSatisfy` contains (Pattern "unexpected character '-' at position 6")
+        -- space: test value — ' ' is at position 5
+        getMsg "test value" `shouldSatisfy` contains (Pattern "unexpected character ' ' at position 5")
+
+      it "should include the full identifier value in the message" do
+        getMsg "2584R015" `shouldSatisfy` contains (Pattern "\"2584R015\"")
+        getMsg "BadId" `shouldSatisfy` contains (Pattern "\"BadId\"")
+
+      it "should report unexpected end of string for empty input" do
+        getMsg "" `shouldSatisfy` contains (Pattern "unexpected end of string")
+
+      it "should include the allowed character hint" do
+        let hint = "identifiers may only contain lowercase letters (a-z), digits (0-9), and underscores"
+        getMsg "2584R015" `shouldSatisfy` contains (Pattern hint)
+        getMsg "ABC" `shouldSatisfy` contains (Pattern hint)
+        getMsg "" `shouldSatisfy` contains (Pattern hint)

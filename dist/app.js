@@ -10612,15 +10612,29 @@ var parseId = (x) => {
     return $Either(
       "Left",
       [
-        $Issue(
-          "CodedIssue",
-          E_VAL_ID,
-          {
-            ...emptyContext,
-            message: $Maybe("Just", $0._1.error + " at pos " + showIntImpl($0._1.pos)),
-            valueContext: $Maybe("Just", { value: x })
-          }
-        )
+        (() => {
+          const v1 = charAt2($0._1.pos)(x);
+          return $Issue(
+            "CodedIssue",
+            E_VAL_ID,
+            {
+              ...emptyContext,
+              message: $Maybe(
+                "Just",
+                '"' + x + '": ' + (() => {
+                  if (v1.tag === "Nothing") {
+                    return "unexpected end of string";
+                  }
+                  if (v1.tag === "Just") {
+                    return "unexpected character '" + singleton(v1._1) + "' at position " + showIntImpl($0._1.pos + 1 | 0);
+                  }
+                  fail();
+                })() + " \u2014 identifiers may only contain lowercase letters (a-z), digits (0-9), and underscores"
+              ),
+              valueContext: $Maybe("Just", { value: x })
+            }
+          );
+        })()
       ]
     );
   }

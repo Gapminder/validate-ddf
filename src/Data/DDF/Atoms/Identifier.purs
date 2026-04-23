@@ -11,6 +11,7 @@ import Data.Hashable (class Hashable, hash)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.String as Str
+import Data.String.CodeUnits as SCU
 import Data.String.NonEmpty.CodeUnits (charAt, fromNonEmptyCharArray)
 import Data.String.NonEmpty.Internal (NonEmptyString(..), fromString, toString)
 import Data.Validation.Issue (Issue(..), Issues, mkIssueWithValue, withMessage)
@@ -67,11 +68,15 @@ identifier' = identifier <* eof
 parseId :: String -> V Issues Identifier
 parseId x = case runParser identifier' x of
   Right str -> pure $ Id str
-  Left e -> invalid [ err ]
-    where
-    pos = show $ e.pos
-    msg = e.error <> " at pos " <> pos
-    err = mkIssueWithValue E_VAL_ID x # withMessage msg
+  Left e ->
+    let
+      suffix = " — identifiers may only contain lowercase letters (a-z), digits (0-9), and underscores"
+      charMsg = case SCU.charAt e.pos x of
+        Nothing -> "unexpected end of string"
+        Just c -> "unexpected character '" <> SCU.singleton c <> "' at position " <> show (e.pos + 1)
+      msg = "\"" <> x <> "\": " <> charMsg <> suffix
+    in
+      invalid [ mkIssueWithValue E_VAL_ID x # withMessage msg ]
 
 -- | parse an id, when the id is non empty string
 parseId' :: NonEmptyString -> V Issues Identifier
