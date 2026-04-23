@@ -96,7 +96,6 @@ main = launchAff_ $ runSpecPure [ consoleReporter ] do
             [ ""
             , "c?d"
             , "a-b-c"
-            , "AAA" -- uppercase not allowed
             ]
         for_ inValidIds \s -> do
           let output = parseId s

@@ -39,13 +39,13 @@ value (Id x) = toString $ x
 value1 :: Identifier -> NonEmptyString
 value1 (Id x) = x
 
--- | parse lower case alphanum strings
+-- | parse alphanum strings (lower and upper case)
 alphaNum :: Parser Char
 alphaNum =
-  lowerCaseChar <|> anyDigit
-    <?> "expect lowercase alphanumeric value"
+  anyLetter <|> anyDigit
+    <?> "expect alphanumeric value"
 
--- | parse lower case alphanum strings also allow underscores inside
+-- | parse alphanum strings, also allow underscores inside
 alphaNumAnd_ :: Parser Char
 alphaNumAnd_ =
   alphaNum <|> char '_'
@@ -70,7 +70,7 @@ parseId x = case runParser identifier' x of
   Right str -> pure $ Id str
   Left e ->
     let
-      suffix = " — identifiers may only contain lowercase letters (a-z), digits (0-9), and underscores"
+      suffix = " \x2014 identifiers may only contain letters (a-z, A-Z), digits (0-9), and underscores"
       charMsg = case SCU.charAt e.pos x of
         Nothing -> "unexpected end of string"
         Just c -> "unexpected character '" <> SCU.singleton c <> "' at position " <> show (e.pos + 1)

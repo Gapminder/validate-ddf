@@ -1,6 +1,6 @@
 {
   "name": "@gapminder/validate-ddf",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "DDF validion tool",
   "author": {
     "name": "Semio Zheng and others at Gapminder Foundation",

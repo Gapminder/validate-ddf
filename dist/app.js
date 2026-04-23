@@ -10383,6 +10383,29 @@ var elem3 = /* @__PURE__ */ (() => {
   })());
   return (x) => any1(($0) => x === $0);
 })();
+var upperCaseChar = (s) => {
+  const $0 = anyChar(s);
+  const v1 = (() => {
+    if ($0.tag === "Left") {
+      const $1 = $0._1;
+      return (v) => $Either("Left", $1);
+    }
+    if ($0.tag === "Right") {
+      const $1 = $0._1;
+      return (f) => f($1);
+    }
+    fail();
+  })()((v12) => {
+    if (elem3(toCharCode(v12.result))(rangeImpl(65, 90))) {
+      return $Either("Right", { result: v12.result, suffix: v12.suffix });
+    }
+    return $Either("Left", { pos: v12.suffix.position, error: "Expected an upper case character but found " + showCharImpl(v12.result) });
+  });
+  if (v1.tag === "Left") {
+    return $Either("Left", { pos: s.position, error: v1._1.error });
+  }
+  return v1;
+};
 var string2 = (pattern) => (v) => {
   const length3 = toCodePointArray(pattern).length;
   const v1 = splitAt2(length3)(v.substring);
@@ -10419,6 +10442,23 @@ var eof = (s) => {
     return $Either("Left", { pos: s.position, error: "Expected EOF" });
   }
   return $Either("Right", { result: void 0, suffix: s });
+};
+var anyLetter = (s) => {
+  const v2 = lowerCaseChar(s);
+  if (v2.tag === "Left") {
+    if (s.position === v2._1.pos) {
+      const v2$1 = upperCaseChar(s);
+      if (v2$1.tag === "Left") {
+        if (s.position === v2$1._1.pos) {
+          return $Either("Left", { pos: s.position, error: "Expected a letter" });
+        }
+        return $Either("Left", { error: v2$1._1.error, pos: v2$1._1.pos });
+      }
+      return v2$1;
+    }
+    return $Either("Left", { error: v2._1.error, pos: v2._1.pos });
+  }
+  return v2;
 };
 var anyDigit = (s) => {
   const $0 = anyChar(s);
@@ -10520,13 +10560,13 @@ var eqId = { eq: (x) => (y) => x === y };
 var hashableId = { hash: (v) => hashString(v), Eq0: () => eqId };
 var ordId = { compare: (x) => (y) => ordString.compare(x)(y), Eq0: () => eqId };
 var alphaNum = (s) => {
-  const v2 = lowerCaseChar(s);
+  const v2 = anyLetter(s);
   if (v2.tag === "Left") {
     if (s.position === v2._1.pos) {
       const v2$1 = anyDigit(s);
       if (v2$1.tag === "Left") {
         if (s.position === v2$1._1.pos) {
-          return $Either("Left", { pos: s.position, error: "expect lowercase alphanumeric value" });
+          return $Either("Left", { pos: s.position, error: "expect alphanumeric value" });
         }
         return $Either("Left", { error: v2$1._1.error, pos: v2$1._1.pos });
       }
@@ -10629,7 +10669,7 @@ var parseId = (x) => {
                     return "unexpected character '" + singleton(v1._1) + "' at position " + showIntImpl($0._1.pos + 1 | 0);
                   }
                   fail();
-                })() + " \u2014 identifiers may only contain lowercase letters (a-z), digits (0-9), and underscores"
+                })() + " \u2014 identifiers may only contain letters (a-z, A-Z), digits (0-9), and underscores"
               ),
               valueContext: $Maybe("Just", { value: x })
             }
@@ -11014,15 +11054,29 @@ var parseGeneralHeader = (x) => {
     return $Either(
       "Left",
       [
-        $Issue(
-          "CodedIssue",
-          E_CSV_HEADER_INVALID,
-          {
-            ...emptyContext,
-            message: $Maybe("Just", $0._1.error + " at pos " + showIntImpl($0._1.pos)),
-            valueContext: $Maybe("Just", { value: x })
-          }
-        )
+        (() => {
+          const v1 = charAt2($0._1.pos)(x);
+          return $Issue(
+            "CodedIssue",
+            E_CSV_HEADER_INVALID,
+            {
+              ...emptyContext,
+              message: $Maybe(
+                "Just",
+                '"' + x + '": ' + (() => {
+                  if (v1.tag === "Nothing") {
+                    return "unexpected end of string";
+                  }
+                  if (v1.tag === "Just") {
+                    return "unexpected character '" + singleton(v1._1) + "' at position " + showIntImpl($0._1.pos + 1 | 0);
+                  }
+                  fail();
+                })() + " \u2014 headers may only contain letters (a-z, A-Z), digits (0-9), and underscores"
+              ),
+              valueContext: $Maybe("Just", { value: x })
+            }
+          );
+        })()
       ]
     );
   }
@@ -11071,15 +11125,29 @@ var parseEntityHeader = (x) => {
     return $Either(
       "Left",
       [
-        $Issue(
-          "CodedIssue",
-          E_CSV_HEADER_INVALID,
-          {
-            ...emptyContext,
-            message: $Maybe("Just", $0._1.error + " at pos " + showIntImpl($0._1.pos)),
-            valueContext: $Maybe("Just", { value: x })
-          }
-        )
+        (() => {
+          const v1 = charAt2($0._1.pos)(x);
+          return $Issue(
+            "CodedIssue",
+            E_CSV_HEADER_INVALID,
+            {
+              ...emptyContext,
+              message: $Maybe(
+                "Just",
+                '"' + x + '": ' + (() => {
+                  if (v1.tag === "Nothing") {
+                    return "unexpected end of string";
+                  }
+                  if (v1.tag === "Just") {
+                    return "unexpected character '" + singleton(v1._1) + "' at position " + showIntImpl($0._1.pos + 1 | 0);
+                  }
+                  fail();
+                })() + ' \u2014 headers may only contain letters (a-z, A-Z), digits (0-9), underscores, or "is--" prefix'
+              ),
+              valueContext: $Maybe("Just", { value: x })
+            }
+          );
+        })()
       ]
     );
   }
@@ -16757,7 +16825,7 @@ var runMain = (opts2) => {
     (() => {
       const gendp = opts2.generateDP;
       const fixFormat = opts2.fixFormat;
-      return _bind(_liftEffect(log2("v2.0.0")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v2.1.0")))(() => _bind((() => {
         if (mode === "FileNameBased") {
           return runValidationT2(validate2(path2)(gendp)(fixFormat));
         }

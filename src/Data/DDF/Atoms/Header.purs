@@ -14,6 +14,7 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.Newtype (class Newtype, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.String (Pattern(..), take)
+import Data.String.CodeUnits as SCU
 import Data.String.NonEmpty (fromString, join1With, stripPrefix, toString)
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.Validation.Issue (Issue(..), Issues, mkIssueWithValue, withMessage)
@@ -61,21 +62,29 @@ generalHeader = do
 parseGeneralHeader :: String -> V Issues Header
 parseGeneralHeader x = case runParser generalHeader x of
   Right str -> pure $ Header str
-  Left e -> invalid [ err ]
-    where
-    pos = show $ e.pos
-    msg = e.error <> " at pos " <> pos
-    err = mkIssueWithValue E_CSV_HEADER_INVALID x # withMessage msg
+  Left e ->
+    let
+      suffix = " \x2014 headers may only contain letters (a-z, A-Z), digits (0-9), and underscores"
+      charMsg = case SCU.charAt e.pos x of
+        Nothing -> "unexpected end of string"
+        Just c -> "unexpected character '" <> SCU.singleton c <> "' at position " <> show (e.pos + 1)
+      msg = "\"" <> x <> "\": " <> charMsg <> suffix
+    in
+      invalid [ mkIssueWithValue E_CSV_HEADER_INVALID x # withMessage msg ]
 
 -- | run entity header parser
 parseEntityHeader :: String -> V Issues Header
 parseEntityHeader x = case runParser entityHeader x of
   Right str -> pure $ Header str
-  Left e -> invalid [ err ]
-    where
-    pos = show $ e.pos
-    msg = e.error <> " at pos " <> pos
-    err = mkIssueWithValue E_CSV_HEADER_INVALID x # withMessage msg
+  Left e ->
+    let
+      suffix = " \x2014 headers may only contain letters (a-z, A-Z), digits (0-9), underscores, or \"is--\" prefix"
+      charMsg = case SCU.charAt e.pos x of
+        Nothing -> "unexpected end of string"
+        Just c -> "unexpected character '" <> SCU.singleton c <> "' at position " <> show (e.pos + 1)
+      msg = "\"" <> x <> "\": " <> charMsg <> suffix
+    in
+      invalid [ mkIssueWithValue E_CSV_HEADER_INVALID x # withMessage msg ]
 
 -- | unsafe create an id, because we won't check the string.
 -- | only use this when you know what you are doning

@@ -54,10 +54,9 @@ spec =
         for_ validIds \s -> do
           parseId s `shouldSatisfy` isValid
 
-    describe "Invalid Identifiers" do
-      it "should reject uppercase and mixed case identifiers" do
+      it "should accept uppercase and mixed case identifiers" do
         let
-          invalidIds =
+          validIds =
             [ "Z" -- single uppercase
             , "AAA" -- all uppercase
             , "ABC" -- all uppercase
@@ -66,9 +65,12 @@ spec =
             , "camelCase" -- camelCase
             , "SCREAMING_SNAKE_CASE" -- all uppercase
             , "Test" -- first letter uppercase
+            , "2584R015" -- digits with uppercase letter
             ]
-        for_ invalidIds \s -> do
-          parseId s `shouldNotSatisfy` isValid
+        for_ validIds \s -> do
+          parseId s `shouldSatisfy` isValid
+
+    describe "Invalid Identifiers" do
       it "should reject empty strings" do
         parseId "" `shouldNotSatisfy` isValid
 
@@ -139,24 +141,22 @@ spec =
               Just issue -> show issue
 
       it "should report the offending character and its position" do
-        -- uppercase in the middle: 2584R015 — 'R' is at position 5
-        getMsg "2584R015" `shouldSatisfy` contains (Pattern "unexpected character 'R' at position 5")
-        -- uppercase at start: ABC — 'A' is at position 1
-        getMsg "ABC" `shouldSatisfy` contains (Pattern "unexpected character 'A' at position 1")
         -- hyphen: kebab-case — '-' is at position 6
         getMsg "kebab-case" `shouldSatisfy` contains (Pattern "unexpected character '-' at position 6")
         -- space: test value — ' ' is at position 5
         getMsg "test value" `shouldSatisfy` contains (Pattern "unexpected character ' ' at position 5")
+        -- at-sign: test@value — '@' is at position 5
+        getMsg "test@value" `shouldSatisfy` contains (Pattern "unexpected character '@' at position 5")
 
       it "should include the full identifier value in the message" do
-        getMsg "2584R015" `shouldSatisfy` contains (Pattern "\"2584R015\"")
-        getMsg "BadId" `shouldSatisfy` contains (Pattern "\"BadId\"")
+        getMsg "kebab-case" `shouldSatisfy` contains (Pattern "\"kebab-case\"")
+        getMsg "bad id" `shouldSatisfy` contains (Pattern "\"bad id\"")
 
       it "should report unexpected end of string for empty input" do
         getMsg "" `shouldSatisfy` contains (Pattern "unexpected end of string")
 
       it "should include the allowed character hint" do
-        let hint = "identifiers may only contain lowercase letters (a-z), digits (0-9), and underscores"
-        getMsg "2584R015" `shouldSatisfy` contains (Pattern hint)
-        getMsg "ABC" `shouldSatisfy` contains (Pattern hint)
+        let hint = "identifiers may only contain letters (a-z, A-Z), digits (0-9), and underscores"
+        getMsg "kebab-case" `shouldSatisfy` contains (Pattern hint)
+        getMsg "test@value" `shouldSatisfy` contains (Pattern hint)
         getMsg "" `shouldSatisfy` contains (Pattern hint)

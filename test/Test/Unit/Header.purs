@@ -39,16 +39,16 @@ spec =
         for_ invalidHeaders \h -> do
           parseGeneralHeader h `shouldNotSatisfy` isValid
 
-      it "should reject uppercase headers" do
+      it "should accept uppercase headers" do
         let
-          invalidHeaders =
+          validHeaders =
             [ "Concept"
             , "CONCEPT"
             , "Name"
             , "TEST"
             ]
-        for_ invalidHeaders \h -> do
-          parseGeneralHeader h `shouldNotSatisfy` isValid
+        for_ validHeaders \h -> do
+          parseGeneralHeader h `shouldSatisfy` isValid
 
       it "should reject empty headers" do
         parseGeneralHeader "" `shouldNotSatisfy` isValid
@@ -87,11 +87,19 @@ spec =
         let
           invalidHeaders =
             [ "is--" -- missing identifier after is--
-            , "is--Country" -- uppercase not allowed
             , "is--test-value" -- hyphen not allowed
             ]
         for_ invalidHeaders \h -> do
           parseEntityHeader h `shouldNotSatisfy` isValid
+
+      it "should accept is-- headers with uppercase" do
+        let
+          validHeaders =
+            [ "is--Country" -- uppercase now allowed
+            , "is--World_4Region"
+            ]
+        for_ validHeaders \h -> do
+          parseEntityHeader h `shouldSatisfy` isValid
 
       it "should reject headers with special characters" do
         let

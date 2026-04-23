@@ -80,11 +80,18 @@ spec =
       it "should reject entity files with invalid identifiers" do
         let
           invalidFiles =
-            [ "ddf--entities--Geo.csv" -- uppercase
-            , "ddf--entities--geo-country.csv" -- hyphen instead of --
+            [ "ddf--entities--geo-country.csv" -- hyphen instead of --
             ]
         for_ invalidFiles \f -> do
           parseFileInfo "./" f `shouldNotSatisfy` isValid
+
+      it "should accept entity files with uppercase identifiers" do
+        let
+          validFiles =
+            [ "ddf--entities--Geo.csv" -- uppercase now allowed
+            ]
+        for_ validFiles \f -> do
+          parseFileInfo "./" f `shouldSatisfy` isValid
 
     describe "Datapoint Files" do
       it "should accept datapoint files with single dimension" do

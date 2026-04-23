@@ -130,7 +130,7 @@ spec =
             }
         parseEntity input `shouldNotSatisfy` isValid
 
-      it "should reject entity with uppercase identifier" do
+      it "should accept entity with uppercase identifier" do
         let
           input =
             { entityId: "SWE"
@@ -139,7 +139,7 @@ spec =
             , props: Map.empty
             , _info: Nothing
             }
-        parseEntity input `shouldNotSatisfy` isValid
+        parseEntity input `shouldSatisfy` isValid
 
       it "should reject entity with invalid boolean in is-- header" do
         let
