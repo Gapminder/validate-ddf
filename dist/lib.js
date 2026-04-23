@@ -6202,59 +6202,78 @@ var cliOptions = /* @__PURE__ */ (() => $Parser(
         $Parser(
           "MultP",
           $MultPE(
-            parserFunctor.map((v) => (v1) => (v2) => (v3) => ({ targetPath: v1, noWarning: v, mode: v2, generateDP: v3 }))($Parser(
-              "AltP",
-              flag$p(true)((() => {
-                const $0 = optionMod((p) => ({ ...p, propHelp: paragraph("don't show warnings") }));
-                return $Mod(
-                  (x) => $0._1({ ...x, flagNames: [$OptName("OptLong", "no-warning"), ...x.flagNames] }),
-                  $DefaultProp(
-                    $0._2._1.tag === "Nothing" ? Nothing : $0._2._1,
-                    $0._2._2.tag === "Nothing" ? Nothing : $0._2._2
-                  ),
-                  (x) => $0._3(x)
-                );
-              })()),
-              $Parser("NilP", false)
-            )),
-            argument(readerAsk)((() => {
-              const $0 = optionMod((p) => ({ ...p, propMetaVar: "PATH" }));
-              const $1 = optionMod((p) => ({ ...p, propHelp: paragraph("The dataset path to validate") }));
-              const $2 = $1._2._1.tag === "Nothing" ? $Maybe("Just", "./") : $1._2._1;
-              const $3 = $1._2._2.tag === "Nothing" ? Nothing : $1._2._2;
+            $Parser(
+              "MultP",
+              $MultPE(
+                parserFunctor.map((v) => (v1) => (v2) => (v3) => (v4) => ({ targetPath: v1, noWarning: v, mode: v2, generateDP: v3, fixFormat: v4 }))($Parser(
+                  "AltP",
+                  flag$p(true)((() => {
+                    const $0 = optionMod((p) => ({ ...p, propHelp: paragraph("don't show warnings") }));
+                    return $Mod(
+                      (x) => $0._1({ ...x, flagNames: [$OptName("OptLong", "no-warning"), ...x.flagNames] }),
+                      $DefaultProp(
+                        $0._2._1.tag === "Nothing" ? Nothing : $0._2._1,
+                        $0._2._2.tag === "Nothing" ? Nothing : $0._2._2
+                      ),
+                      (x) => $0._3(x)
+                    );
+                  })()),
+                  $Parser("NilP", false)
+                )),
+                argument(readerAsk)((() => {
+                  const $0 = optionMod((p) => ({ ...p, propMetaVar: "PATH" }));
+                  const $1 = optionMod((p) => ({ ...p, propHelp: paragraph("The dataset path to validate") }));
+                  const $2 = $1._2._1.tag === "Nothing" ? $Maybe("Just", "./") : $1._2._1;
+                  const $3 = $1._2._2.tag === "Nothing" ? Nothing : $1._2._2;
+                  return $Mod(
+                    (x) => $1._1($0._1(x)),
+                    $DefaultProp($2.tag === "Nothing" ? $0._2._1 : $2, $3.tag === "Nothing" ? $0._2._2 : $3),
+                    (x) => $1._3($0._3(x))
+                  );
+                })())
+              )
+            ),
+            option(parseValidationMode)((() => {
+              const $0 = optionMod((p) => ({ ...p, propHelp: paragraph("configure how validator find files (filenames or datapackage, default filenames)") }));
+              const $1 = $0._2._1.tag === "Nothing" ? $Maybe("Just", FileNameBased) : $0._2._1;
+              const $2 = $0._2._2.tag === "Nothing" ? Nothing : $0._2._2;
+              const $3 = $1.tag === "Nothing" ? Nothing : $1;
+              const $4 = $2.tag === "Nothing" ? Nothing : $2;
               return $Mod(
-                (x) => $1._1($0._1(x)),
-                $DefaultProp($2.tag === "Nothing" ? $0._2._1 : $2, $3.tag === "Nothing" ? $0._2._2 : $3),
-                (x) => $1._3($0._3(x))
+                (x) => $0._1({ ...x, optNames: [$OptName("OptShort", "m"), $OptName("OptLong", "mode"), ...x.optNames] }),
+                $DefaultProp($3.tag === "Nothing" ? Nothing : $3, $4.tag === "Nothing" ? Nothing : $4),
+                (x) => $0._3(x)
               );
             })())
           )
         ),
-        option(parseValidationMode)((() => {
-          const $0 = optionMod((p) => ({ ...p, propHelp: paragraph("configure how validator find files (filenames or datapackage, default filenames)") }));
-          const $1 = $0._2._1.tag === "Nothing" ? $Maybe("Just", FileNameBased) : $0._2._1;
-          const $2 = $0._2._2.tag === "Nothing" ? Nothing : $0._2._2;
-          const $3 = $1.tag === "Nothing" ? Nothing : $1;
-          const $4 = $2.tag === "Nothing" ? Nothing : $2;
-          return $Mod(
-            (x) => $0._1({ ...x, optNames: [$OptName("OptShort", "m"), $OptName("OptLong", "mode"), ...x.optNames] }),
-            $DefaultProp($3.tag === "Nothing" ? Nothing : $3, $4.tag === "Nothing" ? Nothing : $4),
-            (x) => $0._3(x)
-          );
-        })())
+        $Parser(
+          "AltP",
+          flag$p(true)((() => {
+            const $0 = optionMod((p) => ({ ...p, propHelp: paragraph("whether to generate a datapackage.json after validation. (default false)") }));
+            const $1 = $0._2._1.tag === "Nothing" ? Nothing : $0._2._1;
+            const $2 = $0._2._2.tag === "Nothing" ? Nothing : $0._2._2;
+            return $Mod(
+              (x) => $0._1({
+                ...x,
+                flagNames: [$OptName("OptShort", "p"), $OptName("OptLong", "generate-datapackage"), ...x.flagNames]
+              }),
+              $DefaultProp($1.tag === "Nothing" ? Nothing : $1, $2.tag === "Nothing" ? Nothing : $2),
+              (x) => $0._3(x)
+            );
+          })()),
+          $Parser("NilP", false)
+        )
       )
     ),
     $Parser(
       "AltP",
       flag$p(true)((() => {
-        const $0 = optionMod((p) => ({ ...p, propHelp: paragraph("whether to generate a datapackage.json after validation. (default false)") }));
+        const $0 = optionMod((p) => ({ ...p, propHelp: paragraph("auto-fix format issues (BOM, CRLF) in CSV files") }));
         const $1 = $0._2._1.tag === "Nothing" ? Nothing : $0._2._1;
         const $2 = $0._2._2.tag === "Nothing" ? Nothing : $0._2._2;
         return $Mod(
-          (x) => $0._1({
-            ...x,
-            flagNames: [$OptName("OptShort", "p"), $OptName("OptLong", "generate-datapackage"), ...x.flagNames]
-          }),
+          (x) => $0._1({ ...x, flagNames: [$OptName("OptShort", "f"), $OptName("OptLong", "fix"), ...x.flagNames] }),
           $DefaultProp($1.tag === "Nothing" ? Nothing : $1, $2.tag === "Nothing" ? Nothing : $2),
           (x) => $0._3(x)
         );
@@ -9440,6 +9459,66 @@ var foldRows = (v) => (func) => (a) => {
   ));
 };
 
+// output-es/Data.Csv.FileCheck/foreign.js
+import { readFileSync, writeFileSync } from "node:fs";
+var UTF8_BOM = [239, 187, 191];
+function hasBOM(buf) {
+  return buf[0] === UTF8_BOM[0] && buf[1] === UTF8_BOM[1] && buf[2] === UTF8_BOM[2];
+}
+function isValidUTF8(buf) {
+  try {
+    new TextDecoder("utf-8", { fatal: true }).decode(buf);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+function checkFileFormatImpl(filepath) {
+  const buf = readFileSync(filepath);
+  const issues = [];
+  const bom = hasBOM(buf);
+  if (bom) {
+    issues.push("BOM");
+  }
+  if (!isValidUTF8(buf)) {
+    issues.push("ENCODING");
+  }
+  const content = (bom ? buf.slice(3) : buf).toString("utf8");
+  if (content.includes("\r\n")) {
+    issues.push("CRLF");
+  }
+  return issues;
+}
+function fixFileFormatImpl(filepath) {
+  const buf = readFileSync(filepath);
+  const bom = hasBOM(buf);
+  const content = (bom ? buf.slice(3) : buf).toString("utf8");
+  const fixed = content.replace(/\r\n/g, "\n");
+  writeFileSync(filepath, fixed, { encoding: "utf8" });
+}
+
+// output-es/Data.Csv.FileCheck/index.js
+var $FormatIssue = (tag) => tag;
+var BOM = /* @__PURE__ */ $FormatIssue("BOM");
+var CRLF = /* @__PURE__ */ $FormatIssue("CRLF");
+var ENCODING = /* @__PURE__ */ $FormatIssue("ENCODING");
+var fromString3 = (v) => {
+  if (v === "BOM") {
+    return $Maybe("Just", BOM);
+  }
+  if (v === "CRLF") {
+    return $Maybe("Just", CRLF);
+  }
+  if (v === "ENCODING") {
+    return $Maybe("Just", ENCODING);
+  }
+  return Nothing;
+};
+var checkFileFormat = (fp) => () => {
+  const strs = checkFileFormatImpl(fp);
+  return mapMaybe((x) => x)(arrayMap(fromString3)(strs));
+};
+
 // output-es/Data.Hashable/foreign.js
 function hashString(s) {
   var h = 0;
@@ -9534,6 +9613,9 @@ var E_CSV_HEADER_UNEXPECTED = /* @__PURE__ */ $ErrorCode("E_CSV_HEADER_UNEXPECTE
 var E_CSV_HEADER_DUPLICATED = /* @__PURE__ */ $ErrorCode("E_CSV_HEADER_DUPLICATED");
 var E_CSV_ROW_DUPLICATED = /* @__PURE__ */ $ErrorCode("E_CSV_ROW_DUPLICATED");
 var W_CSV_ROW_BAD = /* @__PURE__ */ $ErrorCode("W_CSV_ROW_BAD");
+var W_CSV_FORMAT_BOM = /* @__PURE__ */ $ErrorCode("W_CSV_FORMAT_BOM");
+var W_CSV_FORMAT_CRLF = /* @__PURE__ */ $ErrorCode("W_CSV_FORMAT_CRLF");
+var E_CSV_FORMAT_ENCODING = /* @__PURE__ */ $ErrorCode("E_CSV_FORMAT_ENCODING");
 var E_GENERAL = /* @__PURE__ */ $ErrorCode("E_GENERAL");
 var W_GENERAL = /* @__PURE__ */ $ErrorCode("W_GENERAL");
 var errorSuggestion = (v) => {
@@ -9665,6 +9747,15 @@ var errorSuggestion = (v) => {
   }
   if (v === "W_CSV_ROW_BAD") {
     return "";
+  }
+  if (v === "W_CSV_FORMAT_BOM") {
+    return "run validate-ddf --fix to auto-fix this issue";
+  }
+  if (v === "W_CSV_FORMAT_CRLF") {
+    return "run validate-ddf --fix to auto-fix this issue";
+  }
+  if (v === "E_CSV_FORMAT_ENCODING") {
+    return "convert the file to UTF-8 encoding";
   }
   if (v === "E_GENERAL") {
     return "";
@@ -9803,6 +9894,15 @@ var errorMessageTemplate = (v) => {
   }
   if (v === "W_CSV_ROW_BAD") {
     return "bad CSV row";
+  }
+  if (v === "W_CSV_FORMAT_BOM") {
+    return "file has a UTF-8 BOM \u2014 per DDF spec the encoding SHOULD NOT use a BOM";
+  }
+  if (v === "W_CSV_FORMAT_CRLF") {
+    return "file uses Windows line endings (CRLF) \u2014 per DDF spec LF line endings are preferred";
+  }
+  if (v === "E_CSV_FORMAT_ENCODING") {
+    return "file is not valid UTF-8 \u2014 DDF spec requires UTF-8 encoding";
   }
   if (v === "E_GENERAL") {
     return "validation error";
@@ -10039,6 +10139,15 @@ var errorCodeToString = (v) => {
   }
   if (v === "W_CSV_ROW_BAD") {
     return "W_CSV_ROW_BAD";
+  }
+  if (v === "W_CSV_FORMAT_BOM") {
+    return "W_CSV_FORMAT_BOM";
+  }
+  if (v === "W_CSV_FORMAT_CRLF") {
+    return "W_CSV_FORMAT_CRLF";
+  }
+  if (v === "E_CSV_FORMAT_ENCODING") {
+    return "E_CSV_FORMAT_ENCODING";
   }
   if (v === "E_GENERAL") {
     return "E_GENERAL";
@@ -15316,8 +15425,8 @@ import {
   mkdirSync,
   readdirSync,
   utimesSync,
-  readFileSync,
-  writeFileSync,
+  readFileSync as readFileSync2,
+  writeFileSync as writeFileSync2,
   appendFileSync,
   existsSync,
   openSync,
@@ -15733,6 +15842,64 @@ var readAndParseCsvFiles = (files) => bindVT.bind(monadtransVT.lift(monadAff)(se
   files,
   rawContents
 ))(monadAff));
+var checkAndFixFileFormat = (dictMonad) => {
+  const bindVT1 = bindExceptT({
+    Applicative0: () => applicativeStateT(dictMonad),
+    Bind1: () => bindStateT(dictMonad)
+  });
+  const applicativeVT3 = applicativeExceptT({
+    Applicative0: () => applicativeStateT(dictMonad),
+    Bind1: () => bindStateT(dictMonad)
+  });
+  const for_3 = for_(applicativeVT3)(foldableArray);
+  const emitErrorsAndContinue1 = emitErrorsAndContinue(dictMonad);
+  const emitWarningsAndContinue22 = emitWarningsAndContinue(dictMonad);
+  return (dictMonadEffect) => {
+    const $0 = monadEffectExceptT(monadEffectState(dictMonadEffect));
+    return (doFix) => (fp) => bindVT1.bind($0.liftEffect(checkFileFormat(fp)))((issues) => {
+      const $1 = bindVT1.bind((() => {
+        const $12 = $0.liftEffect(() => fixFileFormatImpl(fp));
+        if (doFix) {
+          return $12;
+        }
+        return applicativeVT3.pure();
+      })())(() => for_3(issues)((issue) => {
+        if (issue === "ENCODING") {
+          return emitErrorsAndContinue1([
+            $Issue(
+              "CodedIssue",
+              E_CSV_FORMAT_ENCODING,
+              { ...emptyContext, fileContext: $Maybe("Just", { filepath: fp, lineNo: -1 }) }
+            )
+          ]);
+        }
+        if (issue === "BOM") {
+          return emitWarningsAndContinue22([
+            $Issue(
+              "CodedIssue",
+              W_CSV_FORMAT_BOM,
+              { ...emptyContext, fileContext: $Maybe("Just", { filepath: fp, lineNo: -1 }) }
+            )
+          ]);
+        }
+        if (issue === "CRLF") {
+          return emitWarningsAndContinue22([
+            $Issue(
+              "CodedIssue",
+              W_CSV_FORMAT_CRLF,
+              { ...emptyContext, fileContext: $Maybe("Just", { filepath: fp, lineNo: -1 }) }
+            )
+          ]);
+        }
+        fail();
+      }));
+      if (issues.length !== 0) {
+        return $1;
+      }
+      return applicativeVT3.pure();
+    });
+  };
+};
 
 // output-es/Data.JSON.DataPackage/index.js
 var constraintsIsSymbol = { reflectSymbol: () => "constraints" };
@@ -16227,6 +16394,8 @@ var applicativeVT2 = /* @__PURE__ */ applicativeExceptT({
   Applicative0: () => applicativeStateT(monadAff),
   Bind1: () => bindStateT(monadAff)
 });
+var traverse_4 = /* @__PURE__ */ traverse_(applicativeVT2)(foldableArray);
+var checkAndFixFileFormat2 = /* @__PURE__ */ checkAndFixFileFormat(monadAff)(monadEffectAff);
 var fromArrayBy3 = /* @__PURE__ */ (() => fromArrayPurs(eqCollectionConstant.eq, hashableCollectionConstant.hash))();
 var identity21 = (x) => x;
 var lookup8 = /* @__PURE__ */ lookup4(hashableCollectionConstant);
@@ -16235,7 +16404,6 @@ var $$for2 = /* @__PURE__ */ (() => {
   const traverse22 = traversableArray.traverse(applicativeVT2);
   return (x) => (f) => traverse22(f)(x);
 })();
-var traverse_4 = /* @__PURE__ */ traverse_(applicativeVT2)(foldableArray);
 var getState3 = /* @__PURE__ */ getState(monadAff)(monoidArray);
 var compare13 = /* @__PURE__ */ (() => ordMaybe(ordTuple(ordString)(ordNonEmpty2(ordString))).compare)();
 var emitWarningsAndContinue2 = /* @__PURE__ */ emitWarningsAndContinue(monadAff);
@@ -16286,12 +16454,12 @@ var readAllFileInfoForValidation2 = (root) => (fs2) => (dictMonad) => {
     }
   ]))(() => applicativeVT1.pure(ddfFiles));
 };
-var validate2 = (path2) => (dpIssueAsWarning) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("reading file list..."))))(() => bindVT3.bind(monadtransVT.lift(monadAff)(getFiles(path2)([
+var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("reading file list..."))))(() => bindVT3.bind(monadtransVT.lift(monadAff)(getFiles(path2)([
   ".git",
   "etl",
   "assets",
   "langsplit"
-])))((fs2) => bindVT3.bind(readAllFileInfoForValidation2(path2)(fs2)(monadAff))((ddfFiles) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
+])))((fs2) => bindVT3.bind(traverse_4(checkAndFixFileFormat2(fixFormat))(filterImpl((f) => stripSuffix(".csv")(f).tag !== "Nothing", fs2)))(() => bindVT3.bind(readAllFileInfoForValidation2(path2)(fs2)(monadAff))((ddfFiles) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
   const fileMap = fromArrayBy3((x) => getCollectionType((() => {
     if (0 < x.length) {
       return x[0].collectionInfo;
@@ -16392,7 +16560,7 @@ var validate2 = (path2) => (dpIssueAsWarning) => bindVT3.bind(monadtransVT.lift(
       }))));
     })));
   })));
-}))));
+})))));
 
 // output-es/Data.DataPackage/index.js
 var valueIsSymbol = { reflectSymbol: () => "value" };
@@ -16635,7 +16803,7 @@ var validate$p = (opts2) => fromAff((() => {
   const path2 = opts2.targetPath;
   const onlyErrors = opts2.onlyErrors;
   const gendp = opts2.generateDP;
-  return _bind(runValidationT2(validate2(path2)(gendp)))((v) => {
+  return _bind(runValidationT2(validate2(path2)(gendp)(false)))((v) => {
     const $0 = v._1;
     const msgsToShow = onlyErrors ? filterImpl((x) => !x.isWarning, $0) : $0;
     return _bind((() => {
@@ -16674,9 +16842,10 @@ var runMain = (opts2) => {
     ffiUtil,
     (() => {
       const gendp = opts2.generateDP;
-      return _bind(_liftEffect(log2("v0.1.10")))(() => _bind((() => {
+      const fixFormat = opts2.fixFormat;
+      return _bind(_liftEffect(log2("v2.0.0")))(() => _bind((() => {
         if (mode === "FileNameBased") {
-          return runValidationT2(validate2(path2)(gendp));
+          return runValidationT2(validate2(path2)(gendp)(fixFormat));
         }
         if (mode === "DataPackageBased") {
           return runValidationT2(validate(path2));

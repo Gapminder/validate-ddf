@@ -18,6 +18,7 @@ import Data.HashMap as HM
 import Data.JSON.DataPackage (Resource, datapackageExists)
 import Data.JSON.DataPackage as DataPackage
 import Data.Maybe (Maybe(..), fromJust, isNothing)
+import Data.String as Str
 import Data.Traversable (for, traverse_)
 import Data.Tuple (Tuple(..))
 import Data.Validation.Issue (Issue(..), mkIssue, mkIssueWithMessage)
@@ -69,13 +70,18 @@ readDataPackageResources path = do
 
 -- | main validation process
 -- | dpIssueAsWarning: if true, datapackage errors are reported as warnings instead of errors
-validate :: FilePath -> Boolean -> ValidationT Messages Aff (Tuple DataSet (Array Resource))
-validate path dpIssueAsWarning = do
+-- | fixFormat: if true, auto-fix BOM/CRLF issues in place
+validate :: FilePath -> Boolean -> Boolean -> ValidationT Messages Aff (Tuple DataSet (Array Resource))
+validate path dpIssueAsWarning fixFormat = do
   lift $ liftEffect $ log "reading file list..."
 
   let
     ignored = [ ".git", "etl", "assets", "langsplit" ]
   fs <- lift $ getFiles path ignored
+
+  -- check (and optionally fix) byte-level format issues on CSV files only
+  let csvFiles = Arr.filter (\f -> Str.stripSuffix (Str.Pattern ".csv") f /= Nothing) fs
+  traverse_ (checkAndFixFileFormat fixFormat) csvFiles
 
   ddfFiles <- readAllFileInfoForValidation path fs
 

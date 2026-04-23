@@ -18,6 +18,7 @@ type CliOptions =
   , noWarning :: Boolean
   , mode :: ValidationMode
   , generateDP :: Boolean
+  , fixFormat :: Boolean
   }
 
 data ValidationMode = FileNameBased | DataPackageBased
@@ -51,8 +52,13 @@ cliOptions = ado
         <> short 'p'
         <> help "whether to generate a datapackage.json after validation. (default false)"
     )
+  fixFormat <- switch
+    ( long "fix"
+        <> short 'f'
+        <> help "auto-fix format issues (BOM, CRLF) in CSV files"
+    )
   in
-    { targetPath, noWarning, mode, generateDP }
+    { targetPath, noWarning, mode, generateDP, fixFormat }
 
 opts :: ParserInfo CliOptions
 opts = info (cliOptions <**> helper)

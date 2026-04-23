@@ -8,6 +8,7 @@ import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as NEA
 import Data.Csv (RawCsvContent, parseCsvContent, readCsv')
 import Data.Csv as C
+import Data.Csv.FileCheck (FormatIssue(..), checkFileFormat, fixFileFormat)
 import Data.DDF.Atoms.Identifier as Id
 import Data.DDF.Concept (Concept(..), getId, getInfo, parseConcept, reservedConcepts)
 import Data.DDF.Csv.CsvFile (CsvFile, parseCsvFile)
@@ -20,6 +21,7 @@ import Data.DDF.DataSet as DataSet
 import Data.DDF.Entity (Entity(..), parseEntity)
 import Data.DDF.Internal (pathAndRow)
 import Data.Either (Either(..))
+import Data.Foldable (for_, traverse_)
 import Data.HashMap as HM
 import Data.List.Types (NonEmptyList)
 import Data.Maybe (Maybe(..))
@@ -35,9 +37,26 @@ import Data.Validation.Result (Messages, messageFromIssue, setError, setFile, se
 import Data.Validation.Semigroup (andThen, toEither)
 import Data.Validation.ValidationT (Validation, ValidationT, vError, vWarning)
 import Effect.Aff (Aff)
-import Effect.Class (liftEffect)
+import Effect.Class (class MonadEffect, liftEffect)
 import Node.FS.Sync as PATH
 import Node.Path (FilePath)
+
+-- | Check (and optionally fix) BOM/CRLF/encoding issues on a single CSV file.
+-- | Emits warnings for W_CSV_FORMAT_BOM and W_CSV_FORMAT_CRLF,
+-- | emits an error for E_CSV_FORMAT_ENCODING.
+checkAndFixFileFormat :: forall m. Monad m => MonadEffect m => Boolean -> FilePath -> ValidationT Messages m Unit
+checkAndFixFileFormat doFix fp = do
+  issues <- liftEffect $ checkFileFormat fp
+  when (not $ Arr.null issues) do
+    when doFix do
+      liftEffect $ fixFileFormat fp
+    for_ issues \issue -> case issue of
+      ENCODING ->
+        emitErrorsAndContinue [ mkIssue E_CSV_FORMAT_ENCODING # withFileLocation fp (-1) ]
+      BOM ->
+        emitWarningsAndContinue [ mkIssue W_CSV_FORMAT_BOM # withFileLocation fp (-1) ]
+      CRLF ->
+        emitWarningsAndContinue [ mkIssue W_CSV_FORMAT_CRLF # withFileLocation fp (-1) ]
 
 -- Error handlers
 --

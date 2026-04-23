@@ -42,7 +42,7 @@ validate' opts = Promise.fromAff do
     onlyErrors = opts.onlyErrors
     gendp = opts.generateDP -- when true, emit warnings for datapackage errors
 
-  (Tuple msgs res) <- runValidationT $ VFN.validate path gendp
+  (Tuple msgs res) <- runValidationT $ VFN.validate path gendp false
   let
     msgsToShow =
       if onlyErrors then Arr.filter (\x -> not $ _.isWarning x) msgs
@@ -70,10 +70,11 @@ runMain opts = launchAff_ do
     noWarning = _.noWarning opts
     mode = _.mode opts
     gendp = _.generateDP opts -- when true, emit warnings for datapackage errors
+    fixFormat = _.fixFormat opts
 
   liftEffect $ log "v2.0.0"
   (Tuple msgs res) <- case mode of
-    FileNameBased -> runValidationT $ VFN.validate path gendp
+    FileNameBased -> runValidationT $ VFN.validate path gendp fixFormat
     DataPackageBased -> runValidationT $ VDP.validate path
   let
     msgsToShow =
