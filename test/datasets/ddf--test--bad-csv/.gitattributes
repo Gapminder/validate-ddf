@@ -1,0 +1,16 @@
+# Preserve intentional encoding/line-ending errors in these test fixtures.
+# Without this, git would silently fix exactly the issues we're testing for.
+
+# Default: treat everything as text with LF
+* text=auto eol=lf
+
+# The BOM and invalid-UTF-8 files are binary — git must not touch them
+ddf--entities--geo.csv     binary
+ddf--entities--country.csv binary
+
+# The CRLF file must keep its \r\n endings — mark as binary too
+ddf--entities--region.csv  binary
+
+# The bad-CSV and clean files are ordinary text
+ddf--concepts.csv          text eol=lf
+ddf--entities--city.csv    text eol=lf
