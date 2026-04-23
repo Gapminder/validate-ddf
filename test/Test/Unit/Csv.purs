@@ -87,7 +87,7 @@ spec =
         result.index `shouldEqual` [ 2, 4 ]
 
         -- Bad row at line 3 should be tracked in badrows
-        result.badrows `shouldEqual` [ 3 ]
+        result.badrows `shouldEqual` [ { lineNo: 3, expected: 3, actual: 2 } ]
 
         -- Should only have valid rows in columns
         result.columns `shouldEqual`

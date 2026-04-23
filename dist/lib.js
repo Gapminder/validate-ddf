@@ -9422,7 +9422,7 @@ function parseCsvImpl(path2) {
         } else {
           const lineNumber = count + 1;
           if (record.length !== numColumns) {
-            badrows.push(lineNumber);
+            badrows.push({ lineNo: lineNumber, expected: numColumns, actual: record.length });
           } else {
             index4.push(lineNumber);
             for (let i = 0; i < numColumns; i++) {
@@ -9612,7 +9612,7 @@ var E_CSV_HEADER_MISSING = /* @__PURE__ */ $ErrorCode("E_CSV_HEADER_MISSING");
 var E_CSV_HEADER_UNEXPECTED = /* @__PURE__ */ $ErrorCode("E_CSV_HEADER_UNEXPECTED");
 var E_CSV_HEADER_DUPLICATED = /* @__PURE__ */ $ErrorCode("E_CSV_HEADER_DUPLICATED");
 var E_CSV_ROW_DUPLICATED = /* @__PURE__ */ $ErrorCode("E_CSV_ROW_DUPLICATED");
-var W_CSV_ROW_BAD = /* @__PURE__ */ $ErrorCode("W_CSV_ROW_BAD");
+var E_CSV_ROW_BAD = /* @__PURE__ */ $ErrorCode("E_CSV_ROW_BAD");
 var W_CSV_FORMAT_BOM = /* @__PURE__ */ $ErrorCode("W_CSV_FORMAT_BOM");
 var W_CSV_FORMAT_CRLF = /* @__PURE__ */ $ErrorCode("W_CSV_FORMAT_CRLF");
 var E_CSV_FORMAT_ENCODING = /* @__PURE__ */ $ErrorCode("E_CSV_FORMAT_ENCODING");
@@ -9745,7 +9745,7 @@ var errorSuggestion = (v) => {
   if (v === "E_CSV_ROW_DUPLICATED") {
     return "";
   }
-  if (v === "W_CSV_ROW_BAD") {
+  if (v === "E_CSV_ROW_BAD") {
     return "";
   }
   if (v === "W_CSV_FORMAT_BOM") {
@@ -9892,8 +9892,8 @@ var errorMessageTemplate = (v) => {
   if (v === "E_CSV_ROW_DUPLICATED") {
     return "duplicate row in CSV";
   }
-  if (v === "W_CSV_ROW_BAD") {
-    return "bad CSV row";
+  if (v === "E_CSV_ROW_BAD") {
+    return "inconsistent column count";
   }
   if (v === "W_CSV_FORMAT_BOM") {
     return "file has a UTF-8 BOM \u2014 per DDF spec the encoding SHOULD NOT use a BOM";
@@ -10137,8 +10137,8 @@ var errorCodeToString = (v) => {
   if (v === "E_CSV_ROW_DUPLICATED") {
     return "E_CSV_ROW_DUPLICATED";
   }
-  if (v === "W_CSV_ROW_BAD") {
-    return "W_CSV_ROW_BAD";
+  if (v === "E_CSV_ROW_BAD") {
+    return "E_CSV_ROW_BAD";
   }
   if (v === "W_CSV_FORMAT_BOM") {
     return "W_CSV_FORMAT_BOM";
@@ -15785,14 +15785,18 @@ var validateDatapointsFileGroup = (indicator) => (pkeys) => (ds) => (csvfiles) =
 var dropAndWarnBadCsvRows = (fp) => (content) => (dictMonad) => bindExceptT({
   Applicative0: () => applicativeStateT(dictMonad),
   Bind1: () => bindStateT(dictMonad)
-}).bind(vWarning(dictMonad)(monoidArray)(arrayMap((idx) => ({
+}).bind(vWarning(dictMonad)(monoidArray)(arrayMap((v) => ({
   ...messageFromIssue($Issue(
     "CodedIssue",
-    W_CSV_ROW_BAD,
-    { ...emptyContext, message: $Maybe("Just", "Bad Csv row") }
+    E_CSV_ROW_BAD,
+    {
+      ...emptyContext,
+      message: $Maybe("Just", "expected " + showIntImpl(v.expected) + " columns but got " + showIntImpl(v.actual))
+    }
   )),
   file: fp,
-  lineNo: idx
+  isWarning: false,
+  lineNo: v.lineNo
 }))(content.badrows)))(() => applicativeExceptT({
   Applicative0: () => applicativeStateT(dictMonad),
   Bind1: () => bindStateT(dictMonad)

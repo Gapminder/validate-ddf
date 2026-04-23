@@ -52,7 +52,7 @@ type RawCsvContent =
   { headers :: Array String
   , index :: Array Int
   , columns :: Array CsvColumn
-  , badrows :: Array Int
+  , badrows :: Array { lineNo :: Int, expected :: Int, actual :: Int }
   }
 
 -- CsvContent

@@ -109,13 +109,15 @@ dropAndWarnBadCsvRows
   -> Validation Messages RawCsvContent
 dropAndWarnBadCsvRows fp content = do
   let
-    badIdx = content.badrows
-    makemsg idx =
-      ( setLineNo idx
+    badrows = content.badrows
+    makemsg { lineNo, expected, actual } =
+      ( setLineNo lineNo
           <<< setFile fp
+          <<< setError
           <<< messageFromIssue
-      ) $ mkIssueWithMessage W_CSV_ROW_BAD "Bad Csv row"
-    msgs = map makemsg badIdx
+      ) $ mkIssueWithMessage E_CSV_ROW_BAD
+          $ "expected " <> show expected <> " columns but got " <> show actual
+    msgs = map makemsg badrows
   vWarning msgs
   pure content
 

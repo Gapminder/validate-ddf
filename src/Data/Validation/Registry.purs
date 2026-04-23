@@ -183,7 +183,7 @@ data ErrorCode
   | E_CSV_HEADER_DUPLICATED
   | E_CSV_HEADER_CONSTRAINT
   | E_CSV_ROW_DUPLICATED
-  | W_CSV_ROW_BAD
+  | E_CSV_ROW_BAD
   -- CSV format errors (byte-level)
   | W_CSV_FORMAT_BOM
   | W_CSV_FORMAT_CRLF
@@ -243,7 +243,7 @@ errorCodeToString = case _ of
   E_CSV_HEADER_DUPLICATED -> "E_CSV_HEADER_DUPLICATED"
   E_CSV_HEADER_CONSTRAINT -> "E_CSV_HEADER_CONSTRAINT"
   E_CSV_ROW_DUPLICATED -> "E_CSV_ROW_DUPLICATED"
-  W_CSV_ROW_BAD -> "W_CSV_ROW_BAD"
+  E_CSV_ROW_BAD -> "E_CSV_ROW_BAD"
   W_CSV_FORMAT_BOM -> "W_CSV_FORMAT_BOM"
   W_CSV_FORMAT_CRLF -> "W_CSV_FORMAT_CRLF"
   E_CSV_FORMAT_ENCODING -> "E_CSV_FORMAT_ENCODING"
@@ -295,7 +295,7 @@ errorMessageTemplate = case _ of
   E_CSV_HEADER_DUPLICATED -> "duplicate CSV header"
   E_CSV_HEADER_CONSTRAINT -> "CSV header violates constraint"
   E_CSV_ROW_DUPLICATED -> "duplicate row in CSV"
-  W_CSV_ROW_BAD -> "bad CSV row"
+  E_CSV_ROW_BAD -> "inconsistent column count"
   W_CSV_FORMAT_BOM -> "file has a UTF-8 BOM — per DDF spec the encoding SHOULD NOT use a BOM"
   W_CSV_FORMAT_CRLF -> "file uses Windows line endings (CRLF) — per DDF spec LF line endings are preferred"
   E_CSV_FORMAT_ENCODING -> "file is not valid UTF-8 — DDF spec requires UTF-8 encoding"
@@ -429,7 +429,7 @@ errorSuggestion = case _ of
   E_CSV_HEADER_DUPLICATED -> ""
   E_CSV_HEADER_CONSTRAINT -> ""
   E_CSV_ROW_DUPLICATED -> ""
-  W_CSV_ROW_BAD -> ""
+  E_CSV_ROW_BAD -> ""
   W_CSV_FORMAT_BOM -> "run validate-ddf --fix to auto-fix this issue"
   W_CSV_FORMAT_CRLF -> "run validate-ddf --fix to auto-fix this issue"
   E_CSV_FORMAT_ENCODING -> "convert the file to UTF-8 encoding"

@@ -32,7 +32,7 @@ export function parseCsvImpl(path) {
           // Line 3: second data row (count=2, so lineNumber=3), etc.
           const lineNumber = count + 1;
           if (record.length !== numColumns) {
-            badrows.push(lineNumber)
+            badrows.push({ lineNo: lineNumber, expected: numColumns, actual: record.length })
           } else {
             index.push(lineNumber)
             for (let i = 0; i < numColumns; i++) {
