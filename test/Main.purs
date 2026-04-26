@@ -199,7 +199,7 @@ main = launchAff_ $ runSpecPure [ consoleReporter ] do
       -- IO things
       it "read csv file" do
         let filename = "test/datasets/ddf--test--new/ddf--concepts.csv"
-        output <- sequence $ readCsv <$> [ filename ]
+        output <- sequence $ flip readCsv false <$> [ filename ]
         (output Arr.!! 0)
           `shouldSatisfy` isJust
       it "list all csv files in a folder" do

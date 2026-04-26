@@ -3,11 +3,9 @@ module Test.Integration.CsvErrors where
 import Prelude
 
 import Data.Array as Arr
-import Data.Csv (readCsv)
-import Data.Csv.FileCheck (FormatIssue(..), checkFileFormat, fixFileFormat)
+import Data.Csv (FormatIssue(..), parseFormatIssues, readCsv)
 import Data.Foldable (for_)
 import Data.Validation.Registry (ErrorCode(..))
-import Effect.Class (liftEffect)
 import Test.Helpers (expectError)
 import Test.Helpers.Regenerate (regenerateBadCsvFiles)
 import Test.Spec (Spec, before_, describe, it, pending)
@@ -40,50 +38,54 @@ spec =
       pending "error-csv-header-constraint: should detect E_CSV_HEADER_CONSTRAINT (not implemented)"
 
     describe "CSV Byte-level Format Errors" do
+      let
+        geo = "test/datasets/ddf--test--bad-csv/ddf--entities--geo.csv"
+        region = "test/datasets/ddf--test--bad-csv/ddf--entities--geo--region.csv"
+        country = "test/datasets/ddf--test--bad-csv/ddf--entities--geo--country.csv"
+        concepts = "test/datasets/ddf--test--bad-csv/ddf--concepts.csv"
+        place = "test/datasets/ddf--test--bad-csv/ddf--entities--geo--place.csv"
+
       before_ regenerateBadCsvFiles do
         describe "Phase 1: issues detected in fresh files" do
           it "geo.csv — BOM detected" do
-            issues <- liftEffect $ checkFileFormat "test/datasets/ddf--test--bad-csv/ddf--entities--geo.csv"
-            issues `shouldSatisfy` Arr.elem BOM
+            csv <- readCsv geo false
+            parseFormatIssues csv.formatIssues `shouldSatisfy` Arr.elem BOM
 
           it "region.csv — CRLF detected" do
-            issues <- liftEffect $ checkFileFormat "test/datasets/ddf--test--bad-csv/ddf--entities--geo--region.csv"
-            issues `shouldSatisfy` Arr.elem CRLF
+            csv <- readCsv region false
+            parseFormatIssues csv.formatIssues `shouldSatisfy` Arr.elem CRLF
 
           it "country.csv — invalid encoding detected" do
-            issues <- liftEffect $ checkFileFormat "test/datasets/ddf--test--bad-csv/ddf--entities--geo--country.csv"
-            issues `shouldSatisfy` Arr.elem ENCODING
+            csv <- readCsv country false
+            parseFormatIssues csv.formatIssues `shouldSatisfy` Arr.elem ENCODING
 
           it "concepts.csv — clean baseline, no format issues" do
-            issues <- liftEffect $ checkFileFormat "test/datasets/ddf--test--bad-csv/ddf--concepts.csv"
-            issues `shouldEqual` []
+            csv <- readCsv concepts false
+            csv.formatIssues `shouldEqual` []
 
           it "place.csv — badrows detected (inconsistent column count)" do
-            csv <- readCsv "test/datasets/ddf--test--bad-csv/ddf--entities--geo--place.csv"
+            csv <- readCsv place false
             csv.badrows `shouldNotEqual` []
 
         describe "Phase 2: after fix" do
           before_
-            ( liftEffect $ for_
-                [ "test/datasets/ddf--test--bad-csv/ddf--entities--geo.csv"
-                , "test/datasets/ddf--test--bad-csv/ddf--entities--geo--region.csv"
-                , "test/datasets/ddf--test--bad-csv/ddf--entities--geo--country.csv"
-                ]
-                fixFileFormat
+            ( for_
+                [ geo, region, country ]
+                (\f -> void $ readCsv f true)
             )
             do
               it "geo.csv — no format issues after fix" do
-                issues <- liftEffect $ checkFileFormat "test/datasets/ddf--test--bad-csv/ddf--entities--geo.csv"
-                issues `shouldEqual` []
+                csv <- readCsv geo false
+                csv.formatIssues `shouldEqual` []
 
               it "region.csv — no format issues after fix" do
-                issues <- liftEffect $ checkFileFormat "test/datasets/ddf--test--bad-csv/ddf--entities--geo--region.csv"
-                issues `shouldEqual` []
+                csv <- readCsv region false
+                csv.formatIssues `shouldEqual` []
 
               it "country.csv — no format issues after fix" do
-                issues <- liftEffect $ checkFileFormat "test/datasets/ddf--test--bad-csv/ddf--entities--geo--country.csv"
-                issues `shouldEqual` []
+                csv <- readCsv country false
+                csv.formatIssues `shouldEqual` []
 
               it "place.csv — badrows persist after fix (format fix cannot repair CSV structure)" do
-                csv <- readCsv "test/datasets/ddf--test--bad-csv/ddf--entities--geo--place.csv"
+                csv <- readCsv place false
                 csv.badrows `shouldNotEqual` []

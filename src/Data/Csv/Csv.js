@@ -1,55 +1,99 @@
-import { parse } from 'csv-parse';
-import fs from 'node:fs';
+import { parse } from 'csv-parse/sync';
+import { readFileSync, writeFileSync } from 'node:fs';
 
+const UTF8_BOM = [0xEF, 0xBB, 0xBF];
 
+function hasBOM(buf) {
+  return buf[0] === UTF8_BOM[0] && buf[1] === UTF8_BOM[1] && buf[2] === UTF8_BOM[2];
+}
+
+function isValidUTF8(buf) {
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(buf);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+// TODO: split into two versions — parseCsvImpl (plain read, no format checks)
+// and parseCsvWithFormatImpl (with BOM/CRLF/UTF-8 detection + optional fix).
+// Datapackage generation and other non-validation callers don't need format
+// checks and would benefit from skipping the detection overhead.
+//
+// parseCsvImpl :: String -> Boolean -> Effect (Promise Foreign)
 export function parseCsvImpl(path) {
-  return function () {
-    const func = async () => {
-      const parser = fs
-        .createReadStream(path, "utf8")
-        .pipe(parse({
-          bom: true,
+  return function (fixFormat) {
+    return function () {
+      const result = (() => {
+        // 1. Read file as buffer (single read)
+        const buf = readFileSync(path);
+        const formatIssues = [];
+
+        // 2. Check format issues
+        const bom = hasBOM(buf);
+        if (bom) {
+          formatIssues.push('BOM');
+        }
+
+        if (!isValidUTF8(buf)) {
+          formatIssues.push('ENCODING');
+        }
+
+        // 3. Get content string (strip BOM if present)
+        const content = (bom ? buf.slice(3) : buf).toString('utf8');
+        if (content.includes('\r\n')) {
+          formatIssues.push('CRLF');
+        }
+
+        // 4. Optionally fix and write back
+        let contentToParse = content;
+        if (fixFormat && formatIssues.length > 0) {
+          if (formatIssues.includes('CRLF')) {
+            contentToParse = contentToParse.replace(/\r\n/g, '\n');
+          }
+          // BOM already stripped above; ENCODING writes replacement chars per UTF-8 decode
+          writeFileSync(path, contentToParse, { encoding: 'utf8' });
+        }
+
+        // 5. Parse CSV
+        const allRecords = parse(contentToParse, {
           quote: '"',
           columns: false,
           relax_column_count: true
-        }));
-      let records;
-      let headers;
-      let numColumns;
-      var count = -1;
-      var badrows = [];
-      var index = [];
-      for await (const record of parser) {
-        count++;
-        if (count === 0) {
-          headers = record;
-          numColumns = headers.length;
-          records = Array(numColumns).fill().map(() => []);
-        } else {
-          // Store the actual CSV file line number (count + 1, since count starts at 0 for the header)
-          // Line 1: header row (count=0)
-          // Line 2: first data row (count=1, so lineNumber=2)
-          // Line 3: second data row (count=2, so lineNumber=3), etc.
-          const lineNumber = count + 1;
+        });
+
+        const headers = allRecords.length > 0 ? allRecords[0] : [];
+        const numColumns = headers.length;
+        const records = Array(numColumns).fill().map(() => []);
+        const badrows = [];
+        const index = [];
+
+        for (let i = 1; i < allRecords.length; i++) {
+          const record = allRecords[i];
+          // lineNumber: header is line 1 (i=0), first data row is line 2 (i=1)
+          const lineNumber = i + 1;
           if (record.length !== numColumns) {
-            badrows.push({ lineNo: lineNumber, expected: numColumns, actual: record.length })
+            badrows.push({ lineNo: lineNumber, expected: numColumns, actual: record.length });
           } else {
-            index.push(lineNumber)
-            for (let i = 0; i < numColumns; i++) {
-              records[i].push(record[i])
+            index.push(lineNumber);
+            for (let j = 0; j < numColumns; j++) {
+              records[j].push(record[j]);
             }
           }
         }
-      };
-      return {
-        headers: headers || [],
-        columns: records || [],
-        index: index || [],
-        badrows: badrows
-      };
+
+        return {
+          headers: headers,
+          columns: records,
+          index: index,
+          badrows: badrows,
+          formatIssues: formatIssues
+        };
+      })();
+      return Promise.resolve(result);
     };
-    return func()
-  }
+  };
 }
 
 export function rowsToColumnsImpl(rows) {
