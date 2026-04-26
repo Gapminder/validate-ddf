@@ -3,7 +3,7 @@ module Test.Unit.Csv where
 import Prelude
 
 import Data.Array as Arr
-import Data.Csv (readCsv)
+import Data.Csv (readCsvPlain)
 import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff)
 import Node.Encoding (Encoding(..))
@@ -26,7 +26,7 @@ spec =
         writeTextFile UTF8 testFilePath csvContent
 
         -- Read the CSV
-        result <- readCsv testFilePath false
+        result <- readCsvPlain testFilePath
 
         -- Verify headers are correct
         result.headers `shouldEqual` [ "header1", "header2", "header3" ]
@@ -56,7 +56,7 @@ spec =
           testFilePath = "/tmp/test-csv-empty.csv"
 
         writeTextFile UTF8 testFilePath csvContent
-        result <- readCsv testFilePath false
+        result <- readCsvPlain testFilePath
 
         -- Should have headers
         result.headers `shouldEqual` [ "header1", "header2", "header3" ]
@@ -77,7 +77,7 @@ spec =
           testFilePath = "/tmp/test-csv-badrows.csv"
 
         writeTextFile UTF8 testFilePath csvContent
-        result <- readCsv testFilePath false
+        result <- readCsvPlain testFilePath
 
         -- Should have headers
         result.headers `shouldEqual` [ "h1", "h2", "h3" ]

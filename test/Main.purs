@@ -6,7 +6,7 @@ import Prelude
 import App.Cli (ValidationMode(..))
 import App.Validation.FileNameBased as VFN
 import Data.Array as Arr
-import Data.Csv (readCsv, readCsv')
+import Data.Csv (readCsvPlain)
 import Data.Csv as Csv
 import Data.DDF.Atoms.Header as Hd
 import Data.DDF.Atoms.Identifier (isLongerThan64Chars, parseId)
@@ -60,7 +60,7 @@ import Utils (getFiles)
 testMain :: Effect Unit
 testMain = do
   path <- resolve [] "test/datasets/ddf--test--new"
-  M.runMain { targetPath: path, noWarning: false, mode: FileNameBased, generateDP: true, fixFormat: false}
+  M.runMain { targetPath: path, noWarning: false, mode: FileNameBased, generateDP: true, fixFormat: false }
 
 main :: Effect Unit
 main = launchAff_ $ runSpecPure [ consoleReporter ] do
@@ -199,7 +199,7 @@ main = launchAff_ $ runSpecPure [ consoleReporter ] do
       -- IO things
       it "read csv file" do
         let filename = "test/datasets/ddf--test--new/ddf--concepts.csv"
-        output <- sequence $ flip readCsv false <$> [ filename ]
+        output <- sequence $ readCsvPlain <$> [ filename ]
         (output Arr.!! 0)
           `shouldSatisfy` isJust
       it "list all csv files in a folder" do
