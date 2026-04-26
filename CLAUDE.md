@@ -329,9 +329,8 @@ const result = await validate("./path/to/dataset", {
 
 ## Development Notes
 
-- When updating version: remember to update BOTH `package.json` AND `src/Main.purs:74`
+- When making a new version: remember to update the version string in BOTH `package.json` AND `src/Main.purs` (search for lines like `liftEffect $ log "v2.1.0"`)
 - PureScript uses dot-syntax for record field access but different syntax for updating records
-- The codebase branch is `purescript` (branched from older JavaScript version)
 - npm test will emit many lines, remember to first show the tail to see a summary
 - use https://pursuit.purescript.org to check library API doc
 
@@ -339,4 +338,4 @@ const result = await validate("./path/to/dataset", {
 
 - try to avoid very long lines, break it into smaller trunks. For example, use let...in to create some temp variables.
 - perfer the `$` operator to writting in parentheses
-- remember to run `purs-tidy format-in-place "file.purs"` to format file after finishing a task
+- remember to run `purs-tidy format-in-place "file.purs"` to format file after updating a purs file.
