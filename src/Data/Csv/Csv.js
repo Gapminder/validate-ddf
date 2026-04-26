@@ -16,12 +16,19 @@ function isValidUTF8(buf) {
   }
 }
 
-// TODO: split into two versions — parseCsvImpl (plain read, no format checks)
-// and parseCsvWithFormatImpl (with BOM/CRLF/UTF-8 detection + optional fix).
-// Datapackage generation and other non-validation callers don't need format
-// checks and would benefit from skipping the detection overhead.
-//
+// parseCsvPlainImpl :: String -> Effect (Promise Foreign)
+// Plain read + parse CSV — no format checks. Used by datapackage generation
+// and other non-validation callers that don't need BOM/CRLF/UTF-8 detection.
+export function parseCsvPlainImpl(path) {
+  return function () {
+    const result = parseCsvContent(readFileSync(path, { encoding: 'utf8' }));
+    return Promise.resolve(result);
+  };
+}
+
 // parseCsvImpl :: String -> Boolean -> Effect (Promise Foreign)
+// Read + parse CSV with BOM/CRLF/UTF-8 format detection and optional fix.
+// Used by the validation pipeline.
 export function parseCsvImpl(path) {
   return function (fixFormat) {
     return function () {
@@ -57,42 +64,48 @@ export function parseCsvImpl(path) {
         }
 
         // 5. Parse CSV
-        const allRecords = parse(contentToParse, {
-          quote: '"',
-          columns: false,
-          relax_column_count: true
-        });
-
-        const headers = allRecords.length > 0 ? allRecords[0] : [];
-        const numColumns = headers.length;
-        const records = Array(numColumns).fill().map(() => []);
-        const badrows = [];
-        const index = [];
-
-        for (let i = 1; i < allRecords.length; i++) {
-          const record = allRecords[i];
-          // lineNumber: header is line 1 (i=0), first data row is line 2 (i=1)
-          const lineNumber = i + 1;
-          if (record.length !== numColumns) {
-            badrows.push({ lineNo: lineNumber, expected: numColumns, actual: record.length });
-          } else {
-            index.push(lineNumber);
-            for (let j = 0; j < numColumns; j++) {
-              records[j].push(record[j]);
-            }
-          }
-        }
-
-        return {
-          headers: headers,
-          columns: records,
-          index: index,
-          badrows: badrows,
-          formatIssues: formatIssues
-        };
+        const parsed = parseCsvContent(contentToParse);
+        return { ...parsed, formatIssues };
       })();
       return Promise.resolve(result);
     };
+  };
+}
+
+// Shared: parse CSV string into column-oriented structure
+function parseCsvContent(text) {
+  const allRecords = parse(text, {
+    quote: '"',
+    columns: false,
+    relax_column_count: true
+  });
+
+  const headers = allRecords.length > 0 ? allRecords[0] : [];
+  const numColumns = headers.length;
+  const records = Array(numColumns).fill().map(() => []);
+  const badrows = [];
+  const index = [];
+
+  for (let i = 1; i < allRecords.length; i++) {
+    const record = allRecords[i];
+    // lineNumber: header is line 1 (i=0), first data row is line 2 (i=1)
+    const lineNumber = i + 1;
+    if (record.length !== numColumns) {
+      badrows.push({ lineNo: lineNumber, expected: numColumns, actual: record.length });
+    } else {
+      index.push(lineNumber);
+      for (let j = 0; j < numColumns; j++) {
+        records[j].push(record[j]);
+      }
+    }
+  }
+
+  return {
+    headers: headers,
+    columns: records,
+    index: index,
+    badrows: badrows,
+    formatIssues: []
   };
 }
 

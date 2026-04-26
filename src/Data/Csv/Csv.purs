@@ -6,10 +6,11 @@ module Data.Csv
   , parseCsvContent
   , parseFormatIssues
   , readAndParseCsv
+  , readAndParseCsvPlain
   , readCsv
   , readCsv'
+  , readCsvPlain
   , iterRows
-  , myTest
   ) where
 
 import Prelude
@@ -84,13 +85,22 @@ type CsvContent =
   , columns :: Array CsvColumn
   }
 
--- important: Please make sure the return type match RawCsvContent as there are no parsing here
+-- | Read CSV with BOM/CRLF/UTF-8 format detection and optional fix.
 foreign import parseCsvImpl :: String -> Boolean -> Effect (Promise Foreign)
 
--- | Read entire csv. Pass fixFormat=true to auto-fix BOM/CRLF in place.
+-- | Plain CSV read — no format checks. For datapackage generation etc.
+foreign import parseCsvPlainImpl :: String -> Effect (Promise Foreign)
+
+-- | Read entire csv with format checks. Pass fixFormat=true to auto-fix BOM/CRLF in place.
 readCsv :: FilePath -> Boolean -> Aff RawCsvContent
 readCsv path fixFormat = do
   f <- toAffE $ parseCsvImpl path fixFormat
+  pure $ unsafeFromForeign f
+
+-- | Read entire csv without format checks. For callers that don't need them.
+readCsvPlain :: FilePath -> Aff RawCsvContent
+readCsvPlain path = do
+  f <- toAffE $ parseCsvPlainImpl path
   pure $ unsafeFromForeign f
 
 readCsv' :: Boolean -> FileInfo -> Aff RawCsvContent
@@ -105,6 +115,12 @@ parseCsvContent { headers, index, columns } = { headers, index, columns }
 readAndParseCsv :: FilePath -> Boolean -> Aff CsvContent
 readAndParseCsv fp fixFormat = do
   csv <- readCsv fp fixFormat
+  pure $ parseCsvContent csv
+
+-- | read and parse csv without format checks.
+readAndParseCsvPlain :: FilePath -> Aff CsvContent
+readAndParseCsvPlain fp = do
+  csv <- readCsvPlain fp
   pure $ parseCsvContent csv
 
 -- | iter each row on a function
@@ -144,9 +160,8 @@ foldRows { headers, columns, index } func a =
 -- TODO: good to implement some common operators, such as drop duplicates
 
 -- for testing
-myTest :: Effect Unit
-myTest = launchAff_ do
-  c <- readCsv
-    "/home/semio/src/work/gapminder/datasets/repo/github.com/open-numbers/ddf--open_numbers/ddf--synonyms--geo.csv"
-    false
-  liftEffect $ logShow c.badrows
+-- myTest :: Effect Unit
+-- myTest = launchAff_ do
+--   c <- readCsvPlain
+--     "/home/semio/src/work/gapminder/datasets/repo/github.com/open-numbers/ddf--open_numbers/ddf--synonyms--geo.csv"
+--   liftEffect $ logShow c.badrows

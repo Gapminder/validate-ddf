@@ -6,7 +6,7 @@ import Data.Array ((:))
 import Data.Array as Arr
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as NEA
-import Data.Csv (foldRows, readAndParseCsv)
+import Data.Csv (foldRows, readAndParseCsvPlain)
 import Data.DDF.Concept as Concept
 import Data.DDF.DataSet (DataSet(..), genSetMemberships, getDomainForEntitySet)
 import Data.DDF.DataSet as DataSet
@@ -131,7 +131,7 @@ generateDataPackage root dataset resources = do
     func schemaAcc res = do
       let
         fullPath = PATH.concat [ root, NES.toString res.path ]
-      csvContent@{ headers, columns } <- readAndParseCsv fullPath false
+      csvContent@{ headers, columns } <- readAndParseCsvPlain fullPath
 
       let
         primaryKeys = map NES.toString $ NEA.toArray res.schema.primaryKey
