@@ -43,4 +43,4 @@ package:
   name: validate-ddf
 workspace:
   packageSet:
-    registry: 66.8.0
+    registry: 76.1.0
