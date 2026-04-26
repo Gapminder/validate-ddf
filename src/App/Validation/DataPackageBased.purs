@@ -104,7 +104,7 @@ validate path = do
       Just xs -> pure $ NEA.toArray xs
   -- validate csv files, create valid concepts
   conceptFileInfos' <- traverse validateFileExists conceptFileInfos
-  conceptCsvFiles <- readAndParseCsvFiles $ Arr.catMaybes conceptFileInfos'
+  conceptCsvFiles <- readAndParseCsvFiles false $ Arr.catMaybes conceptFileInfos'
   concepts <- for conceptCsvFiles (\x -> validateConcepts x)
   -- generate resources for datapackage
   let
@@ -117,7 +117,7 @@ validate path = do
       Just xs -> pure $ NEA.toArray xs
   -- validate csv files, create valid entities
   entityFileInfos' <- traverse validateFileExists entityFileInfos
-  entityCsvFiles <- readAndParseCsvFiles $ Arr.catMaybes entityFileInfos'
+  entityCsvFiles <- readAndParseCsvFiles false $ Arr.catMaybes entityFileInfos'
   entities <- for entityCsvFiles (\x -> validateEntities x)
   -- generate resources for datapackage
   let
@@ -171,7 +171,7 @@ validate path = do
 
       -- read all csv files for the group
       group' <- traverse validateFileExists group
-      dpscsvFiles <- readAndParseCsvFiles $ NEA.catMaybes group'
+      dpscsvFiles <- readAndParseCsvFiles false $ NEA.catMaybes group'
       validateDatapointsFileGroup indicator pkeys ds dpscsvFiles
       pure $ DataPackage.createResources path dpscsvFiles
     let
@@ -186,7 +186,7 @@ validate path = do
         Just xs -> do
           lift $ liftEffect $ log "validating synonym files..."
           pure $ NEA.toArray xs
-    synonymCsvFiles <- readAndParseCsvFiles synonymFileInfos
+    synonymCsvFiles <- readAndParseCsvFiles false synonymFileInfos
     traverse_ (\c -> validateCsvFileWithDataSet ds c) synonymCsvFiles
     -- generate resources for datapackage
     let
@@ -200,7 +200,7 @@ validate path = do
         Just xs -> do
           lift $ liftEffect $ log "validating translation files..."
           pure $ NEA.toArray xs
-    translationCsvFiles <- readAndParseCsvFiles translationFileInfos
+    translationCsvFiles <- readAndParseCsvFiles false translationFileInfos
     traverse_ (\c -> validateCsvFileWithDataSet ds c) translationCsvFiles
     -- we don't generate datapackage resources for translations
 

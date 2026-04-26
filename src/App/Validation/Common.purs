@@ -6,9 +6,8 @@ import Control.Monad.Trans.Class (lift)
 import Data.Array as Arr
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as NEA
-import Data.Csv (RawCsvContent, parseCsvContent, readCsv')
-import Data.Csv as C
-import Data.Csv.FileCheck (FormatIssue(..), checkFileFormat, fixFileFormat)
+import Data.Csv (FormatIssue(..), RawCsvContent, parseCsvContent, parseFormatIssues, readCsv')
+
 import Data.DDF.Atoms.Identifier as Id
 import Data.DDF.Concept (Concept(..), getId, getInfo, parseConcept, reservedConcepts)
 import Data.DDF.Csv.CsvFile (CsvFile, parseCsvFile)
@@ -37,26 +36,21 @@ import Data.Validation.Result (Messages, messageFromIssue, setError, setFile, se
 import Data.Validation.Semigroup (andThen, toEither)
 import Data.Validation.ValidationT (Validation, ValidationT, vError, vWarning)
 import Effect.Aff (Aff)
-import Effect.Class (class MonadEffect, liftEffect)
+import Effect.Class (liftEffect)
 import Node.FS.Sync as PATH
 import Node.Path (FilePath)
 
--- | Check (and optionally fix) BOM/CRLF/encoding issues on a single CSV file.
--- | Emits warnings for W_CSV_FORMAT_BOM and W_CSV_FORMAT_CRLF,
--- | emits an error for E_CSV_FORMAT_ENCODING.
-checkAndFixFileFormat :: forall m. Monad m => MonadEffect m => Boolean -> FilePath -> ValidationT Messages m Unit
-checkAndFixFileFormat doFix fp = do
-  issues <- liftEffect $ checkFileFormat fp
-  when (not $ Arr.null issues) do
-    when doFix do
-      liftEffect $ fixFileFormat fp
-    for_ issues \issue -> case issue of
-      ENCODING ->
-        emitErrorsAndContinue [ mkIssue E_CSV_FORMAT_ENCODING # withFileLocation fp (-1) ]
-      BOM ->
-        emitWarningsAndContinue [ mkIssue W_CSV_FORMAT_BOM # withFileLocation fp (-1) ]
-      CRLF ->
-        emitWarningsAndContinue [ mkIssue W_CSV_FORMAT_CRLF # withFileLocation fp (-1) ]
+-- | Emit format issues (BOM/CRLF/encoding) detected during CSV parsing.
+-- | The actual fix is handled by parseCsvImpl when fixFormat=true.
+emitFormatIssues :: forall m. Monad m => FilePath -> Array FormatIssue -> ValidationT Messages m Unit
+emitFormatIssues fp formatIssues =
+  for_ formatIssues \issue -> case issue of
+    ENCODING ->
+      emitErrorsAndContinue [ mkIssue E_CSV_FORMAT_ENCODING # withFileLocation fp (-1) ]
+    BOM ->
+      emitWarningsAndContinue [ mkIssue W_CSV_FORMAT_BOM # withFileLocation fp (-1) ]
+    CRLF ->
+      emitWarningsAndContinue [ mkIssue W_CSV_FORMAT_CRLF # withFileLocation fp (-1) ]
 
 -- Error handlers
 --
@@ -96,10 +90,13 @@ validateFileExists fi@{ filepath } = do
     emitWarningsAndContinue $ [ mkIssueWithMessage W_GENERAL $ filepath <> " does not exist, skipping" ]
     pure Nothing
 
--- | read csv data from file
-readAndParseCsvFiles :: Array FileInfo -> ValidationT Messages Aff (Array CsvFile)
-readAndParseCsvFiles files = do
-  rawContents <- lift $ sequence $ readCsv' <$> files
+-- | read csv data from file. fixFormat=true auto-fixes BOM/CRLF in place.
+readAndParseCsvFiles :: Boolean -> Array FileInfo -> ValidationT Messages Aff (Array CsvFile)
+readAndParseCsvFiles fixFormat files = do
+  rawContents <- lift $ sequence $ readCsv' fixFormat <$> files
+  -- emit format issues detected during CSV parsing
+  for_ (Arr.zip files rawContents) \(Tuple fi raw) ->
+    emitFormatIssues (FI.filepath fi) (parseFormatIssues raw.formatIssues)
   validateCsvFiles $ Arr.zip files rawContents
 
 -- | validte csv content, drop bad csv rows
@@ -116,7 +113,7 @@ dropAndWarnBadCsvRows fp content = do
           <<< setError
           <<< messageFromIssue
       ) $ mkIssueWithMessage E_CSV_ROW_BAD
-          $ "expected " <> show expected <> " columns but got " <> show actual
+        $ "expected " <> show expected <> " columns but got " <> show actual
     msgs = map makemsg badrows
   vWarning msgs
   pure content

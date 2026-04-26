@@ -1,8 +1,10 @@
 module Data.Csv
   ( CsvColumn
+  , FormatIssue(..)
   , RawCsvContent
   , foldRows
   , parseCsvContent
+  , parseFormatIssues
   , readAndParseCsv
   , readCsv
   , readCsv'
@@ -13,7 +15,6 @@ module Data.Csv
 import Prelude
 
 import Control.Promise (Promise, toAff, toAffE)
-import Data.Array (head, length, partition, range, replicate, tail, take, zip)
 import Data.Array as Arr
 import Data.Array.NonEmpty as NEA
 import Data.DDF.Csv.FileInfo (FileInfo(..), filepath)
@@ -44,6 +45,26 @@ import Partial.Unsafe (unsafePartial)
 import Utils (findDupsL, unsafeLookup)
 import Yoga.JSON as JSON
 
+-- | Type of byte-level format issue found in a CSV file.
+data FormatIssue = BOM | CRLF | ENCODING
+
+derive instance Eq FormatIssue
+derive instance Ord FormatIssue
+instance Show FormatIssue where
+  show BOM = "BOM"
+  show CRLF = "CRLF"
+  show ENCODING = "ENCODING"
+
+-- | Parse a raw format issue string from the FFI into a FormatIssue.
+parseFormatIssues :: Array String -> Array FormatIssue
+parseFormatIssues = Arr.catMaybes <<< map fromString
+  where
+  fromString = case _ of
+    "BOM" -> Just BOM
+    "CRLF" -> Just CRLF
+    "ENCODING" -> Just ENCODING
+    _ -> Nothing
+
 -- | we will use array of columns to store csv data
 type CsvColumn = Array String
 
@@ -53,6 +74,7 @@ type RawCsvContent =
   , index :: Array Int
   , columns :: Array CsvColumn
   , badrows :: Array { lineNo :: Int, expected :: Int, actual :: Int }
+  , formatIssues :: Array String
   }
 
 -- CsvContent
@@ -62,26 +84,27 @@ type CsvContent =
   , columns :: Array CsvColumn
   }
 
--- improtant: Please make sure the return type match RawCsvContent as there are no parsing here
-foreign import parseCsvImpl :: String -> Effect (Promise Foreign)
+-- important: Please make sure the return type match RawCsvContent as there are no parsing here
+foreign import parseCsvImpl :: String -> Boolean -> Effect (Promise Foreign)
 
--- | Read entire csv
-readCsv :: FilePath -> Aff RawCsvContent
-readCsv path = do
-  f <- toAffE $ parseCsvImpl path
+-- | Read entire csv. Pass fixFormat=true to auto-fix BOM/CRLF in place.
+readCsv :: FilePath -> Boolean -> Aff RawCsvContent
+readCsv path fixFormat = do
+  f <- toAffE $ parseCsvImpl path fixFormat
   pure $ unsafeFromForeign f
 
-readCsv' :: FileInfo -> Aff RawCsvContent
-readCsv' = filepath >>> readCsv
+readCsv' :: Boolean -> FileInfo -> Aff RawCsvContent
+readCsv' fixFormat = filepath >>> flip readCsv fixFormat
 
 foreign import rowsToColumnsImpl :: Array (Array String) -> Array (Array String)
 
 parseCsvContent :: RawCsvContent -> CsvContent
 parseCsvContent { headers, index, columns } = { headers, index, columns }
 
-readAndParseCsv :: FilePath -> Aff CsvContent
-readAndParseCsv fp = do
-  csv <- readCsv fp
+-- | read and parse the csv file. if fixFormat=True, it will fix format issues in place.
+readAndParseCsv :: FilePath -> Boolean -> Aff CsvContent
+readAndParseCsv fp fixFormat = do
+  csv <- readCsv fp fixFormat
   pure $ parseCsvContent csv
 
 -- | iter each row on a function
@@ -125,4 +148,5 @@ myTest :: Effect Unit
 myTest = launchAff_ do
   c <- readCsv
     "/home/semio/src/work/gapminder/datasets/repo/github.com/open-numbers/ddf--open_numbers/ddf--synonyms--geo.csv"
+    false
   liftEffect $ logShow c.badrows

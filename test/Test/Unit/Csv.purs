@@ -26,7 +26,7 @@ spec =
         writeTextFile UTF8 testFilePath csvContent
 
         -- Read the CSV
-        result <- readCsv testFilePath
+        result <- readCsv testFilePath false
 
         -- Verify headers are correct
         result.headers `shouldEqual` [ "header1", "header2", "header3" ]
@@ -56,7 +56,7 @@ spec =
           testFilePath = "/tmp/test-csv-empty.csv"
 
         writeTextFile UTF8 testFilePath csvContent
-        result <- readCsv testFilePath
+        result <- readCsv testFilePath false
 
         -- Should have headers
         result.headers `shouldEqual` [ "header1", "header2", "header3" ]
@@ -77,7 +77,7 @@ spec =
           testFilePath = "/tmp/test-csv-badrows.csv"
 
         writeTextFile UTF8 testFilePath csvContent
-        result <- readCsv testFilePath
+        result <- readCsv testFilePath false
 
         -- Should have headers
         result.headers `shouldEqual` [ "h1", "h2", "h3" ]

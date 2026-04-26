@@ -18,8 +18,6 @@ import Data.HashMap as HM
 import Data.JSON.DataPackage (Resource, datapackageExists)
 import Data.JSON.DataPackage as DataPackage
 import Data.Maybe (Maybe(..), fromJust, isNothing)
-import Data.String as Str
-import Data.FoldableWithIndex (forWithIndex_)
 import Data.Traversable (for, traverse_)
 import Data.TraversableWithIndex (forWithIndex)
 import Data.Tuple (Tuple(..))
@@ -82,14 +80,6 @@ validate path dpIssueAsWarning fixFormat = do
     ignored = [ ".git", "etl", "assets", "langsplit" ]
   fs <- lift $ getFiles path ignored
 
-  -- check (and optionally fix) byte-level format issues on CSV files only
-  let csvFiles = Arr.filter (\f -> Str.stripSuffix (Str.Pattern ".csv") f /= Nothing) fs
-  let totalCsvFiles = Arr.length csvFiles
-  forWithIndex_ csvFiles \i f -> do
-    liftEffect $ progress $ "checking format: " <> show (i + 1) <> "/" <> show totalCsvFiles
-    checkAndFixFileFormat fixFormat f
-  liftEffect clearProgress
-
   ddfFiles <- readAllFileInfoForValidation path fs
 
   lift $ liftEffect $ log "validating concepts and entities..."
@@ -112,7 +102,7 @@ validate path dpIssueAsWarning fixFormat = do
         emitErrorsAndStop [ mkIssue E_DATASET_NO_CONCEPT ]
       Just xs -> pure $ NEA.toArray xs
   -- validate csv files, create valid concepts
-  conceptCsvFiles <- readAndParseCsvFiles conceptFileInfos
+  conceptCsvFiles <- readAndParseCsvFiles fixFormat conceptFileInfos
   concepts <- for conceptCsvFiles (\x -> validateConcepts x)
   -- generate resources for datapackage
   let
@@ -124,7 +114,7 @@ validate path dpIssueAsWarning fixFormat = do
       Nothing -> pure []
       Just xs -> pure $ NEA.toArray xs
   -- validate csv files, create valid entities
-  entityCsvFiles <- readAndParseCsvFiles entityFileInfos
+  entityCsvFiles <- readAndParseCsvFiles fixFormat entityFileInfos
   entities <- for entityCsvFiles (\x -> validateEntities x)
   -- generate resources for datapackage
   let
@@ -181,7 +171,7 @@ validate path dpIssueAsWarning fixFormat = do
       --   <> show (NEA.length group)
 
       -- read all csv files for the group
-      dpscsvFiles <- readAndParseCsvFiles $ NEA.toArray group
+      dpscsvFiles <- readAndParseCsvFiles fixFormat $ NEA.toArray group
       validateDatapointsFileGroup indicator pkeys ds dpscsvFiles
       pure $ DataPackage.createResources path dpscsvFiles
     liftEffect clearProgress
@@ -196,7 +186,7 @@ validate path dpIssueAsWarning fixFormat = do
         Just xs -> do
           lift $ liftEffect $ log "validating synonym files..."
           pure $ NEA.toArray xs
-    synonymCsvFiles <- readAndParseCsvFiles synonymFileInfos
+    synonymCsvFiles <- readAndParseCsvFiles fixFormat synonymFileInfos
     traverse_ (\c -> validateCsvFileWithDataSet ds c) synonymCsvFiles
     -- generate resources for datapackage
     let
@@ -210,7 +200,7 @@ validate path dpIssueAsWarning fixFormat = do
         Just xs -> do
           lift $ liftEffect $ log "validating translation files..."
           pure $ NEA.toArray xs
-    translationCsvFiles <- readAndParseCsvFiles translationFileInfos
+    translationCsvFiles <- readAndParseCsvFiles fixFormat translationFileInfos
     traverse_ (\c -> validateCsvFileWithDataSet ds c) translationCsvFiles
     -- we don't generate datapackage resources for translations
 

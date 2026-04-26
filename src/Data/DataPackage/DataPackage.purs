@@ -131,7 +131,7 @@ generateDataPackage root dataset resources = do
     func schemaAcc res = do
       let
         fullPath = PATH.concat [ root, NES.toString res.path ]
-      csvContent@{ headers, columns } <- readAndParseCsv fullPath
+      csvContent@{ headers, columns } <- readAndParseCsv fullPath false
 
       let
         primaryKeys = map NES.toString $ NEA.toArray res.schema.primaryKey
