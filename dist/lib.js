@@ -121,23 +121,6 @@ var EQ = /* @__PURE__ */ $Ordering("EQ");
 var $Maybe = (tag, _1) => ({ tag, _1 });
 var Nothing = /* @__PURE__ */ $Maybe("Nothing");
 var Just = (value0) => $Maybe("Just", value0);
-var monoidMaybe = (dictSemigroup) => {
-  const semigroupMaybe1 = {
-    append: (v) => (v1) => {
-      if (v.tag === "Nothing") {
-        return v1;
-      }
-      if (v1.tag === "Nothing") {
-        return v;
-      }
-      if (v.tag === "Just" && v1.tag === "Just") {
-        return $Maybe("Just", dictSemigroup.append(v._1)(v1._1));
-      }
-      fail();
-    }
-  };
-  return { mempty: Nothing, Semigroup0: () => semigroupMaybe1 };
-};
 var isNothing = (v2) => {
   if (v2.tag === "Nothing") {
     return true;
@@ -154,50 +137,6 @@ var functorMaybe = {
     }
     return Nothing;
   }
-};
-var ordMaybe = (dictOrd) => {
-  const $0 = dictOrd.Eq0();
-  const eqMaybe1 = {
-    eq: (x) => (y) => {
-      if (x.tag === "Nothing") {
-        return y.tag === "Nothing";
-      }
-      return x.tag === "Just" && y.tag === "Just" && $0.eq(x._1)(y._1);
-    }
-  };
-  return {
-    compare: (x) => (y) => {
-      if (x.tag === "Nothing") {
-        if (y.tag === "Nothing") {
-          return EQ;
-        }
-        return LT;
-      }
-      if (y.tag === "Nothing") {
-        return GT;
-      }
-      if (x.tag === "Just" && y.tag === "Just") {
-        return dictOrd.compare(x._1)(y._1);
-      }
-      fail();
-    },
-    Eq0: () => eqMaybe1
-  };
-};
-var applyMaybe = {
-  apply: (v) => (v1) => {
-    if (v.tag === "Just") {
-      if (v1.tag === "Just") {
-        return $Maybe("Just", v._1(v1._1));
-      }
-      return Nothing;
-    }
-    if (v.tag === "Nothing") {
-      return Nothing;
-    }
-    fail();
-  },
-  Functor0: () => functorMaybe
 };
 
 // output-es/Data.Either/index.js
@@ -1062,14 +1001,14 @@ var arrayMap = function(f) {
 var functorArray = { map: arrayMap };
 
 // output-es/Control.Apply/foreign.js
-var arrayApply = function(fs2) {
+var arrayApply = function(fs) {
   return function(xs) {
-    var l = fs2.length;
+    var l = fs.length;
     var k = xs.length;
     var result = new Array(l * k);
     var n = 0;
     for (var i = 0; i < l; i++) {
-      var f = fs2[i];
+      var f = fs[i];
       for (var j = 0; j < k; j++) {
         result[n++] = f(xs[j]);
       }
@@ -1146,26 +1085,6 @@ var $Tuple = (_1, _2) => ({ tag: "Tuple", _1, _2 });
 var Tuple = (value0) => (value12) => $Tuple(value0, value12);
 var snd = (v) => v._2;
 var fst = (v) => v._1;
-var ordTuple = (dictOrd) => {
-  const $0 = dictOrd.Eq0();
-  return (dictOrd1) => {
-    const $1 = dictOrd1.Eq0();
-    const eqTuple2 = { eq: (x) => (y) => $0.eq(x._1)(y._1) && $1.eq(x._2)(y._2) };
-    return {
-      compare: (x) => (y) => {
-        const v = dictOrd.compare(x._1)(y._1);
-        if (v === "LT") {
-          return LT;
-        }
-        if (v === "GT") {
-          return GT;
-        }
-        return dictOrd1.compare(x._2)(y._2);
-      },
-      Eq0: () => eqTuple2
-    };
-  };
-};
 
 // output-es/Control.Monad.Except.Trans/index.js
 var bindExceptT = (dictMonad) => ({
@@ -1425,40 +1344,6 @@ var unsafeClamp = (x) => {
   fail();
 };
 
-// output-es/Data.EuclideanRing/foreign.js
-var intMod = function(x) {
-  return function(y) {
-    if (y === 0) return 0;
-    var yy = Math.abs(y);
-    return (x % yy + yy) % yy;
-  };
-};
-
-// output-es/Data.Semigroup/foreign.js
-var concatString = function(s1) {
-  return function(s2) {
-    return s1 + s2;
-  };
-};
-var concatArray = function(xs) {
-  return function(ys) {
-    if (xs.length === 0) return ys;
-    if (ys.length === 0) return xs;
-    return xs.concat(ys);
-  };
-};
-
-// output-es/Data.Semigroup/index.js
-var semigroupString = { append: concatString };
-var semigroupArray = { append: concatArray };
-
-// output-es/Data.Monoid/index.js
-var monoidArray = { mempty: [], Semigroup0: () => semigroupArray };
-var monoidRecord = () => (dictMonoidRecord) => {
-  const semigroupRecord1 = { append: dictMonoidRecord.SemigroupRecord0().appendRecord($$Proxy) };
-  return { mempty: dictMonoidRecord.memptyRecord($$Proxy), Semigroup0: () => semigroupRecord1 };
-};
-
 // output-es/Data.String.Common/foreign.js
 var split = function(sep2) {
   return function(s) {
@@ -1650,10 +1535,6 @@ var ordArrayImpl = function(f) {
 var ordString = { compare: /* @__PURE__ */ ordStringImpl(LT)(EQ)(GT), Eq0: () => eqString };
 var ordInt = { compare: /* @__PURE__ */ ordIntImpl(LT)(EQ)(GT), Eq0: () => eqInt };
 var ordChar = { compare: /* @__PURE__ */ ordCharImpl(LT)(EQ)(GT), Eq0: () => eqChar };
-var ordRecord = () => (dictOrdRecord) => {
-  const eqRec1 = { eq: dictOrdRecord.EqRecord0().eqRecord($$Proxy) };
-  return { compare: dictOrdRecord.compareRecord($$Proxy), Eq0: () => eqRec1 };
-};
 var ordArray = (dictOrd) => {
   const eqArray2 = { eq: eqArrayImpl(dictOrd.Eq0().eq) };
   return {
@@ -1702,23 +1583,23 @@ var traverseArrayImpl = /* @__PURE__ */ function() {
     };
   }
   return function(apply6) {
-    return function(map3) {
-      return function(pure4) {
+    return function(map4) {
+      return function(pure3) {
         return function(f) {
           return function(array) {
             function go(bot, top) {
               switch (top - bot) {
                 case 0:
-                  return pure4([]);
+                  return pure3([]);
                 case 1:
-                  return map3(array1)(f(array[bot]));
+                  return map4(array1)(f(array[bot]));
                 case 2:
-                  return apply6(map3(array2)(f(array[bot])))(f(array[bot + 1]));
+                  return apply6(map4(array2)(f(array[bot])))(f(array[bot + 1]));
                 case 3:
-                  return apply6(apply6(map3(array3)(f(array[bot])))(f(array[bot + 1])))(f(array[bot + 2]));
+                  return apply6(apply6(map4(array3)(f(array[bot])))(f(array[bot + 1])))(f(array[bot + 2]));
                 default:
                   var pivot = bot + Math.floor((top - bot) / 4) * 2;
-                  return apply6(map3(concat22)(go(bot, pivot)))(go(pivot, top));
+                  return apply6(map4(concat22)(go(bot, pivot)))(go(pivot, top));
               }
             }
             return go(0, array.length);
@@ -1943,20 +1824,17 @@ var snoc = (xs) => (x) => (() => {
     return result;
   };
 })()();
-var last = (xs) => {
+var unsnoc = (xs) => {
+  if (xs.length === 0) {
+    const $02 = xs.length - 1 | 0;
+    return Nothing;
+  }
   const $0 = xs.length - 1 | 0;
   if ($0 >= 0 && $0 < xs.length) {
-    return $Maybe("Just", xs[$0]);
+    return $Maybe("Just", { init: sliceImpl(0, xs.length - 1 | 0, xs), last: xs[$0] });
   }
   return Nothing;
 };
-var unsnoc = (xs) => applyMaybe.apply(xs.length === 0 ? Nothing : $Maybe(
-  "Just",
-  (() => {
-    const $0 = sliceImpl(0, xs.length - 1 | 0, xs);
-    return (v1) => ({ init: $0, last: v1 });
-  })()
-))(last(xs));
 var nubBy = (comp) => (xs) => {
   const indexedAndSorted = sortBy((x) => (y) => comp(x._2)(y._2))(mapWithIndexArray(Tuple)(xs));
   if (0 < indexedAndSorted.length) {
@@ -1964,9 +1842,9 @@ var nubBy = (comp) => (xs) => {
       const result = [indexedAndSorted[0]];
       for (const v1 of indexedAndSorted) {
         const $0 = comp((() => {
-          const $02 = last(result);
-          if ($02.tag === "Just") {
-            return $02._1._2;
+          const $02 = result.length - 1 | 0;
+          if ($02 >= 0 && $02 < result.length) {
+            return result[$02]._2;
           }
           fail();
         })())(v1._2);
@@ -2305,91 +2183,6 @@ var foldableNonEmptyList = {
   foldr: (f) => (b) => (v) => f(v._1)(foldableList.foldr(f)(b)(v._2))
 };
 var semigroupNonEmptyList = { append: (v) => (as$p) => $NonEmpty(v._1, foldableList.foldr(Cons)($List("Cons", as$p._1, as$p._2))(v._2)) };
-var unfoldable1List = {
-  unfoldr1: (f) => (b) => {
-    const go = (go$a0$copy) => (go$a1$copy) => {
-      let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
-      while (go$c) {
-        const source2 = go$a0, memo = go$a1;
-        const v = f(source2);
-        if (v._2.tag === "Just") {
-          go$a0 = v._2._1;
-          go$a1 = $List("Cons", v._1, memo);
-          continue;
-        }
-        if (v._2.tag === "Nothing") {
-          const go$1 = (go$1$a0$copy) => (go$1$a1$copy) => {
-            let go$1$a0 = go$1$a0$copy, go$1$a1 = go$1$a1$copy, go$1$c = true, go$1$r;
-            while (go$1$c) {
-              const b$1 = go$1$a0, v$1 = go$1$a1;
-              if (v$1.tag === "Nil") {
-                go$1$c = false;
-                go$1$r = b$1;
-                continue;
-              }
-              if (v$1.tag === "Cons") {
-                go$1$a0 = $List("Cons", v$1._1, b$1);
-                go$1$a1 = v$1._2;
-                continue;
-              }
-              fail();
-            }
-            return go$1$r;
-          };
-          go$c = false;
-          go$r = go$1(Nil)($List("Cons", v._1, memo));
-          continue;
-        }
-        fail();
-      }
-      return go$r;
-    };
-    return go(b)(Nil);
-  }
-};
-var unfoldableList = {
-  unfoldr: (f) => (b) => {
-    const go = (go$a0$copy) => (go$a1$copy) => {
-      let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
-      while (go$c) {
-        const source2 = go$a0, memo = go$a1;
-        const v = f(source2);
-        if (v.tag === "Nothing") {
-          const go$1 = (go$1$a0$copy) => (go$1$a1$copy) => {
-            let go$1$a0 = go$1$a0$copy, go$1$a1 = go$1$a1$copy, go$1$c = true, go$1$r;
-            while (go$1$c) {
-              const b$1 = go$1$a0, v$1 = go$1$a1;
-              if (v$1.tag === "Nil") {
-                go$1$c = false;
-                go$1$r = b$1;
-                continue;
-              }
-              if (v$1.tag === "Cons") {
-                go$1$a0 = $List("Cons", v$1._1, b$1);
-                go$1$a1 = v$1._2;
-                continue;
-              }
-              fail();
-            }
-            return go$1$r;
-          };
-          go$c = false;
-          go$r = go$1(Nil)(memo);
-          continue;
-        }
-        if (v.tag === "Just") {
-          go$a0 = v._1._2;
-          go$a1 = $List("Cons", v._1._1, memo);
-          continue;
-        }
-        fail();
-      }
-      return go$r;
-    };
-    return go(b)(Nil);
-  },
-  Unfoldable10: () => unfoldable1List
-};
 var foldable1NonEmptyList = /* @__PURE__ */ foldable1NonEmpty(foldableList);
 var eq1List = {
   eq1: (dictEq) => (xs) => (ys) => {
@@ -2446,79 +2239,6 @@ var ord1List = {
   Eq10: () => eq1List
 };
 var ordNonEmpty2 = /* @__PURE__ */ ordNonEmpty(ord1List);
-
-// output-es/Data.List/index.js
-var span = (v) => (v1) => {
-  if (v1.tag === "Cons" && v(v1._1)) {
-    const v2 = span(v)(v1._2);
-    return { init: $List("Cons", v1._1, v2.init), rest: v2.rest };
-  }
-  return { init: Nil, rest: v1 };
-};
-var reverse2 = /* @__PURE__ */ (() => {
-  const go = (go$a0$copy) => (go$a1$copy) => {
-    let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
-    while (go$c) {
-      const v = go$a0, v1 = go$a1;
-      if (v1.tag === "Nil") {
-        go$c = false;
-        go$r = v;
-        continue;
-      }
-      if (v1.tag === "Cons") {
-        go$a0 = $List("Cons", v1._1, v);
-        go$a1 = v1._2;
-        continue;
-      }
-      fail();
-    }
-    return go$r;
-  };
-  return go(Nil);
-})();
-var zipWith2 = (f) => (xs) => (ys) => {
-  const go = (go$a0$copy) => (go$a1$copy) => (go$a2$copy) => {
-    let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$a2 = go$a2$copy, go$c = true, go$r;
-    while (go$c) {
-      const v = go$a0, v1 = go$a1, v2 = go$a2;
-      if (v.tag === "Nil") {
-        go$c = false;
-        go$r = v2;
-        continue;
-      }
-      if (v1.tag === "Nil") {
-        go$c = false;
-        go$r = v2;
-        continue;
-      }
-      if (v.tag === "Cons" && v1.tag === "Cons") {
-        go$a0 = v._2;
-        go$a1 = v1._2;
-        go$a2 = $List("Cons", f(v._1)(v1._1), v2);
-        continue;
-      }
-      fail();
-    }
-    return go$r;
-  };
-  return reverse2(go(xs)(ys)(Nil));
-};
-var manyRec = (dictMonadRec) => (dictAlternative) => {
-  const Alt0 = dictAlternative.Plus1().Alt0();
-  const $0 = dictAlternative.Applicative0();
-  return (p) => dictMonadRec.tailRecM((acc) => dictMonadRec.Monad0().Bind1().bind(Alt0.alt(Alt0.Functor0().map(Loop)(p))($0.pure($Step(
-    "Done",
-    void 0
-  ))))((aa) => $0.pure((() => {
-    if (aa.tag === "Loop") {
-      return $Step("Loop", $List("Cons", aa._1, acc));
-    }
-    if (aa.tag === "Done") {
-      return $Step("Done", reverse2(acc));
-    }
-    fail();
-  })())))(Nil);
-};
 
 // output-es/Data.String.Unsafe/foreign.js
 var charAt = function(i) {
@@ -2674,6 +2394,15 @@ function toCharCode(c) {
 function fromCharCode(c) {
   return String.fromCharCode(c);
 }
+
+// output-es/Data.EuclideanRing/foreign.js
+var intMod = function(x) {
+  return function(y) {
+    if (y === 0) return 0;
+    var yy = Math.abs(y);
+    return (x % yy + yy) % yy;
+  };
+};
 
 // output-es/Data.String.CodePoints/foreign.js
 var hasArrayFrom = typeof Array.from === "function";
@@ -2841,6 +2570,343 @@ var startsWith = (p) => (s) => {
   return $0.tag === "Just" && $0._1 === 0;
 };
 var apApplyFlipped = (dictApply) => (a) => (b) => dictApply.apply(dictApply.Functor0().map(applyFlipped)(a))(b);
+
+// output-es/Data.CatQueue/index.js
+var $CatQueue = (_1, _2) => ({ tag: "CatQueue", _1, _2 });
+var uncons2 = (uncons$a0$copy) => {
+  let uncons$a0 = uncons$a0$copy, uncons$c = true, uncons$r;
+  while (uncons$c) {
+    const v = uncons$a0;
+    if (v._1.tag === "Nil") {
+      if (v._2.tag === "Nil") {
+        uncons$c = false;
+        uncons$r = Nothing;
+        continue;
+      }
+      uncons$a0 = $CatQueue(
+        (() => {
+          const go = (go$a0$copy) => (go$a1$copy) => {
+            let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
+            while (go$c) {
+              const v$1 = go$a0, v1 = go$a1;
+              if (v1.tag === "Nil") {
+                go$c = false;
+                go$r = v$1;
+                continue;
+              }
+              if (v1.tag === "Cons") {
+                go$a0 = $List("Cons", v1._1, v$1);
+                go$a1 = v1._2;
+                continue;
+              }
+              fail();
+            }
+            return go$r;
+          };
+          return go(Nil)(v._2);
+        })(),
+        Nil
+      );
+      continue;
+    }
+    if (v._1.tag === "Cons") {
+      uncons$c = false;
+      uncons$r = $Maybe("Just", $Tuple(v._1._1, $CatQueue(v._1._2, v._2)));
+      continue;
+    }
+    fail();
+  }
+  return uncons$r;
+};
+
+// output-es/Data.CatList/index.js
+var $CatList = (tag, _1, _2) => ({ tag, _1, _2 });
+var CatNil = /* @__PURE__ */ $CatList("CatNil");
+var link = (v) => (v1) => {
+  if (v.tag === "CatNil") {
+    return v1;
+  }
+  if (v1.tag === "CatNil") {
+    return v;
+  }
+  if (v.tag === "CatCons") {
+    return $CatList("CatCons", v._1, $CatQueue(v._2._1, $List("Cons", v1, v._2._2)));
+  }
+  fail();
+};
+var foldr = (k) => (b) => (q) => {
+  const foldl = (foldl$a0$copy) => (foldl$a1$copy) => (foldl$a2$copy) => {
+    let foldl$a0 = foldl$a0$copy, foldl$a1 = foldl$a1$copy, foldl$a2 = foldl$a2$copy, foldl$c = true, foldl$r;
+    while (foldl$c) {
+      const v = foldl$a0, v1 = foldl$a1, v2 = foldl$a2;
+      if (v2.tag === "Nil") {
+        foldl$c = false;
+        foldl$r = v1;
+        continue;
+      }
+      if (v2.tag === "Cons") {
+        foldl$a0 = v;
+        foldl$a1 = v(v1)(v2._1);
+        foldl$a2 = v2._2;
+        continue;
+      }
+      fail();
+    }
+    return foldl$r;
+  };
+  const go = (go$a0$copy) => (go$a1$copy) => {
+    let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
+    while (go$c) {
+      const xs = go$a0, ys = go$a1;
+      const v = uncons2(xs);
+      if (v.tag === "Nothing") {
+        go$c = false;
+        go$r = foldl((x) => (i) => i(x))(b)(ys);
+        continue;
+      }
+      if (v.tag === "Just") {
+        go$a0 = v._1._2;
+        go$a1 = $List("Cons", k(v._1._1), ys);
+        continue;
+      }
+      fail();
+    }
+    return go$r;
+  };
+  return go(q)(Nil);
+};
+var uncons3 = (v) => {
+  if (v.tag === "CatNil") {
+    return Nothing;
+  }
+  if (v.tag === "CatCons") {
+    return $Maybe("Just", $Tuple(v._1, v._2._1.tag === "Nil" && v._2._2.tag === "Nil" ? CatNil : foldr(link)(CatNil)(v._2)));
+  }
+  fail();
+};
+
+// output-es/Control.Monad.Free/index.js
+var $Free = (_1, _2) => ({ tag: "Free", _1, _2 });
+var $FreeView = (tag, _1, _2) => ({ tag, _1, _2 });
+var toView = (toView$a0$copy) => {
+  let toView$a0 = toView$a0$copy, toView$c = true, toView$r;
+  while (toView$c) {
+    const v = toView$a0;
+    if (v._1.tag === "Return") {
+      const v2 = uncons3(v._2);
+      if (v2.tag === "Nothing") {
+        toView$c = false;
+        toView$r = $FreeView("Return", v._1._1);
+        continue;
+      }
+      if (v2.tag === "Just") {
+        toView$a0 = (() => {
+          const $0 = v2._1._1(v._1._1);
+          return $Free(
+            $0._1,
+            (() => {
+              if ($0._2.tag === "CatNil") {
+                return v2._1._2;
+              }
+              if (v2._1._2.tag === "CatNil") {
+                return $0._2;
+              }
+              if ($0._2.tag === "CatCons") {
+                return $CatList("CatCons", $0._2._1, $CatQueue($0._2._2._1, $List("Cons", v2._1._2, $0._2._2._2)));
+              }
+              fail();
+            })()
+          );
+        })();
+        continue;
+      }
+      fail();
+    }
+    if (v._1.tag === "Bind") {
+      toView$c = false;
+      toView$r = $FreeView(
+        "Bind",
+        v._1._1,
+        (a) => {
+          const $0 = v._1._2(a);
+          return $Free(
+            $0._1,
+            (() => {
+              if ($0._2.tag === "CatNil") {
+                return v._2;
+              }
+              if (v._2.tag === "CatNil") {
+                return $0._2;
+              }
+              if ($0._2.tag === "CatCons") {
+                return $CatList("CatCons", $0._2._1, $CatQueue($0._2._2._1, $List("Cons", v._2, $0._2._2._2)));
+              }
+              fail();
+            })()
+          );
+        }
+      );
+      continue;
+    }
+    fail();
+  }
+  return toView$r;
+};
+var resume$p = (k) => (j) => (f) => {
+  const v = toView(f);
+  if (v.tag === "Return") {
+    return j(v._1);
+  }
+  if (v.tag === "Bind") {
+    return k(v._1)(v._2);
+  }
+  fail();
+};
+var freeMonad = { Applicative0: () => freeApplicative, Bind1: () => freeBind };
+var freeFunctor = { map: (k) => (f) => freeBind.bind(f)((x) => freeApplicative.pure(k(x))) };
+var freeBind = {
+  bind: (v) => (k) => $Free(
+    v._1,
+    (() => {
+      if (v._2.tag === "CatNil") {
+        return $CatList("CatCons", k, $CatQueue(Nil, Nil));
+      }
+      if (v._2.tag === "CatCons") {
+        return $CatList(
+          "CatCons",
+          v._2._1,
+          $CatQueue(
+            v._2._2._1,
+            $List("Cons", $CatList("CatCons", k, $CatQueue(Nil, Nil)), v._2._2._2)
+          )
+        );
+      }
+      fail();
+    })()
+  ),
+  Apply0: () => freeApply
+};
+var freeApply = {
+  apply: (f) => (a) => {
+    const $0 = (f$p) => $Free(
+      a._1,
+      (() => {
+        if (a._2.tag === "CatNil") {
+          return $CatList("CatCons", (a$p) => freeApplicative.pure(f$p(a$p)), $CatQueue(Nil, Nil));
+        }
+        if (a._2.tag === "CatCons") {
+          return $CatList(
+            "CatCons",
+            a._2._1,
+            $CatQueue(
+              a._2._2._1,
+              $List(
+                "Cons",
+                $CatList("CatCons", (a$p) => freeApplicative.pure(f$p(a$p)), $CatQueue(Nil, Nil)),
+                a._2._2._2
+              )
+            )
+          );
+        }
+        fail();
+      })()
+    );
+    return $Free(
+      f._1,
+      (() => {
+        if (f._2.tag === "CatNil") {
+          return $CatList("CatCons", $0, $CatQueue(Nil, Nil));
+        }
+        if (f._2.tag === "CatCons") {
+          return $CatList(
+            "CatCons",
+            f._2._1,
+            $CatQueue(
+              f._2._2._1,
+              $List("Cons", $CatList("CatCons", $0, $CatQueue(Nil, Nil)), f._2._2._2)
+            )
+          );
+        }
+        fail();
+      })()
+    );
+  },
+  Functor0: () => freeFunctor
+};
+var freeApplicative = { pure: (x) => $Free($FreeView("Return", x), CatNil), Apply0: () => freeApply };
+var freeMonadRec = {
+  tailRecM: (k) => (a) => {
+    const $0 = k(a);
+    const $1 = (v) => {
+      if (v.tag === "Loop") {
+        return freeMonadRec.tailRecM(k)(v._1);
+      }
+      if (v.tag === "Done") {
+        return $Free($FreeView("Return", v._1), CatNil);
+      }
+      fail();
+    };
+    return $Free(
+      $0._1,
+      (() => {
+        if ($0._2.tag === "CatNil") {
+          return $CatList("CatCons", $1, $CatQueue(Nil, Nil));
+        }
+        if ($0._2.tag === "CatCons") {
+          return $CatList(
+            "CatCons",
+            $0._2._1,
+            $CatQueue(
+              $0._2._2._1,
+              $List("Cons", $CatList("CatCons", $1, $CatQueue(Nil, Nil)), $0._2._2._2)
+            )
+          );
+        }
+        fail();
+      })()
+    );
+  },
+  Monad0: () => freeMonad
+};
+
+// output-es/Control.Monad.Reader.Trans/index.js
+var bindReaderT = (dictBind) => {
+  const $0 = dictBind.Apply0();
+  const $1 = $0.Functor0();
+  const applyReaderT1 = /* @__PURE__ */ (() => {
+    const functorReaderT1 = {
+      map: (x) => {
+        const $2 = $1.map(x);
+        return (v) => (x$1) => $2(v(x$1));
+      }
+    };
+    return { apply: (v) => (v1) => (r) => $0.apply(v(r))(v1(r)), Functor0: () => functorReaderT1 };
+  })();
+  return { bind: (v) => (k) => (r) => dictBind.bind(v(r))((a) => k(a)(r)), Apply0: () => applyReaderT1 };
+};
+var monadReaderT = (dictMonad) => {
+  const $0 = dictMonad.Applicative0();
+  const $1 = $0.Apply0();
+  const applicativeReaderT1 = (() => {
+    const $2 = $1.Functor0();
+    const functorReaderT1 = {
+      map: (x) => {
+        const $3 = $2.map(x);
+        return (v) => (x$1) => $3(v(x$1));
+      }
+    };
+    const applyReaderT1 = { apply: (v) => (v1) => (r) => $1.apply(v(r))(v1(r)), Functor0: () => functorReaderT1 };
+    return {
+      pure: (x) => {
+        const $3 = $0.pure(x);
+        return (v) => $3;
+      },
+      Apply0: () => applyReaderT1
+    };
+  })();
+  const bindReaderT1 = bindReaderT(dictMonad.Bind1());
+  return { Applicative0: () => applicativeReaderT1, Bind1: () => bindReaderT1 };
+};
 
 // output-es/Data.Show.Generic/foreign.js
 var intercalate = function(separator) {
@@ -3141,7 +3207,6 @@ var appendWithSpace = (x) => (y) => $Doc("Cat", x, $Doc("Cat", $Doc("Char", " ")
 var hsep = /* @__PURE__ */ foldr11(appendWithSpace);
 var appendWithLinebreak = (x) => (y) => $Doc("Cat", x, $Doc("Cat", $Doc("FlatAlt", Line, Empty), y));
 var vcat = /* @__PURE__ */ foldr11(appendWithLinebreak);
-var appendWithLine = (x) => (y) => $Doc("Cat", x, $Doc("Cat", $Doc("FlatAlt", Line, $Doc("Char", " ")), y));
 var indent = (i) => (d) => {
   const $0 = i <= 0 ? "" : fromCharArray(replicateImpl(i, " "));
   return $Doc(
@@ -3154,24 +3219,6 @@ var indent = (i) => (d) => {
 };
 
 // output-es/Options.Applicative.Help.Chunk/index.js
-var chunkMonoid = (dictSemigroup) => {
-  const chunkSemigroup1 = {
-    append: (v1) => (v2) => {
-      if (v1.tag === "Nothing") {
-        return v2;
-      }
-      if (v2.tag === "Nothing") {
-        return v1;
-      }
-      if (v1.tag === "Just" && v2.tag === "Just") {
-        return $Maybe("Just", dictSemigroup.append(v1._1)(v2._1));
-      }
-      fail();
-    }
-  };
-  return { mempty: Nothing, Semigroup0: () => chunkSemigroup1 };
-};
-var mempty1 = /* @__PURE__ */ (() => chunkMonoid(docSemigroup).mempty)();
 var vcatChunks = /* @__PURE__ */ foldrArray((v1) => (v2) => {
   if (v1.tag === "Nothing") {
     return v2;
@@ -3190,7 +3237,7 @@ var vcatChunks = /* @__PURE__ */ foldrArray((v1) => (v2) => {
     );
   }
   fail();
-})(mempty1);
+})(Nothing);
 var vsepChunks = /* @__PURE__ */ foldrArray((v1) => (v2) => {
   if (v1.tag === "Nothing") {
     return v2;
@@ -3217,7 +3264,7 @@ var vsepChunks = /* @__PURE__ */ foldrArray((v1) => (v2) => {
     );
   }
   fail();
-})(mempty1);
+})(Nothing);
 var chunkBesideOrBelow = (v1) => (v2) => {
   if (v1.tag === "Nothing") {
     return v2;
@@ -3231,18 +3278,17 @@ var chunkBesideOrBelow = (v1) => (v2) => {
   fail();
 };
 var listToChunk = (dictMonoid) => {
-  const mempty23 = chunkMonoid(dictMonoid.Semigroup0()).mempty;
   const fold12 = foldableArray.foldMap(dictMonoid)(identity2);
   return (v) => {
     if (v.length === 0) {
-      return mempty23;
+      return Nothing;
     }
     return $Maybe("Just", fold12(v));
   };
 };
 var stringChunk = (v) => {
   if (v === "") {
-    return mempty1;
+    return Nothing;
   }
   return $Maybe("Just", v === "" ? Empty : $Doc("Text", toCodePointArray(v).length, v));
 };
@@ -3261,12 +3307,12 @@ var paragraph = /* @__PURE__ */ (() => {
       }
       fail();
     };
-  })(mempty1);
+  })(Nothing);
   return (x) => $0(x === "" ? [] : split2(whitespaceRegex)(x));
 })();
 var tabulate$p = (v) => (v1) => {
   if (v1.length === 0) {
-    return mempty1;
+    return Nothing;
   }
   return $Maybe(
     "Just",
@@ -3276,256 +3322,6 @@ var tabulate$p = (v) => (v1) => {
       $Doc("Cat", $Doc("Char", " "), v2._2)
     )))(v1))
   );
-};
-
-// output-es/Data.CatQueue/index.js
-var $CatQueue = (_1, _2) => ({ tag: "CatQueue", _1, _2 });
-var uncons2 = (uncons$a0$copy) => {
-  let uncons$a0 = uncons$a0$copy, uncons$c = true, uncons$r;
-  while (uncons$c) {
-    const v = uncons$a0;
-    if (v._1.tag === "Nil") {
-      if (v._2.tag === "Nil") {
-        uncons$c = false;
-        uncons$r = Nothing;
-        continue;
-      }
-      uncons$a0 = $CatQueue(reverse2(v._2), Nil);
-      continue;
-    }
-    if (v._1.tag === "Cons") {
-      uncons$c = false;
-      uncons$r = $Maybe("Just", $Tuple(v._1._1, $CatQueue(v._1._2, v._2)));
-      continue;
-    }
-    fail();
-  }
-  return uncons$r;
-};
-
-// output-es/Data.CatList/index.js
-var $CatList = (tag, _1, _2) => ({ tag, _1, _2 });
-var CatNil = /* @__PURE__ */ $CatList("CatNil");
-var link = (v) => (v1) => {
-  if (v.tag === "CatNil") {
-    return v1;
-  }
-  if (v1.tag === "CatNil") {
-    return v;
-  }
-  if (v.tag === "CatCons") {
-    return $CatList("CatCons", v._1, $CatQueue(v._2._1, $List("Cons", v1, v._2._2)));
-  }
-  fail();
-};
-var foldr = (k) => (b) => (q) => {
-  const foldl = (foldl$a0$copy) => (foldl$a1$copy) => (foldl$a2$copy) => {
-    let foldl$a0 = foldl$a0$copy, foldl$a1 = foldl$a1$copy, foldl$a2 = foldl$a2$copy, foldl$c = true, foldl$r;
-    while (foldl$c) {
-      const v = foldl$a0, v1 = foldl$a1, v2 = foldl$a2;
-      if (v2.tag === "Nil") {
-        foldl$c = false;
-        foldl$r = v1;
-        continue;
-      }
-      if (v2.tag === "Cons") {
-        foldl$a0 = v;
-        foldl$a1 = v(v1)(v2._1);
-        foldl$a2 = v2._2;
-        continue;
-      }
-      fail();
-    }
-    return foldl$r;
-  };
-  const go = (go$a0$copy) => (go$a1$copy) => {
-    let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
-    while (go$c) {
-      const xs = go$a0, ys = go$a1;
-      const v = uncons2(xs);
-      if (v.tag === "Nothing") {
-        go$c = false;
-        go$r = foldl((x) => (i) => i(x))(b)(ys);
-        continue;
-      }
-      if (v.tag === "Just") {
-        go$a0 = v._1._2;
-        go$a1 = $List("Cons", k(v._1._1), ys);
-        continue;
-      }
-      fail();
-    }
-    return go$r;
-  };
-  return go(q)(Nil);
-};
-var uncons3 = (v) => {
-  if (v.tag === "CatNil") {
-    return Nothing;
-  }
-  if (v.tag === "CatCons") {
-    return $Maybe("Just", $Tuple(v._1, v._2._1.tag === "Nil" && v._2._2.tag === "Nil" ? CatNil : foldr(link)(CatNil)(v._2)));
-  }
-  fail();
-};
-var snoc2 = (cat) => (a) => {
-  if (cat.tag === "CatNil") {
-    return $CatList("CatCons", a, $CatQueue(Nil, Nil));
-  }
-  if (cat.tag === "CatCons") {
-    return $CatList(
-      "CatCons",
-      cat._1,
-      $CatQueue(
-        cat._2._1,
-        $List("Cons", $CatList("CatCons", a, $CatQueue(Nil, Nil)), cat._2._2)
-      )
-    );
-  }
-  fail();
-};
-
-// output-es/Control.Monad.Free/index.js
-var $Free = (_1, _2) => ({ tag: "Free", _1, _2 });
-var $FreeView = (tag, _1, _2) => ({ tag, _1, _2 });
-var toView = (toView$a0$copy) => {
-  let toView$a0 = toView$a0$copy, toView$c = true, toView$r;
-  while (toView$c) {
-    const v = toView$a0;
-    if (v._1.tag === "Return") {
-      const v2 = uncons3(v._2);
-      if (v2.tag === "Nothing") {
-        toView$c = false;
-        toView$r = $FreeView("Return", v._1._1);
-        continue;
-      }
-      if (v2.tag === "Just") {
-        toView$a0 = (() => {
-          const $0 = v2._1._1(v._1._1);
-          return $Free(
-            $0._1,
-            (() => {
-              if ($0._2.tag === "CatNil") {
-                return v2._1._2;
-              }
-              if (v2._1._2.tag === "CatNil") {
-                return $0._2;
-              }
-              if ($0._2.tag === "CatCons") {
-                return $CatList("CatCons", $0._2._1, $CatQueue($0._2._2._1, $List("Cons", v2._1._2, $0._2._2._2)));
-              }
-              fail();
-            })()
-          );
-        })();
-        continue;
-      }
-      fail();
-    }
-    if (v._1.tag === "Bind") {
-      toView$c = false;
-      toView$r = $FreeView(
-        "Bind",
-        v._1._1,
-        (a) => {
-          const $0 = v._1._2(a);
-          return $Free(
-            $0._1,
-            (() => {
-              if ($0._2.tag === "CatNil") {
-                return v._2;
-              }
-              if (v._2.tag === "CatNil") {
-                return $0._2;
-              }
-              if ($0._2.tag === "CatCons") {
-                return $CatList("CatCons", $0._2._1, $CatQueue($0._2._2._1, $List("Cons", v._2, $0._2._2._2)));
-              }
-              fail();
-            })()
-          );
-        }
-      );
-      continue;
-    }
-    fail();
-  }
-  return toView$r;
-};
-var resume$p = (k) => (j) => (f) => {
-  const v = toView(f);
-  if (v.tag === "Return") {
-    return j(v._1);
-  }
-  if (v.tag === "Bind") {
-    return k(v._1)(v._2);
-  }
-  fail();
-};
-var freeMonad = { Applicative0: () => freeApplicative, Bind1: () => freeBind };
-var freeFunctor = { map: (k) => (f) => freeBind.bind(f)((x) => freeApplicative.pure(k(x))) };
-var freeBind = { bind: (v) => (k) => $Free(v._1, snoc2(v._2)(k)), Apply0: () => freeApply };
-var freeApply = {
-  apply: (f) => (a) => $Free(f._1, snoc2(f._2)((f$p) => $Free(a._1, snoc2(a._2)((a$p) => freeApplicative.pure(f$p(a$p)))))),
-  Functor0: () => freeFunctor
-};
-var freeApplicative = { pure: (x) => $Free($FreeView("Return", x), CatNil), Apply0: () => freeApply };
-var freeMonadRec = {
-  tailRecM: (k) => (a) => {
-    const $0 = k(a);
-    return $Free(
-      $0._1,
-      snoc2($0._2)((v) => {
-        if (v.tag === "Loop") {
-          return freeMonadRec.tailRecM(k)(v._1);
-        }
-        if (v.tag === "Done") {
-          return $Free($FreeView("Return", v._1), CatNil);
-        }
-        fail();
-      })
-    );
-  },
-  Monad0: () => freeMonad
-};
-
-// output-es/Control.Monad.Reader.Trans/index.js
-var bindReaderT = (dictBind) => {
-  const $0 = dictBind.Apply0();
-  const $1 = $0.Functor0();
-  const applyReaderT1 = /* @__PURE__ */ (() => {
-    const functorReaderT1 = {
-      map: (x) => {
-        const $2 = $1.map(x);
-        return (v) => (x$1) => $2(v(x$1));
-      }
-    };
-    return { apply: (v) => (v1) => (r) => $0.apply(v(r))(v1(r)), Functor0: () => functorReaderT1 };
-  })();
-  return { bind: (v) => (k) => (r) => dictBind.bind(v(r))((a) => k(a)(r)), Apply0: () => applyReaderT1 };
-};
-var monadReaderT = (dictMonad) => {
-  const $0 = dictMonad.Applicative0();
-  const $1 = $0.Apply0();
-  const applicativeReaderT1 = (() => {
-    const $2 = $1.Functor0();
-    const functorReaderT1 = {
-      map: (x) => {
-        const $3 = $2.map(x);
-        return (v) => (x$1) => $3(v(x$1));
-      }
-    };
-    const applyReaderT1 = { apply: (v) => (v1) => (r) => $1.apply(v(r))(v1(r)), Functor0: () => functorReaderT1 };
-    return {
-      pure: (x) => {
-        const $3 = $0.pure(x);
-        return (v) => $3;
-      },
-      Apply0: () => applyReaderT1
-    };
-  })();
-  const bindReaderT1 = bindReaderT(dictMonad.Bind1());
-  return { Applicative0: () => applicativeReaderT1, Bind1: () => bindReaderT1 };
 };
 
 // output-es/Options.Applicative.Types/index.js
@@ -3584,44 +3380,6 @@ var readMApplicative = {
   Apply0: () => readMApply
 };
 var parseErrorSemigroup = { append: (v) => (m) => m };
-var optVisibilityEq = {
-  eq: (x) => (y) => {
-    if (x === "Internal") {
-      return y === "Internal";
-    }
-    if (x === "Hidden") {
-      return y === "Hidden";
-    }
-    return x === "Visible" && y === "Visible";
-  }
-};
-var optVisibilityOrd = {
-  compare: (x) => (y) => {
-    if (x === "Internal") {
-      if (y === "Internal") {
-        return EQ;
-      }
-      return LT;
-    }
-    if (y === "Internal") {
-      return GT;
-    }
-    if (x === "Hidden") {
-      if (y === "Hidden") {
-        return EQ;
-      }
-      return LT;
-    }
-    if (y === "Hidden") {
-      return GT;
-    }
-    if (x === "Visible" && y === "Visible") {
-      return EQ;
-    }
-    fail();
-  },
-  Eq0: () => optVisibilityEq
-};
 var optNameEq = {
   eq: (x) => (y) => {
     if (x.tag === "OptShort") {
@@ -3677,7 +3435,37 @@ var parserFunctor = {
     if (v1.tag === "BindP") {
       return $Parser(
         "BindP",
-        $Free(v1._1._1, snoc2(v1._1._2)((x) => $Free($FreeView("Return", v(x)), CatNil)))
+        $Free(
+          v1._1._1,
+          (() => {
+            if (v1._1._2.tag === "CatNil") {
+              return $CatList(
+                "CatCons",
+                (x) => $Free($FreeView("Return", v(x)), CatNil),
+                $CatQueue(Nil, Nil)
+              );
+            }
+            if (v1._1._2.tag === "CatCons") {
+              return $CatList(
+                "CatCons",
+                v1._1._2._1,
+                $CatQueue(
+                  v1._1._2._2._1,
+                  $List(
+                    "Cons",
+                    $CatList(
+                      "CatCons",
+                      (x) => $Free($FreeView("Return", v(x)), CatNil),
+                      $CatQueue(Nil, Nil)
+                    ),
+                    v1._1._2._2._2
+                  )
+                )
+              );
+            }
+            fail();
+          })()
+        )
       );
     }
     fail();
@@ -3753,45 +3541,86 @@ var manyM = (p) => freeMonadRec.tailRecM((acc) => $Free(
     $Parser("AltP", parserFunctor.map(Loop)(p), $Parser("NilP", $Step("Done", void 0))),
     (x) => $Free($FreeView("Return", x), CatNil)
   ),
-  snoc2(CatNil)((aa) => $Free(
-    $FreeView(
-      "Return",
-      (() => {
-        if (aa.tag === "Loop") {
-          return $Step("Loop", $List("Cons", aa._1, acc));
-        }
-        if (aa.tag === "Done") {
-          return $Step("Done", reverse2(acc));
-        }
-        fail();
-      })()
+  $CatList(
+    "CatCons",
+    (aa) => $Free(
+      $FreeView(
+        "Return",
+        (() => {
+          if (aa.tag === "Loop") {
+            return $Step("Loop", $List("Cons", aa._1, acc));
+          }
+          if (aa.tag === "Done") {
+            return $Step(
+              "Done",
+              (() => {
+                const go = (go$a0$copy) => (go$a1$copy) => {
+                  let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
+                  while (go$c) {
+                    const v = go$a0, v1 = go$a1;
+                    if (v1.tag === "Nil") {
+                      go$c = false;
+                      go$r = v;
+                      continue;
+                    }
+                    if (v1.tag === "Cons") {
+                      go$a0 = $List("Cons", v1._1, v);
+                      go$a1 = v1._2;
+                      continue;
+                    }
+                    fail();
+                  }
+                  return go$r;
+                };
+                return go(Nil)(acc);
+              })()
+            );
+          }
+          fail();
+        })()
+      ),
+      CatNil
     ),
-    CatNil
-  ))
+    $CatQueue(Nil, Nil)
+  )
 ))(Nil);
 
 // output-es/Options.Applicative.Builder.Internal/index.js
 var $DefaultProp = (_1, _2) => ({ tag: "DefaultProp", _1, _2 });
 var $Mod = (_1, _2, _3) => ({ tag: "Mod", _1, _2, _3 });
-var identity7 = (x) => x;
+var identity6 = (x) => x;
 var Mod = (value0) => (value12) => (value2) => $Mod(value0, value12, value2);
 var optionFieldsHasName = { name: (n) => (fields) => ({ ...fields, optNames: [n, ...fields.optNames] }) };
 var modSemigroup = {
   append: (v) => (v1) => $Mod((x) => v1._1(v._1(x)), $DefaultProp(v1._2._1.tag === "Nothing" ? v._2._1 : v1._2._1, v1._2._2.tag === "Nothing" ? v._2._2 : v1._2._2), (x) => v1._3(v._3(x)))
 };
-var modMonoid = { mempty: /* @__PURE__ */ $Mod(identity7, /* @__PURE__ */ $DefaultProp(Nothing, Nothing), identity7), Semigroup0: () => modSemigroup };
-var optionMod = /* @__PURE__ */ Mod(identity7)(/* @__PURE__ */ $DefaultProp(Nothing, Nothing));
+var modMonoid = { mempty: /* @__PURE__ */ $Mod(identity6, /* @__PURE__ */ $DefaultProp(Nothing, Nothing), identity6), Semigroup0: () => modSemigroup };
+var optionMod = /* @__PURE__ */ Mod(identity6)(/* @__PURE__ */ $DefaultProp(Nothing, Nothing));
 var internal = /* @__PURE__ */ optionMod((p) => ({ ...p, propVisibility: Internal }));
-var baseProps = /* @__PURE__ */ (() => ({
+var baseProps = {
   propMetaVar: "",
   propVisibility: Visible,
-  propHelp: chunkMonoid(docSemigroup).mempty,
+  propHelp: Nothing,
   propShowDefault: Nothing,
   propDescMod: Nothing
-}))();
-var mkOption = (d) => (g) => (rdr) => ({ optMain: rdr, optProps: { ...g(baseProps), propShowDefault: applyMaybe.apply(d._2)(d._1) } });
+};
+var mkProps = (v) => (g) => ({
+  ...g(baseProps),
+  propShowDefault: (() => {
+    if (v._2.tag === "Just") {
+      if (v._1.tag === "Just") {
+        return $Maybe("Just", v._2._1(v._1._1));
+      }
+      return Nothing;
+    }
+    if (v._2.tag === "Nothing") {
+      return Nothing;
+    }
+    fail();
+  })()
+});
 var mkParser = (v) => (g) => (rdr) => {
-  const o = $Parser("OptP", mkOption(v)(g)(rdr));
+  const o = $Parser("OptP", { optMain: rdr, optProps: mkProps(v)(g) });
   if (v._1.tag === "Nothing") {
     return o;
   }
@@ -3802,25 +3631,8 @@ var mkParser = (v) => (g) => (rdr) => {
 };
 
 // output-es/Options.Applicative.Builder/index.js
-var identity8 = (x) => x;
-var mempty12 = /* @__PURE__ */ (() => chunkMonoid(docSemigroup).mempty)();
-var min3 = (x) => (y) => {
-  const v = optVisibilityOrd.compare(x)(y);
-  if (v === "LT") {
-    return x;
-  }
-  if (v === "EQ") {
-    return x;
-  }
-  if (v === "GT") {
-    return y;
-  }
-  fail();
-};
-var mempty2 = /* @__PURE__ */ (() => monoidRecord()({
-  memptyRecord: (v) => ({ argCompleter: completerMonoid.mempty }),
-  SemigroupRecord0: () => ({ appendRecord: (v) => (ra) => (rb) => ({ argCompleter: completerSemigroup.append(ra.argCompleter)(rb.argCompleter) }) })
-}).mempty)();
+var identity7 = (x) => x;
+var mempty2 = /* @__PURE__ */ (() => ({ argCompleter: completerMonoid.mempty }))();
 var fold = /* @__PURE__ */ (() => foldableArray.foldMap(modMonoid)(identity2))();
 var option = (r) => (m) => {
   const $0 = optionMod((p) => ({ ...p, propMetaVar: "ARG" }));
@@ -3830,7 +3642,7 @@ var option = (r) => (m) => {
     m._2._2.tag === "Nothing" ? $0._2._2 : m._2._2
   ))((x) => m._3($0._3(x)))($OptReader("OptReader", $1.optNames, { crCompleter: $1.optCompleter, crReader: r }, $1.optNoArgError));
 };
-var hidden = /* @__PURE__ */ optionMod((p) => ({ ...p, propVisibility: min3(Hidden)(p.propVisibility) }));
+var hidden = /* @__PURE__ */ optionMod((p) => ({ ...p, propVisibility: p.propVisibility === "Internal" ? p.propVisibility : Hidden }));
 var flag$p = (actv) => (v) => mkParser(v._2)(v._3)((() => {
   const $0 = v._1({ flagNames: [], flagActive: actv });
   return $OptReader("FlagReader", $0.flagNames, $0.flagActive);
@@ -3873,12 +3685,12 @@ var abortOption = (err) => (m) => {
     $Mod(
       (p) => ({ ...p, optNoArgError: (v) => err }),
       $DefaultProp(Nothing, Nothing),
-      identity7
+      identity6
     ),
     $Mod(
-      identity8,
-      $DefaultProp($Maybe("Just", identity8), Nothing),
-      identity8
+      identity7,
+      $DefaultProp($Maybe("Just", identity7), Nothing),
+      identity7
     ),
     optionMod((p) => ({ ...p, propMetaVar: "" }))
   ]);
@@ -3891,6 +3703,21 @@ var abortOption = (err) => (m) => {
     (x) => m._3($0._3(x))
   ));
 };
+
+// output-es/Data.Semigroup/foreign.js
+var concatArray = function(xs) {
+  return function(ys) {
+    if (xs.length === 0) return ys;
+    if (ys.length === 0) return xs;
+    return xs.concat(ys);
+  };
+};
+
+// output-es/Data.Semigroup/index.js
+var semigroupArray = { append: concatArray };
+
+// output-es/Data.Monoid/index.js
+var monoidArray = { mempty: [], Semigroup0: () => semigroupArray };
 
 // output-es/Node.Encoding/index.js
 var $Encoding = (tag) => tag;
@@ -3919,7 +3746,23 @@ var eqNullable = (dictEq) => ({
 var ordNullable = (dictOrd) => {
   const eqNullable1 = eqNullable(dictOrd.Eq0());
   return {
-    compare: (x) => (y) => ordMaybe(dictOrd).compare(nullable(x, Nothing, Just))(nullable(y, Nothing, Just)),
+    compare: (x) => (y) => {
+      const $0 = nullable(x, Nothing, Just);
+      const $1 = nullable(y, Nothing, Just);
+      if ($0.tag === "Nothing") {
+        if ($1.tag === "Nothing") {
+          return EQ;
+        }
+        return LT;
+      }
+      if ($1.tag === "Nothing") {
+        return GT;
+      }
+      if ($0.tag === "Just" && $1.tag === "Just") {
+        return dictOrd.compare($0._1)($1._1);
+      }
+      fail();
+    },
     Eq0: () => eqNullable1
   };
 };
@@ -3943,23 +3786,6 @@ var monoidDual2 = /* @__PURE__ */ (() => {
   const semigroupDual1 = { append: (v) => (v1) => $0.append(v1)(v) };
   return { mempty: monoidEndo2.mempty, Semigroup0: () => semigroupDual1 };
 })();
-var traverseWithIndex_ = (dictApplicative) => {
-  const $0 = dictApplicative.Apply0();
-  return (dictFoldableWithIndex) => (f) => dictFoldableWithIndex.foldrWithIndex((i) => {
-    const $1 = f(i);
-    return (x) => {
-      const $2 = $1(x);
-      return (b) => $0.apply($0.Functor0().map((v) => identity)($2))(b);
-    };
-  })(dictApplicative.pure());
-};
-var forWithIndex_ = (dictApplicative) => {
-  const traverseWithIndex_1 = traverseWithIndex_(dictApplicative);
-  return (dictFoldableWithIndex) => {
-    const $0 = traverseWithIndex_1(dictFoldableWithIndex);
-    return (b) => (a) => $0(a)(b);
-  };
-};
 var foldableWithIndexArray = {
   foldrWithIndex: (f) => (z) => {
     const $0 = foldrArray((v) => {
@@ -4170,6 +3996,54 @@ var monadStateStateT = (dictMonad) => {
   return { state: (f) => (x) => dictMonad.Applicative0().pure(f(x)), Monad0: () => monadStateT1 };
 };
 
+// output-es/Data.List/index.js
+var span2 = (v) => (v1) => {
+  if (v1.tag === "Cons" && v(v1._1)) {
+    const v2 = span2(v)(v1._2);
+    return { init: $List("Cons", v1._1, v2.init), rest: v2.rest };
+  }
+  return { init: Nil, rest: v1 };
+};
+var manyRec = (dictMonadRec) => (dictAlternative) => {
+  const Alt0 = dictAlternative.Plus1().Alt0();
+  const $0 = dictAlternative.Applicative0();
+  return (p) => dictMonadRec.tailRecM((acc) => dictMonadRec.Monad0().Bind1().bind(Alt0.alt(Alt0.Functor0().map(Loop)(p))($0.pure($Step(
+    "Done",
+    void 0
+  ))))((aa) => $0.pure((() => {
+    if (aa.tag === "Loop") {
+      return $Step("Loop", $List("Cons", aa._1, acc));
+    }
+    if (aa.tag === "Done") {
+      return $Step(
+        "Done",
+        (() => {
+          const go = (go$a0$copy) => (go$a1$copy) => {
+            let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
+            while (go$c) {
+              const v = go$a0, v1 = go$a1;
+              if (v1.tag === "Nil") {
+                go$c = false;
+                go$r = v;
+                continue;
+              }
+              if (v1.tag === "Cons") {
+                go$a0 = $List("Cons", v1._1, v);
+                go$a1 = v1._2;
+                continue;
+              }
+              fail();
+            }
+            return go$r;
+          };
+          return go(Nil)(acc);
+        })()
+      );
+    }
+    fail();
+  })())))(Nil);
+};
+
 // output-es/Options.Applicative.Internal/index.js
 var $ComplResult = (tag, _1, _2) => ({ tag, _1, _2 });
 var $TStep = (tag, _1, _2) => ({ tag, _1, _2 });
@@ -4188,7 +4062,6 @@ var modify_ = /* @__PURE__ */ (() => {
   return (f) => $0.state((s) => $Tuple(void 0, f(s)));
 })();
 var throwError = /* @__PURE__ */ (() => monadThrowExceptT(monadStateT).throwError)();
-var identity11 = (x) => x;
 var TNil = /* @__PURE__ */ $TStep("TNil");
 var ComplResult = (value0) => $ComplResult("ComplResult", value0);
 var runListT = (dictMonad) => (xs) => dictMonad.Bind1().bind(xs)((s) => {
@@ -4201,19 +4074,6 @@ var runListT = (dictMonad) => (xs) => dictMonad.Bind1().bind(xs)((s) => {
   }
   fail();
 });
-var runCompletion = (v) => (prefs) => {
-  const v1 = v(prefs);
-  if (v1.tag === "ComplResult") {
-    return Nothing;
-  }
-  if (v1.tag === "ComplParser") {
-    return $Maybe("Just", $Either("Left", $Tuple(v1._1, v1._2)));
-  }
-  if (v1.tag === "ComplOption") {
-    return $Maybe("Just", $Either("Right", v1._1));
-  }
-  fail();
-};
 var pFunctor = {
   map: (f) => (v) => (s) => {
     const $0 = v(s);
@@ -4350,19 +4210,18 @@ var completionMonadP = {
   Monad0: () => completionMonad,
   Alt1: () => completionAlt
 };
-var bimapTStep = (v) => (v1) => (v2) => {
-  if (v2.tag === "TNil") {
-    return TNil;
-  }
-  if (v2.tag === "TCons") {
-    return $TStep("TCons", v(v2._1), v1(v2._2));
-  }
-  fail();
-};
 var listTFunctor = (dictMonad) => ({
   map: (f) => (v) => {
-    const $0 = bimapTStep(f)(listTFunctor(dictMonad).map(f));
-    return dictMonad.Bind1().bind(v)((a$p) => dictMonad.Applicative0().pure($0(a$p)));
+    const $0 = listTFunctor(dictMonad).map(f);
+    return dictMonad.Bind1().bind(v)((a$p) => dictMonad.Applicative0().pure((() => {
+      if (a$p.tag === "TNil") {
+        return TNil;
+      }
+      if (a$p.tag === "TCons") {
+        return $TStep("TCons", f(a$p._1), $0(a$p._2));
+      }
+      fail();
+    })()));
   }
 });
 var listTAlt = (dictMonad) => {
@@ -4486,8 +4345,16 @@ var takeListT = (dictMonad) => {
     if (v === 0) {
       return (v$1) => empty4;
     }
-    const $0 = bimapTStep(identity11)(takeListT(dictMonad)(v - 1 | 0));
-    return (x) => dictMonad.Bind1().bind(x)((a$p) => dictMonad.Applicative0().pure($0(a$p)));
+    const $0 = takeListT(dictMonad)(v - 1 | 0);
+    return (x) => dictMonad.Bind1().bind(x)((a$p) => dictMonad.Applicative0().pure((() => {
+      if (a$p.tag === "TNil") {
+        return TNil;
+      }
+      if (a$p.tag === "TCons") {
+        return $TStep("TCons", a$p._1, $0(a$p._2));
+      }
+      fail();
+    })()));
   };
 };
 var disamb = (dictMonad) => {
@@ -4572,7 +4439,7 @@ var parseWord = /* @__PURE__ */ (() => {
         return $Maybe(
           "Just",
           (() => {
-            const v2 = span((v3) => v3 !== "=")($1._2._2);
+            const v2 = span2((v3) => v3 !== "=")($1._2._2);
             if (v2.rest.tag === "Nil") {
               return $OptWord(
                 $OptName("OptLong", fromCharArray(fromFoldableImpl(foldableList.foldr, $1._2._2))),
@@ -4685,11 +4552,8 @@ var optMatches = (dictMonadP) => {
       return $Maybe(
         "Just",
         bindStateT2.bind($$get)((args) => bindStateT2.bind((() => {
-          if (v._2.tag === "Just") {
-            const $2 = $List("Cons", fromCharArray(["-", ...toCharArray(v._2._1)]), args);
-            return monadStateStateT2.state((v$1) => $Tuple(void 0, $2));
-          }
-          return monadStateStateT2.state((v$1) => $Tuple(void 0, args));
+          const $2 = v._2.tag === "Just" ? $List("Cons", fromCharArray(["-", ...toCharArray(v._2._1)]), args) : args;
+          return monadStateStateT2.state((v$1) => $Tuple(void 0, $2));
         })())(() => $0.pure(opt._2)))
       );
     }
@@ -4704,7 +4568,18 @@ var evalParser = (v) => {
     return Nothing;
   }
   if (v.tag === "MultP") {
-    return applyMaybe.apply(evalParser(v._1._1))(evalParser(v._1._2));
+    const $0 = evalParser(v._1._1);
+    const $1 = evalParser(v._1._2);
+    if ($0.tag === "Just") {
+      if ($1.tag === "Just") {
+        return $Maybe("Just", $0._1($1._1));
+      }
+      return Nothing;
+    }
+    if ($0.tag === "Nothing") {
+      return Nothing;
+    }
+    fail();
   }
   if (v.tag === "AltP") {
     const $0 = evalParser(v._1);
@@ -4758,7 +4633,7 @@ var searchParser = (dictMonad) => {
           "BindP",
           $Free(
             $FreeView("Bind", p$p, (x) => $Free($FreeView("Return", x), CatNil)),
-            snoc2(CatNil)(k)
+            $CatList("CatCons", k, $CatQueue(Nil, Nil))
           )
         ))(searchParser(dictMonad)(v)(p)),
         (() => {
@@ -4785,7 +4660,7 @@ var searchOpt = (dictMonadP) => {
   const $1 = dictMonadP.Alt1().Functor0();
   const empty4 = nondetTPlus(monadStateT2).empty;
   return (pprefs) => (w) => searchParser1((opt) => {
-    const v = optMatches1(pprefs.prefDisambiguate && optVisibilityOrd.compare(opt.optProps.propVisibility)(Internal) === "GT")(opt.optMain)(w);
+    const v = optMatches1(pprefs.prefDisambiguate && opt.optProps.propVisibility !== "Internal")(opt.optMain)(w);
     if (v.tag === "Just") {
       return lift2((s) => $1.map((v1) => $Tuple($Parser("NilP", v1._1), v1._2))(v._1(s)));
     }
@@ -4916,13 +4791,8 @@ var runParser = (dictMonadP) => {
   const getPrefs = dictMonadP.getPrefs;
   const pure4 = dictMonadP.Monad0().Applicative0().pure;
   return (policy) => (isCmdStart) => (p) => (args) => {
-    const result = applyMaybe.apply((() => {
-      const $1 = evalParser(p);
-      if ($1.tag === "Just") {
-        return $Maybe("Just", Tuple($1._1));
-      }
-      return Nothing;
-    })())($Maybe("Just", args));
+    const $1 = evalParser(p);
+    const result = $1.tag === "Just" ? $Maybe("Just", $Tuple($1._1, args)) : Nothing;
     if (args.tag === "Nil") {
       return dictMonadP.exitP(isCmdStart)(policy)(p)(result);
     }
@@ -4930,13 +4800,13 @@ var runParser = (dictMonadP) => {
       if (args._1 === "--" && (policy === "Intersperse" || policy === "NoIntersperse" || policy !== "AllPositionals")) {
         return runParser(dictMonadP)(AllPositionals)(CmdCont)(p)(args._2);
       }
-      const $1 = args._1;
-      const $2 = args._2;
-      return $0.bind(getPrefs)((prefs) => $0.bind(disamb2(!prefs.prefDisambiguate)(stepParser(dictMonadP)(prefs)(policy)($1)(p))($2))((v) => {
+      const $2 = args._1;
+      const $3 = args._2;
+      return $0.bind(getPrefs)((prefs) => $0.bind(disamb2(!prefs.prefDisambiguate)(stepParser(dictMonadP)(prefs)(policy)($2)(p))($3))((v) => {
         if (v._1.tag === "Nothing") {
-          const $3 = dictMonadP.errorP($ParseError("UnexpectedError", $1, $SomeParser(p)));
+          const $4 = dictMonadP.errorP($ParseError("UnexpectedError", $2, $SomeParser(p)));
           if (result.tag === "Nothing") {
-            return $3;
+            return $4;
           }
           if (result.tag === "Just") {
             return pure4(result._1);
@@ -4947,11 +4817,11 @@ var runParser = (dictMonadP) => {
           return runParser(dictMonadP)((() => {
             if (policy === "NoIntersperse") {
               if ((() => {
-                const $3 = parseWord($1);
-                if ($3.tag === "Nothing") {
+                const $4 = parseWord($2);
+                if ($4.tag === "Nothing") {
                   return false;
                 }
-                if ($3.tag === "Just") {
+                if ($4.tag === "Just") {
                   return true;
                 }
                 fail();
@@ -4993,7 +4863,7 @@ var treeMapParser = (g) => {
       return $OptTree("MultNode", []);
     }
     if (v4.tag === "OptP") {
-      if (optVisibilityOrd.compare(v4._1.optProps.propVisibility)(Internal) === "GT") {
+      if (v4._1.optProps.propVisibility !== "Internal") {
         return $OptTree("Leaf", v3({ hinfoMulti: v, hinfoDefault: v1, hinfoUnreachableArgs: v2 })(v4._1));
       }
       return $OptTree("MultNode", []);
@@ -5063,7 +4933,7 @@ var mapParser = (f) => {
 // output-es/Options.Applicative.BashCompletion/index.js
 var $Richness = (tag, _1, _2) => ({ tag, _1, _2 });
 var fromFoldable = /* @__PURE__ */ foldrArray(Cons)(Nil);
-var identity12 = (x) => x;
+var identity11 = (x) => x;
 var fold2 = /* @__PURE__ */ (() => foldableArray.foldMap(monoidArray)(identity2))();
 var sequence = /* @__PURE__ */ (() => traversableArray.traverse(applicativeEffect)(identity3))();
 var unLines = (xs) => foldlArray((v) => (v1) => {
@@ -5176,7 +5046,7 @@ var bashCompletionQuery = (pinfo) => (pprefs) => (richness) => (ws) => (i) => (v
   const $0 = arrayMap(showOption);
   const add_opt_help1 = (opt) => {
     if (richness.tag === "Standard") {
-      return identity12;
+      return identity11;
     }
     if (richness.tag === "Enriched") {
       const $1 = richness._1;
@@ -5189,11 +5059,10 @@ var bashCompletionQuery = (pinfo) => (pprefs) => (richness) => (ws) => (i) => (v
           const $3 = $2 === "" ? [] : split("\n")($2);
           return o + "	" + (() => {
             if ($3.length > 0) {
-              const $4 = uncons4($3);
-              if ($4.tail.length === 0) {
-                return $4.head;
+              if (uncons4($3).tail.length === 0) {
+                return uncons4($3).head;
               }
-              return $4.head + "...";
+              return uncons4($3).head + "...";
             }
             return "";
           })();
@@ -5203,11 +5072,23 @@ var bashCompletionQuery = (pinfo) => (pprefs) => (richness) => (ws) => (i) => (v
     }
     fail();
   };
-  const v2$1 = runCompletion(runParserFully(completionMonadP)(pinfo.infoPolicy)(pinfo.infoParser)(fromFoldable(sliceImpl(
+  const v1$1 = runParserFully(completionMonadP)(pinfo.infoPolicy)(pinfo.infoParser)(fromFoldable(sliceImpl(
     1,
     v1.init.length,
     v1.init
-  ))))(pprefs);
+  )))(pprefs);
+  const v2$1 = (() => {
+    if (v1$1.tag === "ComplResult") {
+      return Nothing;
+    }
+    if (v1$1.tag === "ComplParser") {
+      return $Maybe("Just", $Either("Left", $Tuple(v1$1._1, v1$1._2)));
+    }
+    if (v1$1.tag === "ComplOption") {
+      return $Maybe("Just", $Either("Right", v1$1._1));
+    }
+    fail();
+  })();
   if (v2$1.tag === "Just") {
     if (v2$1._1.tag === "Left") {
       const $1 = v2$1._1._1._2;
@@ -5238,7 +5119,7 @@ var bashCompletionQuery = (pinfo) => (pprefs) => (richness) => (ws) => (i) => (v
           }
           const $22 = (() => {
             if (richness.tag === "Standard") {
-              return identity12;
+              return identity11;
             }
             if (richness.tag === "Enriched") {
               const $23 = richness._2;
@@ -5261,11 +5142,10 @@ var bashCompletionQuery = (pinfo) => (pprefs) => (richness) => (ws) => (i) => (v
                   const $6 = $5 === "" ? [] : split("\n")($5);
                   return cmd + "	" + (() => {
                     if ($6.length > 0) {
-                      const $7 = uncons4($6);
-                      if ($7.tail.length === 0) {
-                        return $7.head;
+                      if (uncons4($6).tail.length === 0) {
+                        return uncons4($6).head;
                       }
-                      return $7.head + "...";
+                      return uncons4($6).head + "...";
                     }
                     return "";
                   })();
@@ -5437,16 +5317,32 @@ var bashCompletionParser = (pinfo) => (pprefs) => $Parser(
 );
 
 // output-es/Options.Applicative.Help.Types/index.js
-var chunkMonoid2 = /* @__PURE__ */ chunkMonoid(docSemigroup);
-var parserHelpMonoid = /* @__PURE__ */ monoidRecord()(/* @__PURE__ */ (() => {
-  const Semigroup0 = chunkMonoid2.Semigroup0();
-  const Semigroup0$1 = chunkMonoid2.Semigroup0();
-  const Semigroup0$2 = chunkMonoid2.Semigroup0();
-  const Semigroup0$3 = chunkMonoid2.Semigroup0();
-  const Semigroup0$4 = chunkMonoid2.Semigroup0();
-  const Semigroup0$5 = chunkMonoid2.Semigroup0();
-  const semigroupRecordCons1 = {
-    appendRecord: (v) => (ra) => (rb) => ({
+var chunkMonoid = /* @__PURE__ */ (() => {
+  const chunkSemigroup1 = {
+    append: (v1) => (v2) => {
+      if (v1.tag === "Nothing") {
+        return v2;
+      }
+      if (v2.tag === "Nothing") {
+        return v1;
+      }
+      if (v1.tag === "Just" && v2.tag === "Just") {
+        return $Maybe("Just", $Doc("Cat", v1._1, v2._1));
+      }
+      fail();
+    }
+  };
+  return { mempty: Nothing, Semigroup0: () => chunkSemigroup1 };
+})();
+var parserHelpMonoid = /* @__PURE__ */ (() => {
+  const Semigroup0 = chunkMonoid.Semigroup0();
+  const Semigroup0$1 = chunkMonoid.Semigroup0();
+  const Semigroup0$2 = chunkMonoid.Semigroup0();
+  const Semigroup0$3 = chunkMonoid.Semigroup0();
+  const Semigroup0$4 = chunkMonoid.Semigroup0();
+  const Semigroup0$5 = chunkMonoid.Semigroup0();
+  const semigroupRecord1 = {
+    append: (ra) => (rb) => ({
       helpBody: Semigroup0.append(ra.helpBody)(rb.helpBody),
       helpError: Semigroup0$1.append(ra.helpError)(rb.helpError),
       helpFooter: Semigroup0$2.append(ra.helpFooter)(rb.helpFooter),
@@ -5456,17 +5352,17 @@ var parserHelpMonoid = /* @__PURE__ */ monoidRecord()(/* @__PURE__ */ (() => {
     })
   };
   return {
-    memptyRecord: (v) => ({
-      helpBody: chunkMonoid2.mempty,
-      helpError: chunkMonoid2.mempty,
-      helpFooter: chunkMonoid2.mempty,
-      helpHeader: chunkMonoid2.mempty,
-      helpSuggestions: chunkMonoid2.mempty,
-      helpUsage: chunkMonoid2.mempty
-    }),
-    SemigroupRecord0: () => semigroupRecordCons1
+    mempty: {
+      helpBody: chunkMonoid.mempty,
+      helpError: chunkMonoid.mempty,
+      helpFooter: chunkMonoid.mempty,
+      helpHeader: chunkMonoid.mempty,
+      helpSuggestions: chunkMonoid.mempty,
+      helpUsage: chunkMonoid.mempty
+    },
+    Semigroup0: () => semigroupRecord1
   };
-})());
+})();
 var helpText = (v) => {
   const $0 = vsepChunks([v.helpError, v.helpSuggestions, v.helpHeader, v.helpUsage, v.helpBody, v.helpFooter]);
   if ($0.tag === "Nothing") {
@@ -5480,10 +5376,25 @@ var helpText = (v) => {
 
 // output-es/Options.Applicative.Help.Core/index.js
 var fold3 = /* @__PURE__ */ (() => foldableArray.foldMap(monoidArray)(identity2))();
-var chunkMonoid3 = /* @__PURE__ */ chunkMonoid(docSemigroup);
+var chunkMonoid2 = /* @__PURE__ */ (() => {
+  const chunkSemigroup1 = {
+    append: (v1) => (v2) => {
+      if (v1.tag === "Nothing") {
+        return v2;
+      }
+      if (v2.tag === "Nothing") {
+        return v1;
+      }
+      if (v1.tag === "Just" && v2.tag === "Just") {
+        return $Maybe("Just", $Doc("Cat", v1._1, v2._1));
+      }
+      fail();
+    }
+  };
+  return { mempty: Nothing, Semigroup0: () => chunkSemigroup1 };
+})();
 var listToChunk2 = /* @__PURE__ */ listToChunk(docMonoid);
-var identity13 = (x) => x;
-var mempty22 = /* @__PURE__ */ (() => $Tuple(monoidMaybe(semigroupString).mempty, chunkMonoid3.mempty))();
+var identity12 = (x) => x;
 var intersperse2 = (sep2) => {
   const $0 = mapWithIndexArray((idx) => (e) => {
     if (idx === 0) {
@@ -5494,7 +5405,7 @@ var intersperse2 = (sep2) => {
   return (x) => fold3($0(x));
 };
 var optDesc = (pprefs) => (style) => (info2) => (opt) => {
-  const suffix = info2.hinfoMulti ? stringChunk(pprefs.prefMultiSuffix) : chunkMonoid3.mempty;
+  const suffix = info2.hinfoMulti ? stringChunk(pprefs.prefMultiSuffix) : chunkMonoid2.mempty;
   const descs = arrayMap((x) => string(showOption(x)))(sortBy(optNameOrd.compare)((() => {
     if (opt.optMain.tag === "OptReader") {
       return opt.optMain._1;
@@ -5506,10 +5417,15 @@ var optDesc = (pprefs) => (style) => (info2) => (opt) => {
   })()));
   return (() => {
     if (opt.optProps.propDescMod.tag === "Nothing") {
-      return identity13;
+      return identity12;
     }
     if (opt.optProps.propDescMod.tag === "Just") {
-      return functorMaybe.map(opt.optProps.propDescMod._1);
+      return (v1) => {
+        if (v1.tag === "Just") {
+          return $Maybe("Just", opt.optProps.propDescMod._1(v1._1));
+        }
+        return Nothing;
+      };
     }
     fail();
   })()((() => {
@@ -5536,7 +5452,7 @@ var optDesc = (pprefs) => (style) => (info2) => (opt) => {
       }
       return opt.optProps.propVisibility !== "Visible";
     })()) {
-      return chunkMonoid3.mempty;
+      return chunkMonoid2.mempty;
     }
     if ((() => {
       if ($2.tag === "Nothing") {
@@ -5751,7 +5667,7 @@ var fold_tree = (v) => {
     return v._1;
   }
   if (v.tag === "MultNode") {
-    return foldrArray((x) => chunkBesideOrBelow(fold_tree(x)))(chunkMonoid3.mempty)(v._1);
+    return foldrArray((x) => chunkBesideOrBelow(fold_tree(x)))(chunkMonoid2.mempty)(v._1);
   }
   if (v.tag === "AltNode") {
     const $0 = filterImpl(
@@ -5791,7 +5707,7 @@ var fold_tree = (v) => {
         );
       }
       fail();
-    })(chunkMonoid3.mempty)($0);
+    })(chunkMonoid2.mempty)($0);
     if ($1.tag === "Just") {
       return $Maybe(
         "Just",
@@ -5835,7 +5751,7 @@ var cmdDesc = /* @__PURE__ */ mapParser((v) => (opt) => {
       ])))
     );
   }
-  return mempty22;
+  return $Tuple(Nothing, chunkMonoid2.mempty);
 });
 var briefDesc$p = (showOptional) => (pprefs) => {
   const $0 = treeMapParser(optDesc(pprefs)({
@@ -6005,7 +5921,6 @@ var unWords = (xs) => foldlArray((v) => (v1) => {
   return { init: false, acc: v.acc + " " + v1 };
 })({ init: true, acc: "" })(xs).acc;
 var fold4 = /* @__PURE__ */ (() => foldableArray.foldMap(monoidArray)(identity2))();
-var mempty13 = /* @__PURE__ */ (() => chunkMonoid(docSemigroup).mempty)();
 var fold1 = /* @__PURE__ */ (() => foldableArray.foldMap(parserHelpMonoid)(identity2))();
 var fromFoldable2 = /* @__PURE__ */ foldrArray(Cons)(Nil);
 var renderFailure = (failure) => (progn) => {
@@ -6042,21 +5957,26 @@ var parserFailure = (pprefs) => (pinfo) => (msg) => (ctx) => {
             fail();
           })(msg._2._1))
         );
-        return applyMaybe.apply((() => {
-          const $1 = good.length < 2 ? stringChunk("Did you mean this?") : stringChunk("Did you mean one of these?");
-          if ($1.tag === "Just") {
-            return $Maybe("Just", appendWithLine($1._1));
+        const $1 = good.length < 2 ? stringChunk("Did you mean this?") : stringChunk("Did you mean one of these?");
+        if ($1.tag === "Just") {
+          const $2 = vcatChunks(arrayMap(stringChunk)(good));
+          if ($2.tag === "Just") {
+            return $Maybe(
+              "Just",
+              $Doc(
+                "Cat",
+                $1._1,
+                $Doc(
+                  "Cat",
+                  $Doc("FlatAlt", Line, $Doc("Char", " ")),
+                  indent(4)($2._1)
+                )
+              )
+            );
           }
-          return Nothing;
-        })())((() => {
-          const $1 = vcatChunks(arrayMap(stringChunk)(good));
-          if ($1.tag === "Just") {
-            return $Maybe("Just", indent(4)($1._1));
-          }
-          return Nothing;
-        })());
+        }
       }
-      return mempty13;
+      return Nothing;
     })()
   };
   const show_full_help = (() => {
@@ -6093,7 +6013,7 @@ var parserFailure = (pprefs) => (pinfo) => (msg) => (ctx) => {
     ...parserHelpMonoid.mempty,
     helpError: (() => {
       if (msg.tag === "ShowHelpText") {
-        return mempty13;
+        return Nothing;
       }
       if (msg.tag === "ErrorMsg") {
         return stringChunk(msg._1);
@@ -6103,7 +6023,7 @@ var parserFailure = (pprefs) => (pinfo) => (msg) => (ctx) => {
       }
       if (msg.tag === "MissingError") {
         if (msg._1 === "CmdStart" && pprefs.prefShowHelpOnEmpty) {
-          return mempty13;
+          return Nothing;
         }
         const $0 = stringChunk("Missing:");
         const $1 = briefDesc$p(false)(pprefs)(msg._2._1);
@@ -6160,26 +6080,26 @@ var helper = /* @__PURE__ */ (() => abortOption(ShowHelpText)(foldableArray.fold
   $Mod(
     optionFieldsHasName.name($OptName("OptLong", "help")),
     $DefaultProp(Nothing, Nothing),
-    identity7
+    identity6
   ),
   $Mod(
     optionFieldsHasName.name($OptName("OptShort", "h")),
     $DefaultProp(Nothing, Nothing),
-    identity7
+    identity6
   ),
   optionMod((p) => ({ ...p, propHelp: paragraph("Show this help text") })),
   hidden
 ])))();
 var getProgName = () => {
   const a$p = argv();
-  const $0 = 1 < a$p.length ? last(split("/")(a$p[1])) : Nothing;
-  if ($0.tag === "Nothing") {
-    return "";
+  if (1 < a$p.length) {
+    const $0 = split("/")(a$p[1]);
+    const $1 = $0.length - 1 | 0;
+    if ($1 >= 0 && $1 < $0.length) {
+      return $0[$1];
+    }
   }
-  if ($0.tag === "Just") {
-    return $0._1;
-  }
-  fail();
+  return "";
 };
 var getArgs = () => {
   const a$p = argv();
@@ -6339,7 +6259,7 @@ var cliOptions = /* @__PURE__ */ (() => $Parser(
 ))();
 var opts = {
   infoFailureCode: $$Error,
-  infoFooter: mempty12,
+  infoFooter: Nothing,
   infoFullDesc: true,
   infoHeader: /* @__PURE__ */ paragraph("validate-ddf - DDF dataset validator"),
   infoParser: /* @__PURE__ */ apApplyFlipped(parserApply)(cliOptions)(helper),
@@ -7586,38 +7506,6 @@ var mapMaybeWithKey = (dictOrd) => (f) => {
   };
   return go;
 };
-var lookup2 = (dictOrd) => (k) => {
-  const go = (go$a0$copy) => {
-    let go$a0 = go$a0$copy, go$c = true, go$r;
-    while (go$c) {
-      const v = go$a0;
-      if (v.tag === "Leaf") {
-        go$c = false;
-        go$r = Nothing;
-        continue;
-      }
-      if (v.tag === "Node") {
-        const v1 = dictOrd.compare(k)(v._3);
-        if (v1 === "LT") {
-          go$a0 = v._5;
-          continue;
-        }
-        if (v1 === "GT") {
-          go$a0 = v._6;
-          continue;
-        }
-        if (v1 === "EQ") {
-          go$c = false;
-          go$r = $Maybe("Just", v._4);
-          continue;
-        }
-      }
-      fail();
-    }
-    return go$r;
-  };
-  return go;
-};
 var stepUnorderedCps = (next) => (done) => {
   const go = (go$a0$copy) => {
     let go$a0 = go$a0$copy, go$c = true, go$r;
@@ -7771,44 +7659,6 @@ var insert = (dictOrd) => (k) => (v) => {
   };
   return go;
 };
-var functorMap = {
-  map: (f) => {
-    const go = (v) => {
-      if (v.tag === "Leaf") {
-        return Leaf2;
-      }
-      if (v.tag === "Node") {
-        return $$$Map("Node", v._1, v._2, v._3, f(v._4), go(v._5), go(v._6));
-      }
-      fail();
-    };
-    return go;
-  }
-};
-var keys2 = /* @__PURE__ */ (() => {
-  const go = (m$p, z$p) => {
-    if (m$p.tag === "Leaf") {
-      return z$p;
-    }
-    if (m$p.tag === "Node") {
-      return go(m$p._5, $List("Cons", m$p._3, go(m$p._6, z$p)));
-    }
-    fail();
-  };
-  return (m) => go(m, Nil);
-})();
-var values = /* @__PURE__ */ (() => {
-  const go = (m$p, z$p) => {
-    if (m$p.tag === "Leaf") {
-      return z$p;
-    }
-    if (m$p.tag === "Node") {
-      return go(m$p._5, $List("Cons", m$p._4, go(m$p._6, z$p)));
-    }
-    fail();
-  };
-  return (m) => go(m, Nil);
-})();
 var filterKeys = (dictOrd) => (f) => {
   const go = (v) => {
     if (v.tag === "Leaf") {
@@ -7862,21 +7712,6 @@ var $$delete2 = (dictOrd) => (k) => {
   return go;
 };
 
-// output-es/Effect.Console/foreign.js
-var log2 = function(s) {
-  return function() {
-    console.log(s);
-  };
-};
-
-// node_modules/csv-parse/lib/index.js
-import { Transform } from "stream";
-
-// node_modules/csv-parse/lib/utils/is_object.js
-var is_object = function(obj) {
-  return typeof obj === "object" && obj !== null && !Array.isArray(obj);
-};
-
 // node_modules/csv-parse/lib/api/CsvError.js
 var CsvError = class _CsvError extends Error {
   constructor(code, message2, options, ...contexts) {
@@ -7895,6 +7730,11 @@ var CsvError = class _CsvError extends Error {
   }
 };
 
+// node_modules/csv-parse/lib/utils/is_object.js
+var is_object = function(obj) {
+  return typeof obj === "object" && obj !== null && !Array.isArray(obj);
+};
+
 // node_modules/csv-parse/lib/api/normalize_columns_array.js
 var normalize_columns_array = function(columns) {
   const normalizedColumns = [];
@@ -7902,8 +7742,8 @@ var normalize_columns_array = function(columns) {
     const column = columns[i];
     if (column === void 0 || column === null || column === false) {
       normalizedColumns[i] = { disabled: true };
-    } else if (typeof column === "string") {
-      normalizedColumns[i] = { name: column };
+    } else if (typeof column === "string" || typeof column === "number") {
+      normalizedColumns[i] = { name: `${column}` };
     } else if (is_object(column)) {
       if (typeof column.name !== "string") {
         throw new CsvError("CSV_OPTION_COLUMNS_MISSING_NAME", [
@@ -8596,6 +8436,7 @@ var boms = {
 var transform = function(original_options = {}) {
   const info2 = {
     bytes: 0,
+    bytes_records: 0,
     comment_lines: 0,
     empty_lines: 0,
     invalid_field_length: 0,
@@ -9156,6 +8997,7 @@ var transform = function(original_options = {}) {
           return;
         }
       }
+      this.info.bytes_records += this.info.bytes;
       push2(record);
     },
     // Return a tuple with the error and the casted value
@@ -9325,6 +9167,7 @@ var transform = function(original_options = {}) {
       const { columns, raw, encoding } = this.options;
       return {
         ...this.__infoDataSet(),
+        bytes_records: this.info.bytes,
         error: this.state.error,
         header: columns === true,
         index: this.state.record.length,
@@ -9334,8 +9177,10 @@ var transform = function(original_options = {}) {
     __infoField: function() {
       const { columns } = this.options;
       const isColumns = Array.isArray(columns);
+      const bytes_records = this.info.bytes_records;
       return {
         ...this.__infoRecord(),
+        bytes_records,
         column: isColumns === true ? columns.length > this.state.record.length ? columns[this.state.record.length].name : null : this.state.record.length,
         quoting: this.state.wasQuoting
       };
@@ -9343,178 +9188,27 @@ var transform = function(original_options = {}) {
   };
 };
 
-// node_modules/csv-parse/lib/index.js
-var Parser = class extends Transform {
-  constructor(opts2 = {}) {
-    super({ ...{ readableObjectMode: true }, ...opts2, encoding: null });
-    this.api = transform({
-      on_skip: (err, chunk) => {
-        this.emit("skip", err, chunk);
-      },
-      ...opts2
-    });
-    this.state = this.api.state;
-    this.options = this.api.options;
-    this.info = this.api.info;
+// node_modules/csv-parse/lib/sync.js
+var parse = function(data, opts2 = {}) {
+  if (typeof data === "string") {
+    data = Buffer.from(data);
   }
-  // Implementation of `Transform._transform`
-  _transform(buf, _, callback) {
-    if (this.state.stop === true) {
-      return;
+  const records = opts2 && opts2.objname ? {} : [];
+  const parser = transform(opts2);
+  const push2 = (record) => {
+    if (parser.options.objname === void 0) records.push(record);
+    else {
+      records[record[0]] = record[1];
     }
-    const err = this.api.parse(
-      buf,
-      false,
-      (record) => {
-        this.push(record);
-      },
-      () => {
-        this.push(null);
-        this.end();
-        this.on("end", this.destroy);
-      }
-    );
-    if (err !== void 0) {
-      this.state.stop = true;
-    }
-    callback(err);
-  }
-  // Implementation of `Transform._flush`
-  _flush(callback) {
-    if (this.state.stop === true) {
-      return;
-    }
-    const err = this.api.parse(
-      void 0,
-      true,
-      (record) => {
-        this.push(record);
-      },
-      () => {
-        this.push(null);
-        this.on("end", this.destroy);
-      }
-    );
-    callback(err);
-  }
-};
-var parse = function() {
-  let data, options, callback;
-  for (const i in arguments) {
-    const argument2 = arguments[i];
-    const type = typeof argument2;
-    if (data === void 0 && (typeof argument2 === "string" || Buffer.isBuffer(argument2))) {
-      data = argument2;
-    } else if (options === void 0 && is_object(argument2)) {
-      options = argument2;
-    } else if (callback === void 0 && type === "function") {
-      callback = argument2;
-    } else {
-      throw new CsvError(
-        "CSV_INVALID_ARGUMENT",
-        ["Invalid argument:", `got ${JSON.stringify(argument2)} at index ${i}`],
-        options || {}
-      );
-    }
-  }
-  const parser = new Parser(options);
-  if (callback) {
-    const records = options === void 0 || options.objname === void 0 ? [] : {};
-    parser.on("readable", function() {
-      let record;
-      while ((record = this.read()) !== null) {
-        if (options === void 0 || options.objname === void 0) {
-          records.push(record);
-        } else {
-          records[record[0]] = record[1];
-        }
-      }
-    });
-    parser.on("error", function(err) {
-      callback(err, void 0, parser.api.__infoDataSet());
-    });
-    parser.on("end", function() {
-      callback(void 0, records, parser.api.__infoDataSet());
-    });
-  }
-  if (data !== void 0) {
-    const writer = function() {
-      parser.write(data);
-      parser.end();
-    };
-    if (typeof setImmediate === "function") {
-      setImmediate(writer);
-    } else {
-      setTimeout(writer, 0);
-    }
-  }
-  return parser;
+  };
+  const close2 = () => {
+  };
+  const error3 = parser.parse(data, true, push2, close2);
+  if (error3 !== void 0) throw error3;
+  return records;
 };
 
 // output-es/Data.Csv/foreign.js
-import fs from "node:fs";
-function parseCsvImpl(path2) {
-  return function() {
-    const func = async () => {
-      const parser = fs.createReadStream(path2, "utf8").pipe(parse({
-        bom: true,
-        quote: '"',
-        columns: false,
-        relax_column_count: true
-      }));
-      let records;
-      let headers;
-      let numColumns;
-      var count = -1;
-      var badrows = [];
-      var index4 = [];
-      for await (const record of parser) {
-        count++;
-        if (count === 0) {
-          headers = record;
-          numColumns = headers.length;
-          records = Array(numColumns).fill().map(() => []);
-        } else {
-          const lineNumber = count + 1;
-          if (record.length !== numColumns) {
-            badrows.push({ lineNo: lineNumber, expected: numColumns, actual: record.length });
-          } else {
-            index4.push(lineNumber);
-            for (let i = 0; i < numColumns; i++) {
-              records[i].push(record[i]);
-            }
-          }
-        }
-      }
-      ;
-      return {
-        headers: headers || [],
-        columns: records || [],
-        index: index4 || [],
-        badrows
-      };
-    };
-    return func();
-  };
-}
-
-// output-es/Data.Csv/index.js
-var fromFoldable4 = /* @__PURE__ */ fromFoldable3(ordString)(foldableArray);
-var readCsv = (path2) => _bind(_bind(_liftEffect(parseCsvImpl(path2)))(toAff$p(coerce)))((f) => _pure(f));
-var readCsv$p = (x) => readCsv(x.filepath);
-var readAndParseCsv = (fp) => _bind(readCsv(fp))((csv) => _pure({ headers: csv.headers, index: csv.index, columns: csv.columns }));
-var foldRows = (v) => (func) => (a) => {
-  const v1 = v.index.length;
-  if (v1 === 0) {
-    return a;
-  }
-  return foldrArray((i) => (acc) => func(fromFoldable4(zipWithImpl(Tuple, v.headers, arrayMap((c) => c[i])(v.columns))))(acc))(a)(rangeImpl(
-    0,
-    v1 - 1 | 0
-  ));
-};
-
-// output-es/Data.Csv.FileCheck/foreign.js
 import { readFileSync, writeFileSync } from "node:fs";
 var UTF8_BOM = [239, 187, 191];
 function hasBOM(buf) {
@@ -9528,50 +9222,109 @@ function isValidUTF8(buf) {
     return false;
   }
 }
-function checkFileFormatImpl(filepath) {
-  const buf = readFileSync(filepath);
-  const issues = [];
-  const bom = hasBOM(buf);
-  if (bom) {
-    issues.push("BOM");
-  }
-  if (!isValidUTF8(buf)) {
-    issues.push("ENCODING");
-  }
-  const content = (bom ? buf.slice(3) : buf).toString("utf8");
-  if (content.includes("\r\n")) {
-    issues.push("CRLF");
-  }
-  return issues;
+function parseCsvPlainImpl(path2) {
+  return function() {
+    const result = parseCsvContent(readFileSync(path2, { encoding: "utf8" }));
+    return Promise.resolve(result);
+  };
 }
-function fixFileFormatImpl(filepath) {
-  const buf = readFileSync(filepath);
-  const bom = hasBOM(buf);
-  const content = (bom ? buf.slice(3) : buf).toString("utf8");
-  const fixed = content.replace(/\r\n/g, "\n");
-  writeFileSync(filepath, fixed, { encoding: "utf8" });
+function parseCsvImpl(path2) {
+  return function(fixFormat) {
+    return function() {
+      const result = (() => {
+        const buf = readFileSync(path2);
+        const formatIssues = [];
+        const bom = hasBOM(buf);
+        if (bom) {
+          formatIssues.push("BOM");
+        }
+        if (!isValidUTF8(buf)) {
+          formatIssues.push("ENCODING");
+        }
+        const content = (bom ? buf.slice(3) : buf).toString("utf8");
+        if (content.includes("\r\n")) {
+          formatIssues.push("CRLF");
+        }
+        let contentToParse = content;
+        if (fixFormat && formatIssues.length > 0) {
+          if (formatIssues.includes("CRLF")) {
+            contentToParse = contentToParse.replace(/\r\n/g, "\n");
+          }
+          writeFileSync(path2, contentToParse, { encoding: "utf8" });
+        }
+        const parsed = parseCsvContent(contentToParse);
+        return { ...parsed, formatIssues };
+      })();
+      return Promise.resolve(result);
+    };
+  };
+}
+function parseCsvContent(text2) {
+  const allRecords = parse(text2, {
+    quote: '"',
+    columns: false,
+    relax_column_count: true
+  });
+  const headers = allRecords.length > 0 ? allRecords[0] : [];
+  const numColumns = headers.length;
+  const records = Array(numColumns).fill().map(() => []);
+  const badrows = [];
+  const index3 = [];
+  for (let i = 1; i < allRecords.length; i++) {
+    const record = allRecords[i];
+    const lineNumber = i + 1;
+    if (record.length !== numColumns) {
+      badrows.push({ lineNo: lineNumber, expected: numColumns, actual: record.length });
+    } else {
+      index3.push(lineNumber);
+      for (let j = 0; j < numColumns; j++) {
+        records[j].push(record[j]);
+      }
+    }
+  }
+  return {
+    headers,
+    columns: records,
+    index: index3,
+    badrows,
+    formatIssues: []
+  };
 }
 
-// output-es/Data.Csv.FileCheck/index.js
+// output-es/Data.Csv/index.js
 var $FormatIssue = (tag) => tag;
+var fromFoldable4 = /* @__PURE__ */ fromFoldable3(ordString)(foldableArray);
 var BOM = /* @__PURE__ */ $FormatIssue("BOM");
 var CRLF = /* @__PURE__ */ $FormatIssue("CRLF");
 var ENCODING = /* @__PURE__ */ $FormatIssue("ENCODING");
-var fromString3 = (v) => {
-  if (v === "BOM") {
-    return $Maybe("Just", BOM);
+var readCsvPlain = (path2) => _bind(_bind(_liftEffect(parseCsvPlainImpl(path2)))(toAff$p(coerce)))((f) => _pure(f));
+var readCsv = (path2) => (fixFormat) => _bind(_bind(_liftEffect(parseCsvImpl(path2)(fixFormat)))(toAff$p(coerce)))((f) => _pure(f));
+var readCsv$p = (fixFormat) => (x) => readCsv(x.filepath)(fixFormat);
+var parseFormatIssues = /* @__PURE__ */ (() => {
+  const $0 = arrayMap((v) => {
+    if (v === "BOM") {
+      return $Maybe("Just", BOM);
+    }
+    if (v === "CRLF") {
+      return $Maybe("Just", CRLF);
+    }
+    if (v === "ENCODING") {
+      return $Maybe("Just", ENCODING);
+    }
+    return Nothing;
+  });
+  return (x) => mapMaybe((x$1) => x$1)($0(x));
+})();
+var readAndParseCsvPlain = (fp) => _bind(readCsvPlain(fp))((csv) => _pure({ headers: csv.headers, index: csv.index, columns: csv.columns }));
+var foldRows = (v) => (func) => (a) => {
+  const v1 = v.index.length;
+  if (v1 === 0) {
+    return a;
   }
-  if (v === "CRLF") {
-    return $Maybe("Just", CRLF);
-  }
-  if (v === "ENCODING") {
-    return $Maybe("Just", ENCODING);
-  }
-  return Nothing;
-};
-var checkFileFormat = (fp) => () => {
-  const strs = checkFileFormatImpl(fp);
-  return mapMaybe((x) => x)(arrayMap(fromString3)(strs));
+  return foldrArray((i) => (acc) => func(fromFoldable4(zipWithImpl(Tuple, v.headers, arrayMap((c) => c[i])(v.columns))))(acc))(a)(rangeImpl(
+    0,
+    v1 - 1 | 0
+  ));
 };
 
 // output-es/Data.Hashable/foreign.js
@@ -10226,18 +9979,20 @@ var emptyContext = {
 // output-es/Data.Validation.Issue/index.js
 var $Issue = (tag, _1, _2) => ({ tag, _1, _2 });
 var NotImplemented = /* @__PURE__ */ $Issue("NotImplemented");
-var toInvaildItem = (v) => (v1) => (v2) => {
-  if (v2.tag === "CodedIssue") {
-    return $Issue("CodedIssue", v2._1, { ...v2._2, fileContext: $Maybe("Just", { filepath: v, lineNo: v1 }) });
-  }
-  if (v2.tag === "NotImplemented") {
-    return NotImplemented;
-  }
-  fail();
-};
 var withRowInfo = (fp) => (row) => (v2) => {
   if (v2.tag === "Left") {
-    return $Either("Left", arrayMap(toInvaildItem(fp)(row))(v2._1));
+    return $Either(
+      "Left",
+      arrayMap((v2$1) => {
+        if (v2$1.tag === "CodedIssue") {
+          return $Issue("CodedIssue", v2$1._1, { ...v2$1._2, fileContext: $Maybe("Just", { filepath: fp, lineNo: row }) });
+        }
+        if (v2$1.tag === "NotImplemented") {
+          return NotImplemented;
+        }
+        fail();
+      })(v2._1)
+    );
   }
   if (v2.tag === "Right") {
     return $Either("Right", v2._1);
@@ -10266,7 +10021,54 @@ var formatIssue = (code) => (ctx) => {
 };
 
 // output-es/Data.List.NonEmpty/index.js
-var zipWith4 = (f) => (v) => (v1) => $NonEmpty(f(v._1)(v1._1), zipWith2(f)(v._2)(v1._2));
+var zipWith3 = (f) => (v) => (v1) => $NonEmpty(
+  f(v._1)(v1._1),
+  (() => {
+    const go = (go$a0$copy) => (go$a1$copy) => (go$a2$copy) => {
+      let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$a2 = go$a2$copy, go$c = true, go$r;
+      while (go$c) {
+        const v$1 = go$a0, v1$1 = go$a1, v2 = go$a2;
+        if (v$1.tag === "Nil") {
+          go$c = false;
+          go$r = v2;
+          continue;
+        }
+        if (v1$1.tag === "Nil") {
+          go$c = false;
+          go$r = v2;
+          continue;
+        }
+        if (v$1.tag === "Cons" && v1$1.tag === "Cons") {
+          go$a0 = v$1._2;
+          go$a1 = v1$1._2;
+          go$a2 = $List("Cons", f(v$1._1)(v1$1._1), v2);
+          continue;
+        }
+        fail();
+      }
+      return go$r;
+    };
+    const go$1 = (go$1$a0$copy) => (go$1$a1$copy) => {
+      let go$1$a0 = go$1$a0$copy, go$1$a1 = go$1$a1$copy, go$1$c = true, go$1$r;
+      while (go$1$c) {
+        const v$1 = go$1$a0, v1$1 = go$1$a1;
+        if (v1$1.tag === "Nil") {
+          go$1$c = false;
+          go$1$r = v$1;
+          continue;
+        }
+        if (v1$1.tag === "Cons") {
+          go$1$a0 = $List("Cons", v1$1._1, v$1);
+          go$1$a1 = v1$1._2;
+          continue;
+        }
+        fail();
+      }
+      return go$1$r;
+    };
+    return go$1(Nil)(go(v._2)(v1._2)(Nil));
+  })()
+);
 
 // output-es/StringParser.Parser/index.js
 var functorParser = {
@@ -10800,10 +10602,50 @@ var parseId = (x) => {
 var $ItemInfo = (_1, _2) => ({ tag: "ItemInfo", _1, _2 });
 
 // output-es/Data.Map.Extra/index.js
+var toUnfoldable2 = (x) => {
+  const go = (go$a0$copy) => (go$a1$copy) => {
+    let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
+    while (go$c) {
+      const source2 = go$a0, memo = go$a1;
+      const v = stepUnfoldr(source2);
+      if (v.tag === "Nothing") {
+        const go$1 = (go$1$a0$copy) => (go$1$a1$copy) => {
+          let go$1$a0 = go$1$a0$copy, go$1$a1 = go$1$a1$copy, go$1$c = true, go$1$r;
+          while (go$1$c) {
+            const b = go$1$a0, v$1 = go$1$a1;
+            if (v$1.tag === "Nil") {
+              go$1$c = false;
+              go$1$r = b;
+              continue;
+            }
+            if (v$1.tag === "Cons") {
+              go$1$a0 = $List("Cons", v$1._1, b);
+              go$1$a1 = v$1._2;
+              continue;
+            }
+            fail();
+          }
+          return go$1$r;
+        };
+        go$c = false;
+        go$r = go$1(Nil)(memo);
+        continue;
+      }
+      if (v.tag === "Just") {
+        go$a0 = v._1._2;
+        go$a1 = $List("Cons", v._1._1, memo);
+        continue;
+      }
+      fail();
+    }
+    return go$r;
+  };
+  return go($MapIter("IterNode", x, IterLeaf))(Nil);
+};
 var mapKeysWith = (dictOrd) => (c) => (f) => (m) => fromFoldableWith(dictOrd)(foldableList)(c)(listMap((v) => $Tuple(
   f(v._1),
   v._2
-))(unfoldableList.unfoldr(stepUnfoldr)($MapIter("IterNode", m, IterLeaf))));
+))(toUnfoldable2(m)));
 
 // output-es/Data.Validation.Semigroup/index.js
 var applyV = (dictSemigroup) => ({
@@ -10836,6 +10678,38 @@ var elem4 = /* @__PURE__ */ (() => {
 })();
 var elem1 = /* @__PURE__ */ elem4(eqString);
 var pop2 = /* @__PURE__ */ pop(ordId);
+var lookup2 = (k) => {
+  const go = (go$a0$copy) => {
+    let go$a0 = go$a0$copy, go$c = true, go$r;
+    while (go$c) {
+      const v = go$a0;
+      if (v.tag === "Leaf") {
+        go$c = false;
+        go$r = Nothing;
+        continue;
+      }
+      if (v.tag === "Node") {
+        const v1 = ordString.compare(k)(v._3);
+        if (v1 === "LT") {
+          go$a0 = v._5;
+          continue;
+        }
+        if (v1 === "GT") {
+          go$a0 = v._6;
+          continue;
+        }
+        if (v1 === "EQ") {
+          go$c = false;
+          go$r = $Maybe("Just", v._4);
+          continue;
+        }
+      }
+      fail();
+    }
+    return go$r;
+  };
+  return go;
+};
 var elem22 = /* @__PURE__ */ elem4(eqId);
 var apply3 = /* @__PURE__ */ (() => applyV(semigroupArray).apply)();
 var StringC = /* @__PURE__ */ $ConceptType("StringC");
@@ -10942,7 +10816,7 @@ var hasFieldAndPopValue = (input) => (field) => {
   fail();
 };
 var hasFieldAndGetValue = (input) => (field) => {
-  const v = lookup2(ordId)(field === "" ? "undefined_id" : field)(input.props);
+  const v = lookup2(field === "" ? "undefined_id" : field)(input.props);
   if (v.tag === "Nothing") {
     return $Either(
       "Left",
@@ -10992,7 +10866,6 @@ var eqConceptType = {
     return x.tag === "CustomC" && y.tag === "CustomC" && x._1 === y._1;
   }
 };
-var concept = (conceptId) => (conceptType) => (props) => ({ conceptId, conceptType, props, _info: Nothing });
 var checkRestrictedConecptIds = (v) => {
   if (v.conceptType.tag === "TimeC") {
     if (elem22(v.conceptId)(arrayMap(unsafeCreate)(["year", "month", "day", "week", "quarter", "time"]))) {
@@ -11060,7 +10933,13 @@ var parseConcept = (input) => {
           return $Either("Left", $22._1);
         }
         if ($22.tag === "Right") {
-          return $Either("Right", concept($22._1));
+          return $Either(
+            "Right",
+            (() => {
+              const $32 = $22._1;
+              return (conceptType) => (props) => ({ conceptId: $32, conceptType, props, _info: Nothing });
+            })()
+          );
         }
         fail();
       })())(parseConceptType($0._1._1)))($Either("Right", $0._1._2.props));
@@ -11447,85 +11326,6 @@ var translationFile = (root) => (fp) => {
     ]
   );
 };
-var getCollectionType = (v) => {
-  if (v.tag === "Concepts") {
-    return CONCEPTS;
-  }
-  if (v.tag === "Entities") {
-    return ENTITIES;
-  }
-  if (v.tag === "DataPoints") {
-    return DATAPOINTS;
-  }
-  if (v.tag === "Synonyms") {
-    return SYNONYMS;
-  }
-  if (v.tag === "Translations") {
-    return TRANSLATIONS;
-  }
-  if (v.tag === "Other") {
-    return OTHERS;
-  }
-  fail();
-};
-var genericCollectionConstant = {
-  to: (x) => {
-    if (x.tag === "Inl") {
-      return CONCEPTS;
-    }
-    if (x.tag === "Inr") {
-      if (x._1.tag === "Inl") {
-        return ENTITIES;
-      }
-      if (x._1.tag === "Inr") {
-        if (x._1._1.tag === "Inl") {
-          return DATAPOINTS;
-        }
-        if (x._1._1.tag === "Inr") {
-          if (x._1._1._1.tag === "Inl") {
-            return SYNONYMS;
-          }
-          if (x._1._1._1.tag === "Inr") {
-            if (x._1._1._1._1.tag === "Inl") {
-              return TRANSLATIONS;
-            }
-            if (x._1._1._1._1.tag === "Inr") {
-              return OTHERS;
-            }
-          }
-        }
-      }
-    }
-    fail();
-  },
-  from: (x) => {
-    if (x === "CONCEPTS") {
-      return $Sum("Inl", NoArguments);
-    }
-    if (x === "ENTITIES") {
-      return $Sum("Inr", $Sum("Inl", NoArguments));
-    }
-    if (x === "DATAPOINTS") {
-      return $Sum("Inr", $Sum("Inr", $Sum("Inl", NoArguments)));
-    }
-    if (x === "SYNONYMS") {
-      return $Sum("Inr", $Sum("Inr", $Sum("Inr", $Sum("Inl", NoArguments))));
-    }
-    if (x === "TRANSLATIONS") {
-      return $Sum(
-        "Inr",
-        $Sum("Inr", $Sum("Inr", $Sum("Inr", $Sum("Inl", NoArguments))))
-      );
-    }
-    if (x === "OTHERS") {
-      return $Sum(
-        "Inr",
-        $Sum("Inr", $Sum("Inr", $Sum("Inr", $Sum("Inr", NoArguments))))
-      );
-    }
-    fail();
-  }
-};
 var showCollectionConstant = {
   show: /* @__PURE__ */ (() => {
     const $0 = genericShowConstructor(genericShowArgsNoArguments)({ reflectSymbol: () => "CONCEPTS" });
@@ -11599,7 +11399,33 @@ var showCollectionConstant = {
         }
       };
     })();
-    return (x) => $2["genericShow'"](genericCollectionConstant.from(x));
+    return (x) => $2["genericShow'"]((() => {
+      if (x === "CONCEPTS") {
+        return $Sum("Inl", NoArguments);
+      }
+      if (x === "ENTITIES") {
+        return $Sum("Inr", $Sum("Inl", NoArguments));
+      }
+      if (x === "DATAPOINTS") {
+        return $Sum("Inr", $Sum("Inr", $Sum("Inl", NoArguments)));
+      }
+      if (x === "SYNONYMS") {
+        return $Sum("Inr", $Sum("Inr", $Sum("Inr", $Sum("Inl", NoArguments))));
+      }
+      if (x === "TRANSLATIONS") {
+        return $Sum(
+          "Inr",
+          $Sum("Inr", $Sum("Inr", $Sum("Inr", $Sum("Inl", NoArguments))))
+        );
+      }
+      if (x === "OTHERS") {
+        return $Sum(
+          "Inr",
+          $Sum("Inr", $Sum("Inr", $Sum("Inr", $Sum("Inr", NoArguments))))
+        );
+      }
+      fail();
+    })());
   })()
 };
 var eqCollectionConstant = {
@@ -11623,59 +11449,271 @@ var eqCollectionConstant = {
   }
 };
 var hashableCollectionConstant = { hash: (x) => hashString(showCollectionConstant.show(x)), Eq0: () => eqCollectionConstant };
-var ordCollectionConstant = {
-  compare: (x) => (y) => {
-    if (x === "CONCEPTS") {
-      if (y === "CONCEPTS") {
+var eqCollection = {
+  eq: (a) => (b) => {
+    if (a.tag === "Concepts") {
+      if (b.tag === "Concepts") {
+        return true;
+      }
+      if (b.tag === "Entities") {
+        return false;
+      }
+      if (b.tag === "DataPoints") {
+        return false;
+      }
+      if (b.tag === "Synonyms") {
+        return false;
+      }
+      if (b.tag === "Translations") {
+        return false;
+      }
+      if (b.tag === "Other") {
+        return false;
+      }
+      fail();
+    }
+    if (a.tag === "Entities") {
+      if (b.tag === "Concepts") {
+        return false;
+      }
+      if (b.tag === "Entities") {
+        return true;
+      }
+      if (b.tag === "DataPoints") {
+        return false;
+      }
+      if (b.tag === "Synonyms") {
+        return false;
+      }
+      if (b.tag === "Translations") {
+        return false;
+      }
+      if (b.tag === "Other") {
+        return false;
+      }
+      fail();
+    }
+    if (a.tag === "DataPoints") {
+      if (b.tag === "Concepts") {
+        return false;
+      }
+      if (b.tag === "Entities") {
+        return false;
+      }
+      if (b.tag === "DataPoints") {
+        return true;
+      }
+      if (b.tag === "Synonyms") {
+        return false;
+      }
+      if (b.tag === "Translations") {
+        return false;
+      }
+      if (b.tag === "Other") {
+        return false;
+      }
+      fail();
+    }
+    if (a.tag === "Synonyms") {
+      if (b.tag === "Concepts") {
+        return false;
+      }
+      if (b.tag === "Entities") {
+        return false;
+      }
+      if (b.tag === "DataPoints") {
+        return false;
+      }
+      if (b.tag === "Synonyms") {
+        return true;
+      }
+      if (b.tag === "Translations") {
+        return false;
+      }
+      if (b.tag === "Other") {
+        return false;
+      }
+      fail();
+    }
+    if (a.tag === "Translations") {
+      if (b.tag === "Concepts") {
+        return false;
+      }
+      if (b.tag === "Entities") {
+        return false;
+      }
+      if (b.tag === "DataPoints") {
+        return false;
+      }
+      if (b.tag === "Synonyms") {
+        return false;
+      }
+      if (b.tag === "Translations") {
+        return true;
+      }
+      if (b.tag === "Other") {
+        return false;
+      }
+      fail();
+    }
+    if (a.tag === "Other") {
+      if (b.tag === "Concepts") {
+        return false;
+      }
+      if (b.tag === "Entities") {
+        return false;
+      }
+      if (b.tag === "DataPoints") {
+        return false;
+      }
+      if (b.tag === "Synonyms") {
+        return false;
+      }
+      if (b.tag === "Translations") {
+        return false;
+      }
+      if (b.tag === "Other") {
+        return true;
+      }
+    }
+    fail();
+  }
+};
+var ordCollection = {
+  compare: (a) => (b) => {
+    if (a.tag === "Concepts") {
+      if ((() => {
+        if (b.tag === "Concepts") {
+          return true;
+        }
+        if (b.tag === "Entities") {
+          return false;
+        }
+        if (b.tag === "DataPoints") {
+          return false;
+        }
+        if (b.tag === "Synonyms") {
+          return false;
+        }
+        if (b.tag === "Translations") {
+          return false;
+        }
+        if (b.tag === "Other") {
+          return false;
+        }
+        fail();
+      })()) {
         return EQ;
       }
       return LT;
     }
-    if (y === "CONCEPTS") {
-      return GT;
-    }
-    if (x === "ENTITIES") {
-      if (y === "ENTITIES") {
+    if (a.tag === "Entities") {
+      if (b.tag === "Concepts") {
+        return GT;
+      }
+      if (b.tag === "Entities") {
         return EQ;
       }
-      return LT;
+      if (b.tag === "DataPoints") {
+        return LT;
+      }
+      if (b.tag === "Synonyms") {
+        return LT;
+      }
+      if (b.tag === "Translations") {
+        return LT;
+      }
+      if (b.tag === "Other") {
+        return LT;
+      }
+      fail();
     }
-    if (y === "ENTITIES") {
-      return GT;
-    }
-    if (x === "DATAPOINTS") {
-      if (y === "DATAPOINTS") {
+    if (a.tag === "DataPoints") {
+      if (b.tag === "Concepts") {
+        return GT;
+      }
+      if (b.tag === "Entities") {
+        return GT;
+      }
+      if (b.tag === "DataPoints") {
         return EQ;
       }
-      return LT;
+      if (b.tag === "Synonyms") {
+        return LT;
+      }
+      if (b.tag === "Translations") {
+        return LT;
+      }
+      if (b.tag === "Other") {
+        return LT;
+      }
+      fail();
     }
-    if (y === "DATAPOINTS") {
-      return GT;
-    }
-    if (x === "SYNONYMS") {
-      if (y === "SYNONYMS") {
+    if (a.tag === "Synonyms") {
+      if (b.tag === "Concepts") {
+        return GT;
+      }
+      if (b.tag === "Entities") {
+        return GT;
+      }
+      if (b.tag === "DataPoints") {
+        return GT;
+      }
+      if (b.tag === "Synonyms") {
         return EQ;
       }
-      return LT;
+      if (b.tag === "Translations") {
+        return LT;
+      }
+      if (b.tag === "Other") {
+        return LT;
+      }
+      fail();
     }
-    if (y === "SYNONYMS") {
-      return GT;
-    }
-    if (x === "TRANSLATIONS") {
-      if (y === "TRANSLATIONS") {
+    if (a.tag === "Translations") {
+      if (b.tag === "Concepts") {
+        return GT;
+      }
+      if (b.tag === "Entities") {
+        return GT;
+      }
+      if (b.tag === "DataPoints") {
+        return GT;
+      }
+      if (b.tag === "Synonyms") {
+        return GT;
+      }
+      if (b.tag === "Translations") {
         return EQ;
       }
-      return LT;
+      if (b.tag === "Other") {
+        return LT;
+      }
+      fail();
     }
-    if (y === "TRANSLATIONS") {
-      return GT;
-    }
-    if (x === "OTHERS" && y === "OTHERS") {
-      return EQ;
+    if (a.tag === "Other") {
+      if (b.tag === "Concepts") {
+        return GT;
+      }
+      if (b.tag === "Entities") {
+        return GT;
+      }
+      if (b.tag === "DataPoints") {
+        return GT;
+      }
+      if (b.tag === "Synonyms") {
+        return GT;
+      }
+      if (b.tag === "Translations") {
+        return GT;
+      }
+      if (b.tag === "Other") {
+        return EQ;
+      }
     }
     fail();
   },
-  Eq0: () => eqCollectionConstant
+  Eq0: () => eqCollection
 };
 var ddfFileBegin = (x) => {
   const $0 = string2("ddf--")(x);
@@ -12151,7 +12189,18 @@ var foldableSet = {
     const foldMap1 = foldableList.foldMap(dictMonoid);
     return (f) => {
       const $0 = foldMap1(f);
-      return (x) => $0(keys2(x));
+      return (x) => $0((() => {
+        const go = (m$p, z$p) => {
+          if (m$p.tag === "Leaf") {
+            return z$p;
+          }
+          if (m$p.tag === "Node") {
+            return go(m$p._5, $List("Cons", m$p._3, go(m$p._6, z$p)));
+          }
+          fail();
+        };
+        return go(x, Nil);
+      })());
     };
   },
   foldl: (f) => (x) => {
@@ -12174,14 +12223,68 @@ var foldableSet = {
       return go$r;
     };
     const $0 = go(x);
-    return (x$1) => $0(keys2(x$1));
+    return (x$1) => $0((() => {
+      const go$1 = (m$p, z$p) => {
+        if (m$p.tag === "Leaf") {
+          return z$p;
+        }
+        if (m$p.tag === "Node") {
+          return go$1(m$p._5, $List("Cons", m$p._3, go$1(m$p._6, z$p)));
+        }
+        fail();
+      };
+      return go$1(x$1, Nil);
+    })());
   },
   foldr: (f) => (x) => {
     const $0 = foldableList.foldr(f)(x);
-    return (x$1) => $0(keys2(x$1));
+    return (x$1) => $0((() => {
+      const go = (m$p, z$p) => {
+        if (m$p.tag === "Leaf") {
+          return z$p;
+        }
+        if (m$p.tag === "Node") {
+          return go(m$p._5, $List("Cons", m$p._3, go(m$p._6, z$p)));
+        }
+        fail();
+      };
+      return go(x$1, Nil);
+    })());
   }
 };
-var map = (dictOrd) => (f) => foldableSet.foldl((m) => (a) => insert(dictOrd)(f(a))()(m))(Leaf2);
+var map = (dictOrd) => (f) => {
+  const go = (go$a0$copy) => (go$a1$copy) => {
+    let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
+    while (go$c) {
+      const b = go$a0, v = go$a1;
+      if (v.tag === "Nil") {
+        go$c = false;
+        go$r = b;
+        continue;
+      }
+      if (v.tag === "Cons") {
+        go$a0 = insert(dictOrd)(f(v._1))()(b);
+        go$a1 = v._2;
+        continue;
+      }
+      fail();
+    }
+    return go$r;
+  };
+  const $0 = go(Leaf2);
+  return (x) => $0((() => {
+    const go$1 = (m$p, z$p) => {
+      if (m$p.tag === "Leaf") {
+        return z$p;
+      }
+      if (m$p.tag === "Node") {
+        return go$1(m$p._5, $List("Cons", m$p._3, go$1(m$p._6, z$p)));
+      }
+      fail();
+    };
+    return go$1(x, Nil);
+  })());
+};
 
 // output-es/Data.String.NonEmpty.Internal/index.js
 var toString3 = (v) => v;
@@ -12372,7 +12475,36 @@ var isFileImpl = (s) => s.isFile();
 
 // output-es/Utils/index.js
 var unsafeLookup = (dictShow) => (dictOrd) => (k) => (m) => {
-  const v = lookup2(dictOrd)(k)(m);
+  const go = (go$a0$copy) => {
+    let go$a0 = go$a0$copy, go$c = true, go$r;
+    while (go$c) {
+      const v2 = go$a0;
+      if (v2.tag === "Leaf") {
+        go$c = false;
+        go$r = Nothing;
+        continue;
+      }
+      if (v2.tag === "Node") {
+        const v1 = dictOrd.compare(k)(v2._3);
+        if (v1 === "LT") {
+          go$a0 = v2._5;
+          continue;
+        }
+        if (v1 === "GT") {
+          go$a0 = v2._6;
+          continue;
+        }
+        if (v1 === "EQ") {
+          go$c = false;
+          go$r = $Maybe("Just", v2._4);
+          continue;
+        }
+      }
+      fail();
+    }
+    return go$r;
+  };
+  const v = go(m);
   if (v.tag === "Just") {
     return v._1;
   }
@@ -12449,15 +12581,37 @@ var fromFoldable12 = /* @__PURE__ */ (() => {
   const $0 = foldable1NonEmptyList.Foldable0().foldr;
   return (x) => fromFoldableImpl($0, x);
 })();
-var sort1 = /* @__PURE__ */ (() => {
-  const compare2 = ordTuple(ordString)(ordInt).compare;
-  return (xs) => sortBy(compare2)(xs);
-})();
+var sort1 = (xs) => sortBy((x) => (y) => {
+  const v = ordString.compare(x._1)(y._1);
+  if (v === "LT") {
+    return LT;
+  }
+  if (v === "GT") {
+    return GT;
+  }
+  return ordInt.compare(x._2)(y._2);
+})(xs);
 var fromFoldable22 = /* @__PURE__ */ foldrArray(Cons)(Nil);
 var fromFoldable42 = /* @__PURE__ */ fromFoldable3(ordHeader)(foldableArray);
 var sequence2 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV)(identity3))();
 var show22 = /* @__PURE__ */ (() => showArrayImpl(showNonEmptyString.show))();
 var fromFoldable5 = /* @__PURE__ */ foldlArray((m) => (a) => insert(ordString)(a)()(m))(Leaf2);
+var map3 = /* @__PURE__ */ map(/* @__PURE__ */ (() => {
+  const eqTuple2 = { eq: (x) => (y) => x._1 === y._1 && x._2 === y._2 };
+  return {
+    compare: (x) => (y) => {
+      const v = ordInt.compare(x._1)(y._1);
+      if (v === "LT") {
+        return LT;
+      }
+      if (v === "GT") {
+        return GT;
+      }
+      return ordString.compare(x._2)(y._2);
+    },
+    Eq0: () => eqTuple2
+  };
+})());
 var fromFoldable8 = /* @__PURE__ */ fromFoldable3(ordString)(foldableNonEmptyList);
 var fromFoldable9 = /* @__PURE__ */ fromFoldable3(ordString)(foldableArray);
 var elem12 = /* @__PURE__ */ (() => {
@@ -12609,8 +12763,8 @@ var findInvalid = (col) => (x) => {
   }
   fail();
 };
-var findDupsForColumns = (headers) => (values3) => {
-  const colsToCheck = arrayMap((h) => unsafeLookup(showHeader)(ordHeader)(h)(values3))(headers);
+var findDupsForColumns = (headers) => (values2) => {
+  const colsToCheck = arrayMap((h) => unsafeLookup(showHeader)(ordHeader)(h)(values2))(headers);
   return fromFoldableImpl(
     foldableList.foldr,
     listMap(snd)(findDupsL((x) => (y) => ordString.compare(x._1)(y._1))(fromFoldable22(sort1(zipWithImpl(
@@ -12652,8 +12806,8 @@ var noDuplicatedByKey = (key) => (fileInfo) => (v) => {
     ))(dups)
   );
 };
-var noDuplicatedByKeys = (keys5) => (fileInfo) => (v) => {
-  const keyHeaders = arrayMap(unsafeCreate2)(keys5);
+var noDuplicatedByKeys = (keys3) => (fileInfo) => (v) => {
+  const keyHeaders = arrayMap(unsafeCreate2)(keys3);
   const columnMap = fromFoldable42(zipWithImpl(Tuple, v.headers, v.columns));
   const dups = findDupsForColumns(keyHeaders)(columnMap);
   if (dups.length === 0) {
@@ -12722,23 +12876,87 @@ var checkOneColumn = (val) => (col) => {
     if (res.tag === "Leaf") {
       return [];
     }
-    return fromFoldableImpl(
-      foldableSet.foldr,
-      map(ordTuple(ordInt)(ordString))((x) => $Tuple(findInvalid(col)(x), x))(res)
-    );
+    return fromFoldableImpl(foldableSet.foldr, map3((x) => $Tuple(findInvalid(col)(x), x))(res));
   }
   fail();
 };
 var constrainsAreMet = (fp) => (v) => (v1) => {
   const $0 = v.pkeys;
-  const v2 = concat(fromFoldableImpl(
-    foldableList.foldr,
-    zipWith2(checkOneColumn)(values(fromFoldable8(zipWith4(Tuple)($0)(v.constraints))))(values(filterKeys(ordString)((k) => elem12(k)($0))(fromFoldable9(zipWithImpl(
-      Tuple,
-      arrayMap(unsafeCoerce)(v1.headers),
-      v1.columns
-    )))))
-  ));
+  const v2 = concat((() => {
+    const go = (m$p, z$p) => {
+      if (m$p.tag === "Leaf") {
+        return z$p;
+      }
+      if (m$p.tag === "Node") {
+        return go(m$p._5, $List("Cons", m$p._4, go(m$p._6, z$p)));
+      }
+      fail();
+    };
+    return fromFoldableImpl(
+      foldableList.foldr,
+      (() => {
+        const go$1 = (m$p, z$p) => {
+          if (m$p.tag === "Leaf") {
+            return z$p;
+          }
+          if (m$p.tag === "Node") {
+            return go$1(m$p._5, $List("Cons", m$p._4, go$1(m$p._6, z$p)));
+          }
+          fail();
+        };
+        const go$2 = (go$2$a0$copy) => (go$2$a1$copy) => (go$2$a2$copy) => {
+          let go$2$a0 = go$2$a0$copy, go$2$a1 = go$2$a1$copy, go$2$a2 = go$2$a2$copy, go$2$c = true, go$2$r;
+          while (go$2$c) {
+            const v$1 = go$2$a0, v1$1 = go$2$a1, v22 = go$2$a2;
+            if (v$1.tag === "Nil") {
+              go$2$c = false;
+              go$2$r = v22;
+              continue;
+            }
+            if (v1$1.tag === "Nil") {
+              go$2$c = false;
+              go$2$r = v22;
+              continue;
+            }
+            if (v$1.tag === "Cons" && v1$1.tag === "Cons") {
+              go$2$a0 = v$1._2;
+              go$2$a1 = v1$1._2;
+              go$2$a2 = $List("Cons", checkOneColumn(v$1._1)(v1$1._1), v22);
+              continue;
+            }
+            fail();
+          }
+          return go$2$r;
+        };
+        const go$3 = (go$3$a0$copy) => (go$3$a1$copy) => {
+          let go$3$a0 = go$3$a0$copy, go$3$a1 = go$3$a1$copy, go$3$c = true, go$3$r;
+          while (go$3$c) {
+            const v$1 = go$3$a0, v1$1 = go$3$a1;
+            if (v1$1.tag === "Nil") {
+              go$3$c = false;
+              go$3$r = v$1;
+              continue;
+            }
+            if (v1$1.tag === "Cons") {
+              go$3$a0 = $List("Cons", v1$1._1, v$1);
+              go$3$a1 = v1$1._2;
+              continue;
+            }
+            fail();
+          }
+          return go$3$r;
+        };
+        return go$3(Nil)(go$2(go(fromFoldable8(zipWith3(Tuple)($0)(v.constraints)), Nil))(go$1(
+          filterKeys(ordString)((k) => elem12(k)($0))(fromFoldable9(zipWithImpl(
+            Tuple,
+            arrayMap(unsafeCoerce)(v1.headers),
+            v1.columns
+          ))),
+          Nil
+        ))(Nil));
+      })()
+    );
+  })());
   if (v2.length === 0) {
     return applicativeV.pure(v1);
   }
@@ -13141,10 +13359,6 @@ var createConceptInput = (v) => {
   );
 };
 
-// output-es/Data.Map/index.js
-var keys3 = /* @__PURE__ */ (() => functorMap.map((v) => {
-}))();
-
 // output-es/Data.DDF.DataPoint/index.js
 var eq12 = /* @__PURE__ */ (() => eqArrayImpl(eqId.eq))();
 var fromFoldable32 = /* @__PURE__ */ foldlArray((m) => (a) => insert(ordId)(a)()(m))(Leaf2);
@@ -13206,7 +13420,18 @@ var headersMatchesData = (expected) => (actual) => {
   );
 };
 var parseDataPoints = (v) => {
-  const $0 = headersMatchesData(fromFoldable32(snoc(v.by)(v.indicatorId)))(keys3(v.values));
+  const $0 = headersMatchesData(fromFoldable32(snoc(v.by)(v.indicatorId)))((() => {
+    const go = (v$1) => {
+      if (v$1.tag === "Leaf") {
+        return Leaf2;
+      }
+      if (v$1.tag === "Node") {
+        return $$$Map("Node", v$1._1, v$1._2, v$1._3, void 0, go(v$1._5), go(v$1._6));
+      }
+      fail();
+    };
+    return go(v.values);
+  })());
   if ($0.tag === "Left") {
     return $Either("Left", $0._1);
   }
@@ -13225,13 +13450,13 @@ function MapNode(datamap, nodemap, content) {
 MapNode.prototype.lookup = function lookup3(Nothing2, Just2, keyEquals, key, keyHash, shift) {
   var bit = mask(keyHash, shift);
   if ((this.datamap & bit) !== 0) {
-    var i = index3(this.datamap, bit);
+    var i = index2(this.datamap, bit);
     if (keyEquals(key)(this.content[i * 2]))
       return Just2(this.content[i * 2 + 1]);
     return Nothing2;
   }
   if ((this.nodemap & bit) !== 0) {
-    return this.content[this.content.length - 1 - index3(this.nodemap, bit)].lookup(Nothing2, Just2, keyEquals, key, keyHash, shift + 5);
+    return this.content[this.content.length - 1 - index2(this.nodemap, bit)].lookup(Nothing2, Just2, keyEquals, key, keyHash, shift + 5);
   }
   return Nothing2;
 };
@@ -13243,7 +13468,7 @@ function remove2insert1Mut(a, removeIndex, insertIndex, v1) {
 }
 MapNode.prototype.insertMut = function insertMut(keyEquals, hashFunction, key, keyHash, value2, shift) {
   var bit = mask(keyHash, shift);
-  var i = index3(this.datamap, bit);
+  var i = index2(this.datamap, bit);
   if ((this.datamap & bit) !== 0) {
     var k = this.content[i * 2];
     if (keyEquals(k)(key)) {
@@ -13252,10 +13477,10 @@ MapNode.prototype.insertMut = function insertMut(keyEquals, hashFunction, key, k
       var newNode = binaryNode(k, hashFunction(k), this.content[i * 2 + 1], key, keyHash, value2, shift + 5);
       this.datamap = this.datamap ^ bit;
       this.nodemap = this.nodemap | bit;
-      remove2insert1Mut(this.content, i * 2, this.content.length - index3(this.nodemap, bit) - 2, newNode);
+      remove2insert1Mut(this.content, i * 2, this.content.length - index2(this.nodemap, bit) - 2, newNode);
     }
   } else if ((this.nodemap & bit) !== 0) {
-    var n = this.content.length - 1 - index3(this.nodemap, bit);
+    var n = this.content.length - 1 - index2(this.nodemap, bit);
     this.content[n].insertMut(keyEquals, hashFunction, key, keyHash, value2, shift + 5);
   } else {
     this.datamap = this.datamap | bit;
@@ -13264,16 +13489,16 @@ MapNode.prototype.insertMut = function insertMut(keyEquals, hashFunction, key, k
 };
 MapNode.prototype.insert = function insert2(keyEquals, hashFunction, key, keyHash, value2, shift) {
   var bit = mask(keyHash, shift);
-  var i = index3(this.datamap, bit);
+  var i = index2(this.datamap, bit);
   if ((this.datamap & bit) !== 0) {
     var k = this.content[i * 2];
     if (keyEquals(k)(key))
       return new MapNode(this.datamap, this.nodemap, overwriteTwoElements(this.content, i * 2, key, value2));
     var newNode = binaryNode(k, hashFunction(k), this.content[i * 2 + 1], key, keyHash, value2, shift + 5);
-    return new MapNode(this.datamap ^ bit, this.nodemap | bit, remove2insert1(this.content, i * 2, this.content.length - index3(this.nodemap, bit) - 2, newNode));
+    return new MapNode(this.datamap ^ bit, this.nodemap | bit, remove2insert1(this.content, i * 2, this.content.length - index2(this.nodemap, bit) - 2, newNode));
   }
   if ((this.nodemap & bit) !== 0) {
-    var n = this.content.length - 1 - index3(this.nodemap, bit);
+    var n = this.content.length - 1 - index2(this.nodemap, bit);
     return new MapNode(
       this.datamap,
       this.nodemap,
@@ -13288,16 +13513,16 @@ MapNode.prototype.insert = function insert2(keyEquals, hashFunction, key, keyHas
 };
 MapNode.prototype.insertWith = function insertWith2(keyEquals, hashFunction, f, key, keyHash, value2, shift) {
   var bit = mask(keyHash, shift);
-  var i = index3(this.datamap, bit);
+  var i = index2(this.datamap, bit);
   if ((this.datamap & bit) !== 0) {
     var k = this.content[i * 2];
     if (keyEquals(k)(key))
       return new MapNode(this.datamap, this.nodemap, overwriteTwoElements(this.content, i * 2, key, f(this.content[i * 2 + 1])(value2)));
     var newNode = binaryNode(k, hashFunction(k), this.content[i * 2 + 1], key, keyHash, value2, shift + 5);
-    return new MapNode(this.datamap ^ bit, this.nodemap | bit, remove2insert1(this.content, i * 2, this.content.length - index3(this.nodemap, bit) - 2, newNode));
+    return new MapNode(this.datamap ^ bit, this.nodemap | bit, remove2insert1(this.content, i * 2, this.content.length - index2(this.nodemap, bit) - 2, newNode));
   }
   if ((this.nodemap & bit) !== 0) {
-    var n = this.content.length - 1 - index3(this.nodemap, bit);
+    var n = this.content.length - 1 - index2(this.nodemap, bit);
     return new MapNode(
       this.datamap,
       this.nodemap,
@@ -13313,7 +13538,7 @@ MapNode.prototype.insertWith = function insertWith2(keyEquals, hashFunction, f, 
 MapNode.prototype.delet = function delet(keyEquals, key, keyHash, shift) {
   var bit = mask(keyHash, shift);
   if ((this.datamap & bit) !== 0) {
-    var dataIndex = index3(this.datamap, bit);
+    var dataIndex = index2(this.datamap, bit);
     if (keyEquals(this.content[dataIndex * 2])(key)) {
       if (this.nodemap === 0 && this.content.length === 2) return empty2;
       return new MapNode(this.datamap ^ bit, this.nodemap, remove2(this.content, dataIndex * 2));
@@ -13321,7 +13546,7 @@ MapNode.prototype.delet = function delet(keyEquals, key, keyHash, shift) {
     return this;
   }
   if ((this.nodemap & bit) !== 0) {
-    var nodeIndex = index3(this.nodemap, bit);
+    var nodeIndex = index2(this.nodemap, bit);
     var recNode = this.content[this.content.length - 1 - nodeIndex];
     var recRes = recNode.delet(keyEquals, key, keyHash, shift + 5);
     if (recNode === recRes) return this;
@@ -13333,7 +13558,7 @@ MapNode.prototype.delet = function delet(keyEquals, key, keyHash, shift) {
       return new MapNode(
         this.datamap | bit,
         this.nodemap ^ bit,
-        insert2remove1(this.content, 2 * index3(this.datamap, bit), recRes.content[0], recRes.content[1], this.content.length - 1 - nodeIndex)
+        insert2remove1(this.content, 2 * index2(this.datamap, bit), recRes.content[0], recRes.content[1], this.content.length - 1 - nodeIndex)
       );
     }
     return new MapNode(this.datamap, this.nodemap, copyAndOverwriteOrExtend1(this.content, this.content.length - 1 - nodeIndex, recRes));
@@ -13425,31 +13650,31 @@ MapNode.prototype.unionWith = function(eq2, hash, f, that, shift) {
     skipmap &= ~bit;
     switch (mergeState(bit, this.nodemap, this.datamap, that.nodemap, that.datamap)) {
       case 1:
-        thisNodeIndex = index3(this.nodemap, bit);
+        thisNodeIndex = index2(this.nodemap, bit);
         nodemap |= bit;
         nodes.push(this.content[this.content.length - thisNodeIndex - 1]);
         break;
       case 2:
-        thisDataIndex = index3(this.datamap, bit);
+        thisDataIndex = index2(this.datamap, bit);
         datamap |= bit;
         data.push(this.content[thisDataIndex * 2], this.content[thisDataIndex * 2 + 1]);
         break;
       case 4:
-        thatNodeIndex = index3(that.nodemap, bit);
+        thatNodeIndex = index2(that.nodemap, bit);
         nodemap |= bit;
         nodes.push(that.content[that.content.length - thatNodeIndex - 1]);
         break;
       case 5:
-        thisNodeIndex = index3(this.nodemap, bit);
-        thatNodeIndex = index3(that.nodemap, bit);
+        thisNodeIndex = index2(this.nodemap, bit);
+        thatNodeIndex = index2(that.nodemap, bit);
         nodemap |= bit;
         nodes.push(
           this.content[this.content.length - thisNodeIndex - 1].unionWith(eq2, hash, f, that.content[that.content.length - thatNodeIndex - 1], shift + 5)
         );
         break;
       case 6:
-        thisDataIndex = index3(this.datamap, bit);
-        thatNodeIndex = index3(that.nodemap, bit);
+        thisDataIndex = index2(this.datamap, bit);
+        thatNodeIndex = index2(that.nodemap, bit);
         var k = this.content[thisDataIndex * 2];
         var v = this.content[thisDataIndex * 2 + 1];
         var hk = hash(k);
@@ -13462,13 +13687,13 @@ MapNode.prototype.unionWith = function(eq2, hash, f, that, shift) {
         nodes.push(that.content[that.content.length - thatNodeIndex - 1].insertWith(eq2, hash, flippedF, k, hk, v, shift + 5));
         break;
       case 8:
-        thatDataIndex = index3(that.datamap, bit);
+        thatDataIndex = index2(that.datamap, bit);
         datamap |= bit;
         data.push(that.content[thatDataIndex * 2], that.content[thatDataIndex * 2 + 1]);
         break;
       case 9:
-        thatDataIndex = index3(that.datamap, bit);
-        thisNodeIndex = index3(this.nodemap, bit);
+        thatDataIndex = index2(that.datamap, bit);
+        thisNodeIndex = index2(this.nodemap, bit);
         var k = that.content[thatDataIndex * 2];
         var v = that.content[thatDataIndex * 2 + 1];
         var hk = hash(k);
@@ -13476,8 +13701,8 @@ MapNode.prototype.unionWith = function(eq2, hash, f, that, shift) {
         nodes.push(this.content[this.content.length - thisNodeIndex - 1].insertWith(eq2, hash, f, k, hk, v, shift + 5));
         break;
       case 10:
-        thisDataIndex = index3(this.datamap, bit);
-        thatDataIndex = index3(that.datamap, bit);
+        thisDataIndex = index2(this.datamap, bit);
+        thatDataIndex = index2(that.datamap, bit);
         if (eq2(this.content[thisDataIndex * 2])(that.content[thatDataIndex * 2])) {
           datamap |= bit;
           data.push(this.content[thisDataIndex * 2], f(this.content[thisDataIndex * 2 + 1])(that.content[thatDataIndex * 2 + 1]));
@@ -13512,8 +13737,8 @@ MapNode.prototype.intersectionWith = function(Nothing2, Just2, eq2, hash, f, tha
     skipmap &= ~bit;
     switch (mergeState(bit, this.nodemap, this.datamap, that.nodemap, that.datamap)) {
       case 5:
-        thisNodeIndex = index3(this.nodemap, bit);
-        thatNodeIndex = index3(that.nodemap, bit);
+        thisNodeIndex = index2(this.nodemap, bit);
+        thatNodeIndex = index2(that.nodemap, bit);
         var recRes = this.content[this.content.length - thisNodeIndex - 1].intersectionWith(Nothing2, Just2, eq2, hash, f, that.content[that.content.length - thatNodeIndex - 1], shift + 5);
         if (isEmpty2(recRes)) continue;
         if (recRes.isSingleton()) {
@@ -13525,8 +13750,8 @@ MapNode.prototype.intersectionWith = function(Nothing2, Just2, eq2, hash, f, tha
         }
         break;
       case 6:
-        thisDataIndex = index3(this.datamap, bit);
-        thatNodeIndex = index3(that.nodemap, bit);
+        thisDataIndex = index2(this.datamap, bit);
+        thatNodeIndex = index2(that.nodemap, bit);
         var k = this.content[thisDataIndex * 2];
         var v = this.content[thisDataIndex * 2 + 1];
         var hk = hash(k);
@@ -13537,8 +13762,8 @@ MapNode.prototype.intersectionWith = function(Nothing2, Just2, eq2, hash, f, tha
         }
         break;
       case 9:
-        thatDataIndex = index3(that.datamap, bit);
-        thisNodeIndex = index3(this.nodemap, bit);
+        thatDataIndex = index2(that.datamap, bit);
+        thisNodeIndex = index2(this.nodemap, bit);
         var k = that.content[thatDataIndex * 2];
         var v = that.content[thatDataIndex * 2 + 1];
         var hk = hash(k);
@@ -13549,8 +13774,8 @@ MapNode.prototype.intersectionWith = function(Nothing2, Just2, eq2, hash, f, tha
         }
         break;
       case 10:
-        thisDataIndex = index3(this.datamap, bit);
-        thatDataIndex = index3(that.datamap, bit);
+        thisDataIndex = index2(this.datamap, bit);
+        thatDataIndex = index2(that.datamap, bit);
         if (eq2(this.content[thisDataIndex * 2])(that.content[thatDataIndex * 2])) {
           datamap |= bit;
           data.push(this.content[thisDataIndex * 2], f(this.content[thisDataIndex * 2 + 1])(that.content[thatDataIndex * 2 + 1]));
@@ -13570,7 +13795,7 @@ MapNode.prototype.filterWithKey = function filterWithKey(f) {
     var bit = lowestBit(skipmap);
     skipmap &= ~bit;
     if ((this.datamap & bit) !== 0) {
-      var dataIndex = index3(this.datamap, bit);
+      var dataIndex = index2(this.datamap, bit);
       var k = this.content[dataIndex * 2];
       var v = this.content[dataIndex * 2 + 1];
       if (f(k)(v)) {
@@ -13578,7 +13803,7 @@ MapNode.prototype.filterWithKey = function filterWithKey(f) {
         data.push(k, v);
       }
     } else {
-      var nodeIndex = index3(this.nodemap, bit);
+      var nodeIndex = index2(this.nodemap, bit);
       var node = this.content[this.content.length - nodeIndex - 1].filterWithKey(f);
       if (isEmpty2(node)) continue;
       if (node.isSingleton()) {
@@ -13628,15 +13853,15 @@ MapNode.prototype.ifoldMap = function(m, mappend, f) {
     m = this.content[i].ifoldMap(m, mappend, f);
   return m;
 };
-MapNode.prototype.itraverse = function(pure4, apply6, f) {
-  var m = pure4(this.travHelper());
+MapNode.prototype.itraverse = function(pure3, apply6, f) {
+  var m = pure3(this.travHelper());
   for (var i = 0; i < popCount(this.datamap) * 2; ) {
     var k = this.content[i++];
     var v = this.content[i++];
     m = apply6(m)(f(k)(v));
   }
   for (; i < this.content.length; i++)
-    m = apply6(m)(this.content[i].itraverse(pure4, apply6, f));
+    m = apply6(m)(this.content[i].itraverse(pure3, apply6, f));
   return m;
 };
 MapNode.prototype.any = function(predicate) {
@@ -13654,9 +13879,9 @@ MapNode.prototype.any = function(predicate) {
   }
   return false;
 };
-function Collision(keys5, values3) {
-  this.keys = keys5;
-  this.values = values3;
+function Collision(keys3, values2) {
+  this.keys = keys3;
+  this.values = values2;
 }
 Collision.prototype.lookup = function collisionLookup(Nothing2, Just2, keyEquals, key, keyHash, shift) {
   for (var i = 0; i < this.keys.length; i++)
@@ -13764,8 +13989,8 @@ Collision.prototype.travHelper = function() {
     return new Collision(self.keys, self.values.slice());
   });
 };
-Collision.prototype.itraverse = function(pure4, apply6, f) {
-  var m = pure4(this.travHelper());
+Collision.prototype.itraverse = function(pure3, apply6, f) {
+  var m = pure3(this.travHelper());
   for (var i = 0; i < this.keys.length; i++)
     m = apply6(m)(f(this.keys[i])(this.values[i]));
   return m;
@@ -13773,66 +13998,66 @@ Collision.prototype.itraverse = function(pure4, apply6, f) {
 Collision.prototype.unionWith = function(eq2, hash, f, that, shift) {
   if (that.constructor !== Collision)
     throw "Trying to union a Collision with something else";
-  var keys5 = [];
-  var values3 = [];
+  var keys3 = [];
+  var values2 = [];
   var added = Array(that.keys.length).fill(false);
   outer:
     for (var i = 0; i < this.keys.length; i++) {
       for (var j = 0; j < that.keys.length; j++) {
         if (eq2(this.keys[i])(that.keys[j])) {
-          keys5.push(this.keys[i]);
-          values3.push(f(this.values[i])(that.values[j]));
+          keys3.push(this.keys[i]);
+          values2.push(f(this.values[i])(that.values[j]));
           added[j] = true;
           continue outer;
         }
       }
-      keys5.push(this.keys[i]);
-      values3.push(this.values[i]);
+      keys3.push(this.keys[i]);
+      values2.push(this.values[i]);
       added[j] = true;
     }
   for (var k = 0; k < that.keys.length; k++) {
     if (!added[k]) {
-      keys5.push(that.keys[k]);
-      values3.push(that.values[k]);
+      keys3.push(that.keys[k]);
+      values2.push(that.values[k]);
     }
   }
-  return new Collision(keys5, values3);
+  return new Collision(keys3, values2);
 };
 Collision.prototype.intersectionWith = function(Nothing2, Just2, eq2, hash, f, that, shift) {
   if (that.constructor !== Collision)
     throw "Trying to intersect a Collision with something else";
-  var keys5 = [];
-  var values3 = [];
+  var keys3 = [];
+  var values2 = [];
   outer:
     for (var i = 0; i < this.keys.length; i++) {
       for (var j = 0; j < that.keys.length; j++) {
         if (eq2(this.keys[i])(that.keys[j])) {
-          keys5.push(this.keys[i]);
-          values3.push(f(this.values[i])(that.values[j]));
+          keys3.push(this.keys[i]);
+          values2.push(f(this.values[i])(that.values[j]));
           continue outer;
         }
       }
     }
-  if (keys5.length === 0)
+  if (keys3.length === 0)
     return empty2;
-  if (keys5.length === 1)
-    return new MapNode(1, 0, [keys5[0], values3[0]]);
-  return new Collision(keys5, values3);
+  if (keys3.length === 1)
+    return new MapNode(1, 0, [keys3[0], values2[0]]);
+  return new Collision(keys3, values2);
 };
 Collision.prototype.filterWithKey = function collisionFilterWithKey(f) {
-  var keys5 = [];
-  var values3 = [];
+  var keys3 = [];
+  var values2 = [];
   for (var i = 0; i < this.keys.length; i++) {
     var k = this.keys[i];
     var v = this.values[i];
     if (f(k)(v)) {
-      keys5.push(k);
-      values3.push(v);
+      keys3.push(k);
+      values2.push(v);
     }
   }
-  if (keys5.length === 0) return empty2;
-  if (keys5.length === 1) return new MapNode(1, 0, [keys5[0], values3[0]]);
-  return new Collision(keys5, values3);
+  if (keys3.length === 0) return empty2;
+  if (keys3.length === 1) return new MapNode(1, 0, [keys3[0], values2[0]]);
+  return new Collision(keys3, values2);
 };
 Collision.prototype.any = function(predicate) {
   for (var i = 0; i < this.keys.length; i++) {
@@ -13845,8 +14070,8 @@ Collision.prototype.any = function(predicate) {
 function mask(keyHash, shift) {
   return 1 << (keyHash >>> shift & 31);
 }
-function index3(map3, bit) {
-  return popCount(map3 & bit - 1);
+function index2(map4, bit) {
+  return popCount(map4 & bit - 1);
 }
 function popCount(n) {
   n = n - (n >> 1 & 1431655765);
@@ -13860,25 +14085,25 @@ function binaryNode(k1, kh1, v1, k2, kh2, v2, s) {
   if (b1 !== b2) return new MapNode(1 << b1 | 1 << b2, 0, b1 >>> 0 < b2 >>> 0 ? [k1, v1, k2, v2] : [k2, v2, k1, v1]);
   return new MapNode(0, 1 << b1, [binaryNode(k1, kh1, v1, k2, kh2, v2, s + 5)]);
 }
-function overwriteTwoElements(a, index4, v1, v2) {
+function overwriteTwoElements(a, index3, v1, v2) {
   var res = a.slice();
-  res[index4] = v1;
-  res[index4 + 1] = v2;
+  res[index3] = v1;
+  res[index3 + 1] = v2;
   return res;
 }
-function remove2(a, index4) {
+function remove2(a, index3) {
   var res = a.slice();
-  res.splice(index4, 2);
+  res.splice(index3, 2);
   return res;
 }
-function remove1(a, index4) {
+function remove1(a, index3) {
   var res = a.slice();
-  res.splice(index4, 1);
+  res.splice(index3, 1);
   return res;
 }
-function copyAndOverwriteOrExtend1(a, index4, v) {
+function copyAndOverwriteOrExtend1(a, index3, v) {
   var res = a.slice();
-  res[index4] = v;
+  res[index3] = v;
   return res;
 }
 function remove2insert1(a, removeIndex, insertIndex, v1) {
@@ -13889,9 +14114,9 @@ function remove2insert1(a, removeIndex, insertIndex, v1) {
   for (; i < res.length; i++) res[i] = a[i + 1];
   return res;
 }
-function insert22(a, index4, v1, v2) {
+function insert22(a, index3, v1, v2) {
   var res = new Array(a.length + 2);
-  for (var i = 0; i < index4; i++) res[i] = a[i];
+  for (var i = 0; i < index3; i++) res[i] = a[i];
   res[i++] = v1;
   res[i++] = v2;
   for (; i < res.length; i++) res[i] = a[i - 2];
@@ -13969,7 +14194,7 @@ function foldMapWithIndexPurs(mempty) {
 }
 
 // output-es/Data.HashMap/index.js
-var values2 = /* @__PURE__ */ toArrayBy((v) => (v1) => v1);
+var values = /* @__PURE__ */ toArrayBy((v) => (v1) => v1);
 var unionWith = (dictHashable) => {
   const eq2 = dictHashable.Eq0().eq;
   const hash = dictHashable.hash;
@@ -13995,7 +14220,7 @@ var member = (dictHashable) => {
     };
   };
 };
-var keys4 = /* @__PURE__ */ toArrayBy($$const);
+var keys2 = /* @__PURE__ */ toArrayBy($$const);
 var foldableWithIndexHashMap = {
   foldMapWithIndex: (dictMonoid) => foldMapWithIndexPurs(dictMonoid.mempty)(dictMonoid.Semigroup0().append),
   foldrWithIndex: (f) => foldrWithIndexDefault(foldableWithIndexHashMap)(f),
@@ -14015,13 +14240,13 @@ function unsafeReadPropImpl(f, s, key, value2) {
 
 // output-es/Foreign.Index/index.js
 var unsafeReadProp = (dictMonad) => {
-  const pure4 = applicativeExceptT(dictMonad).pure;
+  const pure3 = applicativeExceptT(dictMonad).pure;
   return (k) => (value2) => unsafeReadPropImpl(
     monadThrowExceptT(dictMonad).throwError($NonEmpty(
       $ForeignError("TypeMismatch", "object", typeOf(value2)),
       Nil
     )),
-    pure4,
+    pure3,
     k,
     value2
   );
@@ -14058,7 +14283,7 @@ function replacer(key, value2) {
 var _unsafePrettyStringify = (spaces) => (data) => JSON.stringify(data, replacer, spaces);
 
 // output-es/Yoga.JSON/index.js
-var identity16 = (x) => x;
+var identity14 = (x) => x;
 var bindExceptT2 = /* @__PURE__ */ bindExceptT(monadIdentity);
 var applicativeExceptT2 = /* @__PURE__ */ applicativeExceptT(monadIdentity);
 var readNull2 = /* @__PURE__ */ readNull(monadIdentity);
@@ -14067,7 +14292,7 @@ var writeForeignString = { writeImpl: unsafeCoerce };
 var writeForeignNonEmptyStrin = { writeImpl: unsafeCoerce };
 var writeForeignInt = { writeImpl: unsafeCoerce };
 var writeForeignForeign = { writeImpl: (x) => x };
-var writeForeignFieldsNilRowR = { writeImplFields: (v) => (v1) => identity16 };
+var writeForeignFieldsNilRowR = { writeImplFields: (v) => (v1) => identity14 };
 var writeForeignBoolean = { writeImpl: unsafeCoerce };
 var readForeignString = { readImpl: /* @__PURE__ */ readString(monadIdentity) };
 var readForeignNonEmptyString = {
@@ -14078,7 +14303,7 @@ var readForeignNonEmptyString = {
     return $Either("Right", x);
   })
 };
-var readForeignFieldsNilRowRo = { getFields: (v) => (v1) => applicativeExceptT2.pure(identity16) };
+var readForeignFieldsNilRowRo = { getFields: (v) => (v1) => applicativeExceptT2.pure(identity14) };
 var writeForeignFieldsCons = (dictIsSymbol) => (dictWriteForeign) => (dictWriteForeignFields) => () => () => () => ({
   writeImplFields: (v) => (rec) => {
     const $0 = insert3()()(dictIsSymbol)($$Proxy)(dictWriteForeign.writeImpl(unsafeGet(dictIsSymbol.reflectSymbol($$Proxy))(rec)));
@@ -14276,18 +14501,6 @@ var readForeignFieldsCons = (dictIsSymbol) => (dictReadForeign) => {
     }
   });
 };
-var readForeignRecord = () => (dictReadForeignFields) => ({
-  readImpl: (o) => {
-    const $0 = dictReadForeignFields.getFields($$Proxy)(o);
-    if ($0.tag === "Left") {
-      return $Either("Left", $0._1);
-    }
-    if ($0.tag === "Right") {
-      return $Either("Right", $0._1({}));
-    }
-    fail();
-  }
-});
 
 // output-es/Yoga.JSON.Error/index.js
 var toJSONPath = (fe) => {
@@ -14615,7 +14828,6 @@ var getEntitySetsFromHeaders = (lst) => {
   }
   fail();
 };
-var entity = (entityId) => (entityDomain) => (entitySets) => (props) => ({ entityId, entityDomain, entitySets, props, _info: Nothing });
 var parseEntity = (v) => {
   if (v.entityId === "") {
     return $Either(
@@ -14636,7 +14848,13 @@ var parseEntity = (v) => {
       return $Either("Left", $02._1);
     }
     if ($02.tag === "Right") {
-      return $Either("Right", entity($02._1));
+      return $Either(
+        "Right",
+        (() => {
+          const $1 = $02._1;
+          return (entityDomain) => (entitySets) => (props) => ({ entityId: $1, entityDomain, entitySets, props, _info: Nothing });
+        })()
+      );
     }
     fail();
   })())(applicativeV2.pure(v.entityDomain)))((() => {
@@ -14670,12 +14888,12 @@ var parseEntity = (v) => {
 };
 
 // output-es/Data.HashSet/index.js
-var identity17 = (x) => x;
+var identity15 = (x) => x;
 var insert4 = (dictHashable) => {
   const insert1 = insertPurs(dictHashable.Eq0().eq, dictHashable.hash);
   return (a) => (v) => insert1(a)()(v);
 };
-var fromArray2 = (dictHashable) => fromArrayPurs(dictHashable.Eq0().eq, dictHashable.hash)(identity17)((v) => {
+var fromArray2 = (dictHashable) => fromArrayPurs(dictHashable.Eq0().eq, dictHashable.hash)(identity15)((v) => {
 });
 var foldableHashSet = {
   foldr: (f) => (a) => (v) => foldrWithIndexDefault(foldableWithIndexHashMap)((k) => (v1) => f(k))(a)(v),
@@ -14705,7 +14923,7 @@ var applicativeV3 = /* @__PURE__ */ (() => {
   return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
 })();
 var fromArrayBy = /* @__PURE__ */ fromArrayPurs(eqStringImpl, hashString);
-var identity18 = (x) => x;
+var identity16 = (x) => x;
 var traverse_2 = /* @__PURE__ */ traverse_(applicativeV3)(foldableArray);
 var lookup5 = /* @__PURE__ */ lookup4(hashableString);
 var for_2 = /* @__PURE__ */ for_(applicativeV3);
@@ -14714,7 +14932,16 @@ var fromArray3 = /* @__PURE__ */ fromArray2(hashableString);
 var fromArray1 = /* @__PURE__ */ fromArray2(hashableId);
 var map22 = /* @__PURE__ */ map2(hashableString);
 var unions = /* @__PURE__ */ (() => foldableArray.foldMap(monoidHashSet(hashableId))(identity2))();
-var compare1 = /* @__PURE__ */ (() => ordTuple(ordId)(ordString).compare)();
+var compare1 = (x) => (y) => {
+  const v = ordString.compare(x._1)(y._1);
+  if (v === "LT") {
+    return LT;
+  }
+  if (v === "GT") {
+    return GT;
+  }
+  return ordString.compare(x._2)(y._2);
+};
 var for_22 = /* @__PURE__ */ for_2(foldableArray);
 var sequence3 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV3)(identity3))();
 var fromArray22 = /* @__PURE__ */ fromArrayPurs(eqStringImpl, hashString)(fst)(snd);
@@ -14732,7 +14959,7 @@ var unsafeLookupHM = (dictHashable) => {
   };
 };
 var unsafeLookupHM1 = /* @__PURE__ */ unsafeLookupHM(hashableString)(showString);
-var parseColumnValues$p = (fp) => (concept2) => (parser) => (vals) => (index4) => traverse_2((v) => {
+var parseColumnValues$p = (fp) => (concept) => (parser) => (vals) => (index3) => traverse_2((v) => {
   const $0 = arrayMap((issue) => {
     if (issue.tag === "CodedIssue") {
       return $Issue(
@@ -14742,10 +14969,10 @@ var parseColumnValues$p = (fp) => (concept2) => (parser) => (vals) => (index4) =
           ...issue._2,
           message: (() => {
             if (issue._2.message.tag === "Just") {
-              return $Maybe("Just", "in column " + concept2 + ": " + issue._2.message._1);
+              return $Maybe("Just", "in column " + concept + ": " + issue._2.message._1);
             }
             if (issue._2.message.tag === "Nothing") {
-              return $Maybe("Just", "in column " + concept2 + ": ");
+              return $Maybe("Just", "in column " + concept + ": ");
             }
             fail();
           })()
@@ -14771,7 +14998,7 @@ var parseColumnValues$p = (fp) => (concept2) => (parser) => (vals) => (index4) =
     return $Either("Right", $1._1);
   }
   fail();
-})(values2(fromArrayBy(fst)(identity18)(zipWithImpl(Tuple, vals, index4))));
+})(values(fromArrayBy(fst)(identity16)(zipWithImpl(Tuple, vals, index3))));
 var parseColumnValues = (parser) => (vals) => (iteminfo) => traverse_2((v) => withRowInfo(v._2._1)(v._2._2)((() => {
   const $0 = parser(v._1);
   if ($0.tag === "Left") {
@@ -14781,7 +15008,7 @@ var parseColumnValues = (parser) => (vals) => (iteminfo) => traverse_2((v) => wi
     return applicativeV3.pure();
   }
   fail();
-})()))(values2(fromArrayBy(fst)(identity18)(zipWithImpl(Tuple, vals, iteminfo))));
+})()))(values(fromArrayBy(fst)(identity16)(zipWithImpl(Tuple, vals, iteminfo))));
 var makeIssue$p = (e) => {
   const $0 = (() => {
     if (e._info.tag === "Nothing") {
@@ -14900,7 +15127,7 @@ var lookupSetWithInDomain = (concepts) => ($$set) => (domain) => {
     }
     if (v1.tag === "Just") {
       if (v1._1.conceptType.tag === "EntitySetC") {
-        const v4 = lookup2(ordId)("domain")(v1._1.props);
+        const v4 = lookup2("domain")(v1._1.props);
         if (v4.tag === "Nothing") {
           return $Either(
             "Left",
@@ -15033,7 +15260,7 @@ var getDomainForEntitySet = (dataset) => (k) => {
     if ($0._1.conceptType.tag === "EntityDomainC") {
       return $Maybe("Just", $0._1.conceptId);
     }
-    return lookup2(ordId)("domain")($0._1.props);
+    return lookup2("domain")($0._1.props);
   }
   if ($0.tag === "Nothing") {
     return Nothing;
@@ -15176,8 +15403,8 @@ var checkDuplicatedConcepts = (input) => {
   return $Either("Left", arrayMap(makeIssue)(dups));
 };
 var checkDrillup = (concepts) => {
-  const $0 = for_22(values2(concepts))((c) => {
-    const v = lookup2(ordId)("drill_up")(c.props);
+  const $0 = for_22(values(concepts))((c) => {
+    const v = lookup2("drill_up")(c.props);
     if (v.tag === "Nothing") {
       return applicativeV3.pure();
     }
@@ -15191,7 +15418,7 @@ var checkDrillup = (concepts) => {
         }
         fail();
       })();
-      const $1 = lookup2(ordId)("domain")(c.props);
+      const $1 = lookup2("domain")(c.props);
       const domain = (() => {
         if ($1.tag === "Just") {
           return $1._1;
@@ -15308,7 +15535,7 @@ var checkConceptDomain = (input) => {
       }
       fail();
     })();
-    const v1 = lookup2(ordId)("domain")(c.props);
+    const v1 = lookup2("domain")(c.props);
     if (v1.tag === "Just") {
       if (elem(eqString)(v1._1)(domainNames)) {
         return applicativeV3.pure();
@@ -15380,7 +15607,7 @@ var parseConcepts = (input) => {
     return $Either("Left", $1._1);
   }
   if ($1.tag === "Right") {
-    return applicativeV3.pure(fromArrayBy((x) => x.conceptId)(identity18)($1._1));
+    return applicativeV3.pure(fromArrayBy((x) => x.conceptId)(identity16)($1._1));
   }
   fail();
 };
@@ -15427,8 +15654,8 @@ var parseBaseDataSet = (conceptsInput) => (entitiesInput) => {
     return applicativeV3.pure({
       ...$3,
       _valueParsers: fromArray22([
-        ...arrayMap((x) => $Tuple(x, makeValueParser($3)(x)))(keys4($3.concepts)),
-        $Tuple("concept", parseDomainVal("concept")(fromArray3(keys4($3.concepts)))),
+        ...arrayMap((x) => $Tuple(x, makeValueParser($3)(x)))(keys2($3.concepts)),
+        $Tuple("concept", parseDomainVal("concept")(fromArray3(keys2($3.concepts)))),
         $Tuple("concept_type", parseStrVal)
       ])
     });
@@ -15511,18 +15738,6 @@ var vError = (dictMonad) => monadThrowExceptT({
   Applicative0: () => applicativeStateT(dictMonad),
   Bind1: () => bindStateT(dictMonad)
 }).throwError;
-var runValidationT = (dictMonad) => (dictMonoid) => {
-  const mempty = dictMonoid.mempty;
-  return (v) => dictMonad.Bind1().bind(v(mempty))((v1) => dictMonad.Applicative0().pure((() => {
-    if (v1._1.tag === "Left") {
-      return $Tuple(dictMonoid.Semigroup0().append(v1._2)(v1._1._1), Nothing);
-    }
-    if (v1._1.tag === "Right") {
-      return $Tuple(v1._2, $Maybe("Just", v1._1._1));
-    }
-    fail();
-  })()));
-};
 var monadtransVT = {
   lift: (dictMonad) => (x) => bindStateT(dictMonad).bind((s) => dictMonad.Bind1().bind(x)((x$1) => dictMonad.Applicative0().pure($Tuple(x$1, s))))((a) => applicativeStateT(dictMonad).pure($Either(
     "Right",
@@ -15583,10 +15798,10 @@ var bindVT = /* @__PURE__ */ bindExceptT({
   Bind1: () => bindStateT(monadAff)
 });
 var liftEffect = /* @__PURE__ */ (() => monadEffectExceptT(monadEffectState(monadEffectAff)).liftEffect)();
-var pure3 = /* @__PURE__ */ (() => applicativeExceptT({
+var applicativeVT = /* @__PURE__ */ applicativeExceptT({
   Applicative0: () => applicativeStateT(monadAff),
   Bind1: () => bindStateT(monadAff)
-}).pure)();
+});
 var sequence4 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV4)(identity3))();
 var joinWith2 = (splice) => (xs) => foldlArray((v) => (v1) => {
   if (v.init) {
@@ -15594,10 +15809,11 @@ var joinWith2 = (splice) => (xs) => foldlArray((v) => (v1) => {
   }
   return { init: false, acc: v.acc + splice + v1 };
 })({ init: true, acc: "" })(xs).acc;
-var identity19 = (x) => x;
+var identity17 = (x) => x;
 var sequence1 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeAff)(identity3))();
+var for_3 = /* @__PURE__ */ for_(applicativeVT)(foldableArray);
 var validateCsvHeaders = (v) => (v1) => (dictMonad) => {
-  const applicativeVT3 = applicativeExceptT({
+  const applicativeVT1 = applicativeExceptT({
     Applicative0: () => applicativeStateT(dictMonad),
     Bind1: () => bindStateT(dictMonad)
   });
@@ -15605,11 +15821,11 @@ var validateCsvHeaders = (v) => (v1) => (dictMonad) => {
   const $0 = v1.fileInfo;
   const reserved = arrayMap(unsafeCoerce)(reservedConcepts);
   const filepath = $0.filepath;
-  const concepts = keys4(v.concepts);
+  const concepts = keys2(v.concepts);
   return bindExceptT({
     Applicative0: () => applicativeStateT(dictMonad),
     Bind1: () => bindStateT(dictMonad)
-  }).bind(traversableArray.traverse(applicativeVT3)((h) => {
+  }).bind(traversableArray.traverse(applicativeVT1)((h) => {
     if (take2(4)(h) === "is--") {
       if ($0.collectionInfo.tag === "Entities") {
         const $$set = drop2(length2(take2(4)(h)))(h);
@@ -15645,11 +15861,11 @@ var validateCsvHeaders = (v) => (v1) => (dictMonad) => {
           if ($0.collectionInfo._1.domain !== domainInDataset._1) {
             return $12;
           }
-          return applicativeVT3.pure();
+          return applicativeVT1.pure();
         }
         fail();
       }
-      return applicativeVT3.pure();
+      return applicativeVT1.pure();
     }
     const $1 = vWarning2([
       {
@@ -15664,8 +15880,8 @@ var validateCsvHeaders = (v) => (v1) => (dictMonad) => {
     if (!(elem(eqString)(h)(reserved) || elem(eqString)(h)(concepts))) {
       return $1;
     }
-    return applicativeVT3.pure();
-  })(arrayMap(unsafeCoerce)(v1.csvContent.headers)))(() => applicativeVT3.pure());
+    return applicativeVT1.pure();
+  })(arrayMap(unsafeCoerce)(v1.csvContent.headers)))(() => applicativeVT1.pure());
 };
 var emitWarningsAndContinue = (dictMonad) => {
   const vWarning2 = vWarning(dictMonad)(monoidArray);
@@ -15695,7 +15911,7 @@ var validateFileExists = (v) => {
   const $0 = v.filepath;
   return bindVT.bind(liftEffect(() => existsSync($0)))((pathExists) => {
     if (pathExists) {
-      return pure3($Maybe("Just", v));
+      return applicativeVT.pure($Maybe("Just", v));
     }
     return bindVT.bind(emitWarningsAndContinue1([
       $Issue(
@@ -15703,7 +15919,7 @@ var validateFileExists = (v) => {
         W_GENERAL,
         { ...emptyContext, message: $Maybe("Just", $0 + " does not exist, skipping") }
       )
-    ]))(() => pure3(Nothing));
+    ]))(() => applicativeVT.pure(Nothing));
   });
 };
 var emitErrorsAndStop = (dictMonad) => {
@@ -15839,6 +16055,45 @@ var emitErrorsAndContinue = (dictMonad) => {
     Bind1: () => bindStateT(dictMonad)
   }).pure());
 };
+var emitFormatIssues = (dictMonad) => {
+  const for_12 = for_(applicativeExceptT({
+    Applicative0: () => applicativeStateT(dictMonad),
+    Bind1: () => bindStateT(dictMonad)
+  }))(foldableArray);
+  const emitErrorsAndContinue1 = emitErrorsAndContinue(dictMonad);
+  const emitWarningsAndContinue22 = emitWarningsAndContinue(dictMonad);
+  return (fp) => (formatIssues) => for_12(formatIssues)((issue) => {
+    if (issue === "ENCODING") {
+      return emitErrorsAndContinue1([
+        $Issue(
+          "CodedIssue",
+          E_CSV_FORMAT_ENCODING,
+          { ...emptyContext, fileContext: $Maybe("Just", { filepath: fp, lineNo: -1 }) }
+        )
+      ]);
+    }
+    if (issue === "BOM") {
+      return emitWarningsAndContinue22([
+        $Issue(
+          "CodedIssue",
+          W_CSV_FORMAT_BOM,
+          { ...emptyContext, fileContext: $Maybe("Just", { filepath: fp, lineNo: -1 }) }
+        )
+      ]);
+    }
+    if (issue === "CRLF") {
+      return emitWarningsAndContinue22([
+        $Issue(
+          "CodedIssue",
+          W_CSV_FORMAT_CRLF,
+          { ...emptyContext, fileContext: $Maybe("Just", { filepath: fp, lineNo: -1 }) }
+        )
+      ]);
+    }
+    fail();
+  });
+};
+var emitFormatIssues1 = /* @__PURE__ */ emitFormatIssues(monadAff);
 var validateDataPoints = (csvfiles) => (dictMonad) => {
   const $0 = applicativeExceptT({
     Applicative0: () => applicativeStateT(dictMonad),
@@ -15964,83 +16219,25 @@ var validateCsvFile = (v) => (dictMonad) => {
 var validateCsvFiles = (dictTraversable) => {
   const $0 = dictTraversable.Foldable1().foldr;
   return (xs) => (dictMonad) => {
-    const applicativeVT3 = applicativeExceptT({
+    const applicativeVT1 = applicativeExceptT({
       Applicative0: () => applicativeStateT(dictMonad),
       Bind1: () => bindStateT(dictMonad)
     });
     return bindExceptT({
       Applicative0: () => applicativeStateT(dictMonad),
       Bind1: () => bindStateT(dictMonad)
-    }).bind(dictTraversable.traverse(applicativeVT3)((x) => validateCsvFile(x)(dictMonad))(xs))((rs) => applicativeVT3.pure(mapMaybe(identity19)(fromFoldableImpl(
+    }).bind(dictTraversable.traverse(applicativeVT1)((x) => validateCsvFile(x)(dictMonad))(xs))((rs) => applicativeVT1.pure(mapMaybe(identity17)(fromFoldableImpl(
       $0,
       rs
     ))));
   };
 };
 var validateCsvFiles1 = /* @__PURE__ */ validateCsvFiles(traversableArray);
-var readAndParseCsvFiles = (files) => bindVT.bind(monadtransVT.lift(monadAff)(sequence1(arrayMap(readCsv$p)(files))))((rawContents) => validateCsvFiles1(zipWithImpl(
+var readAndParseCsvFiles = (fixFormat) => (files) => bindVT.bind(monadtransVT.lift(monadAff)(sequence1(arrayMap(readCsv$p(fixFormat))(files))))((rawContents) => bindVT.bind(for_3(zipWithImpl(
   Tuple,
   files,
   rawContents
-))(monadAff));
-var checkAndFixFileFormat = (dictMonad) => {
-  const bindVT1 = bindExceptT({
-    Applicative0: () => applicativeStateT(dictMonad),
-    Bind1: () => bindStateT(dictMonad)
-  });
-  const applicativeVT3 = applicativeExceptT({
-    Applicative0: () => applicativeStateT(dictMonad),
-    Bind1: () => bindStateT(dictMonad)
-  });
-  const for_3 = for_(applicativeVT3)(foldableArray);
-  const emitErrorsAndContinue1 = emitErrorsAndContinue(dictMonad);
-  const emitWarningsAndContinue22 = emitWarningsAndContinue(dictMonad);
-  return (dictMonadEffect) => {
-    const $0 = monadEffectExceptT(monadEffectState(dictMonadEffect));
-    return (doFix) => (fp) => bindVT1.bind($0.liftEffect(checkFileFormat(fp)))((issues) => {
-      const $1 = bindVT1.bind((() => {
-        const $12 = $0.liftEffect(() => fixFileFormatImpl(fp));
-        if (doFix) {
-          return $12;
-        }
-        return applicativeVT3.pure();
-      })())(() => for_3(issues)((issue) => {
-        if (issue === "ENCODING") {
-          return emitErrorsAndContinue1([
-            $Issue(
-              "CodedIssue",
-              E_CSV_FORMAT_ENCODING,
-              { ...emptyContext, fileContext: $Maybe("Just", { filepath: fp, lineNo: -1 }) }
-            )
-          ]);
-        }
-        if (issue === "BOM") {
-          return emitWarningsAndContinue22([
-            $Issue(
-              "CodedIssue",
-              W_CSV_FORMAT_BOM,
-              { ...emptyContext, fileContext: $Maybe("Just", { filepath: fp, lineNo: -1 }) }
-            )
-          ]);
-        }
-        if (issue === "CRLF") {
-          return emitWarningsAndContinue22([
-            $Issue(
-              "CodedIssue",
-              W_CSV_FORMAT_CRLF,
-              { ...emptyContext, fileContext: $Maybe("Just", { filepath: fp, lineNo: -1 }) }
-            )
-          ]);
-        }
-        fail();
-      }));
-      if (issues.length !== 0) {
-        return $1;
-      }
-      return applicativeVT3.pure();
-    });
-  };
-};
+))((v) => emitFormatIssues1(v._1.filepath)(parseFormatIssues(v._2.formatIssues))))(() => validateCsvFiles1(zipWithImpl(Tuple, files, rawContents))(monadAff)));
 
 // output-es/Data.JSON.DataPackage/index.js
 var constraintsIsSymbol = { reflectSymbol: () => "constraints" };
@@ -16085,9 +16282,65 @@ var readProp2 = /* @__PURE__ */ unsafeReadProp(monadIdentity);
 var readForeignFieldsCons1 = /* @__PURE__ */ readForeignFieldsCons(nameIsSymbol)(readForeignNonEmptyString);
 var fieldsIsSymbol = { reflectSymbol: () => "fields" };
 var primaryKeyIsSymbol = { reflectSymbol: () => "primaryKey" };
-var readForeignArray2 = /* @__PURE__ */ readForeignArray(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons1(/* @__PURE__ */ readForeignFieldsCons({
-  reflectSymbol: () => "path"
-})(readForeignNonEmptyString)(/* @__PURE__ */ readForeignFieldsCons({ reflectSymbol: () => "schema" })(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons(fieldsIsSymbol)(/* @__PURE__ */ readForeignArray(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons(constraintsIsSymbol)(/* @__PURE__ */ readForeignMaybe(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons(enumIsSymbol)(/* @__PURE__ */ readForeignArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()())))(/* @__PURE__ */ readForeignFieldsCons1(readForeignFieldsNilRowRo)()())()())))(/* @__PURE__ */ readForeignFieldsCons(primaryKeyIsSymbol)(/* @__PURE__ */ readForeignNonEmptyArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()())()()))(readForeignFieldsNilRowRo)()())()())()()));
+var readForeignArray2 = /* @__PURE__ */ readForeignArray(/* @__PURE__ */ (() => {
+  const $0 = readForeignFieldsCons1(readForeignFieldsCons({ reflectSymbol: () => "path" })(readForeignNonEmptyString)(readForeignFieldsCons({
+    reflectSymbol: () => "schema"
+  })((() => {
+    const $02 = readForeignFieldsCons(fieldsIsSymbol)(readForeignArray((() => {
+      const $03 = readForeignFieldsCons(constraintsIsSymbol)(readForeignMaybe((() => {
+        const $04 = readForeignFieldsCons(enumIsSymbol)(readForeignArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()();
+        return {
+          readImpl: (o) => {
+            const $1 = $04.getFields($$Proxy)(o);
+            if ($1.tag === "Left") {
+              return $Either("Left", $1._1);
+            }
+            if ($1.tag === "Right") {
+              return $Either("Right", $1._1({}));
+            }
+            fail();
+          }
+        };
+      })()))(readForeignFieldsCons1(readForeignFieldsNilRowRo)()())()();
+      return {
+        readImpl: (o) => {
+          const $1 = $03.getFields($$Proxy)(o);
+          if ($1.tag === "Left") {
+            return $Either("Left", $1._1);
+          }
+          if ($1.tag === "Right") {
+            return $Either("Right", $1._1({}));
+          }
+          fail();
+        }
+      };
+    })()))(readForeignFieldsCons(primaryKeyIsSymbol)(readForeignNonEmptyArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()())()();
+    return {
+      readImpl: (o) => {
+        const $1 = $02.getFields($$Proxy)(o);
+        if ($1.tag === "Left") {
+          return $Either("Left", $1._1);
+        }
+        if ($1.tag === "Right") {
+          return $Either("Right", $1._1({}));
+        }
+        fail();
+      }
+    };
+  })())(readForeignFieldsNilRowRo)()())()())()();
+  return {
+    readImpl: (o) => {
+      const $1 = $0.getFields($$Proxy)(o);
+      if ($1.tag === "Left") {
+        return $Either("Left", $1._1);
+      }
+      if ($1.tag === "Right") {
+        return $Either("Right", $1._1({}));
+      }
+      fail();
+    }
+  };
+})());
 var applicativeV5 = /* @__PURE__ */ (() => {
   const applyV1 = applyV(semigroupArray);
   return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
@@ -16286,7 +16539,7 @@ var createResources = (root) => (xs) => foldlArray((v) => (v1) => {
                 }
                 fail();
               })()
-            }))(fromFoldable14(zipWith4(Tuple)(v1.fileInfo.collectionInfo._1.pkeys)(v1.fileInfo.collectionInfo._1.constraints)));
+            }))(fromFoldable14(zipWith3(Tuple)(v1.fileInfo.collectionInfo._1.pkeys)(v1.fileInfo.collectionInfo._1.constraints)));
             const $0 = arrayMap((h) => ({ name: h, constraints: Nothing }))(difference2(headers$p)(fromFoldable14(v1.fileInfo.collectionInfo._1.pkeys)));
             if ($0.length > 0) {
               return [...part1, ...$0];
@@ -16353,6 +16606,13 @@ var compareResources = (expected) => (actual) => {
   return sequence_(zipWithImpl(compareOneResource, expectedSorted, actualSorted));
 };
 
+// output-es/Effect.Console/foreign.js
+var log2 = function(s) {
+  return function() {
+    console.log(s);
+  };
+};
+
 // output-es/App.Validation.DataPackageBased/index.js
 var bindVT2 = /* @__PURE__ */ bindExceptT({
   Applicative0: () => applicativeStateT(monadAff),
@@ -16360,35 +16620,59 @@ var bindVT2 = /* @__PURE__ */ bindExceptT({
 });
 var liftEffect2 = /* @__PURE__ */ (() => monadEffectExceptT(monadEffectState(monadEffectAff)).liftEffect)();
 var emitErrorsAndContinue2 = /* @__PURE__ */ emitErrorsAndContinue(monadAff);
-var applicativeVT = /* @__PURE__ */ applicativeExceptT({
+var applicativeVT2 = /* @__PURE__ */ applicativeExceptT({
   Applicative0: () => applicativeStateT(monadAff),
   Bind1: () => bindStateT(monadAff)
 });
 var fromArrayBy2 = /* @__PURE__ */ (() => fromArrayPurs(eqCollectionConstant.eq, hashableCollectionConstant.hash))();
-var identity20 = (x) => x;
+var identity18 = (x) => x;
 var lookup7 = /* @__PURE__ */ lookup4(hashableCollectionConstant);
 var emitErrorsAndStop2 = /* @__PURE__ */ emitErrorsAndStop(monadAff);
-var traverse2 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeVT))();
+var traverse2 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeVT2))();
 var $$for = /* @__PURE__ */ (() => {
-  const traverse22 = traversableArray.traverse(applicativeVT);
+  const traverse22 = traversableArray.traverse(applicativeVT2);
   return (x) => (f) => traverse22(f)(x);
 })();
-var traverse_3 = /* @__PURE__ */ traverse_(applicativeVT)(foldableArray);
+var traverse_3 = /* @__PURE__ */ traverse_(applicativeVT2)(foldableArray);
 var getState2 = /* @__PURE__ */ getState(monadAff)(monoidArray);
-var compare12 = /* @__PURE__ */ (() => ordMaybe(ordTuple(ordString)(ordNonEmpty2(ordString))).compare)();
-var traverse1 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeVT))();
+var compare12 = /* @__PURE__ */ (() => {
+  const $0 = ordNonEmpty2(ordString);
+  return (x) => (y) => {
+    if (x.tag === "Nothing") {
+      if (y.tag === "Nothing") {
+        return EQ;
+      }
+      return LT;
+    }
+    if (y.tag === "Nothing") {
+      return GT;
+    }
+    if (x.tag === "Just" && y.tag === "Just") {
+      const v = ordString.compare(x._1._1)(y._1._1);
+      if (v === "LT") {
+        return LT;
+      }
+      if (v === "GT") {
+        return GT;
+      }
+      return $0.compare(x._1._2)(y._1._2);
+    }
+    fail();
+  };
+})();
+var traverse1 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeVT2))();
 var readDataPackageResources = (path2) => bindVT2.bind(liftEffect2(datapackageExists(path2)))((datapackage) => {
   if (datapackage.tag === "Left") {
-    return bindVT2.bind(emitErrorsAndContinue2(datapackage._1))(() => applicativeVT.pure([]));
+    return bindVT2.bind(emitErrorsAndContinue2(datapackage._1))(() => applicativeVT2.pure([]));
   }
   if (datapackage.tag === "Right") {
     return bindVT2.bind(monadtransVT.lift(monadAff)(toAff2(readTextFile)(UTF8)(datapackage._1)))((content) => {
       const $0 = parseDataPackageResources(content);
       if ($0.tag === "Left") {
-        return bindVT2.bind(emitErrorsAndContinue2($0._1))(() => applicativeVT.pure([]));
+        return bindVT2.bind(emitErrorsAndContinue2($0._1))(() => applicativeVT2.pure([]));
       }
       if ($0.tag === "Right") {
-        return applicativeVT.pure($0._1);
+        return applicativeVT2.pure($0._1);
       }
       fail();
     });
@@ -16425,46 +16709,67 @@ var readAllFileInfoForValidation = (root) => (rs) => (dictMonad) => {
   ]))(() => applicativeVT1.pure(ddfFiles));
 };
 var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("reading file list..."))))(() => bindVT2.bind(readDataPackageResources(path2))((resources) => bindVT2.bind(readAllFileInfoForValidation(path2)(resources)(monadAff))((ddfFiles) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
-  const fileMap = fromArrayBy2((x) => getCollectionType((() => {
-    if (0 < x.length) {
-      return x[0].collectionInfo;
+  const fileMap = fromArrayBy2((x) => {
+    const $0 = (() => {
+      if (0 < x.length) {
+        return x[0].collectionInfo;
+      }
+      fail();
+    })();
+    if ($0.tag === "Concepts") {
+      return CONCEPTS;
+    }
+    if ($0.tag === "Entities") {
+      return ENTITIES;
+    }
+    if ($0.tag === "DataPoints") {
+      return DATAPOINTS;
+    }
+    if ($0.tag === "Synonyms") {
+      return SYNONYMS;
+    }
+    if ($0.tag === "Translations") {
+      return TRANSLATIONS;
+    }
+    if ($0.tag === "Other") {
+      return OTHERS;
     }
     fail();
-  })()))(identity20)(groupAllBy((x) => (y) => ordCollectionConstant.compare(getCollectionType(x.collectionInfo))(getCollectionType(y.collectionInfo)))(ddfFiles));
+  })(identity18)(groupAllBy((x) => (y) => ordCollection.compare(x.collectionInfo)(y.collectionInfo))(ddfFiles));
   return bindVT2.bind((() => {
     const v = lookup7(CONCEPTS)(fileMap);
     if (v.tag === "Nothing") {
       return emitErrorsAndStop2([$Issue("CodedIssue", E_DATASET_NO_CONCEPT, emptyContext)]);
     }
     if (v.tag === "Just") {
-      return applicativeVT.pure(v._1);
+      return applicativeVT2.pure(v._1);
     }
     fail();
-  })())((conceptFileInfos) => bindVT2.bind(traverse2(validateFileExists)(conceptFileInfos))((conceptFileInfos$p) => bindVT2.bind(readAndParseCsvFiles(mapMaybe((x) => x)(conceptFileInfos$p)))((conceptCsvFiles) => bindVT2.bind($$for(conceptCsvFiles)((x) => validateConcepts(x)(monadAff)))((concepts) => {
+  })())((conceptFileInfos) => bindVT2.bind(traverse2(validateFileExists)(conceptFileInfos))((conceptFileInfos$p) => bindVT2.bind(readAndParseCsvFiles(false)(mapMaybe((x) => x)(conceptFileInfos$p)))((conceptCsvFiles) => bindVT2.bind($$for(conceptCsvFiles)((x) => validateConcepts(x)(monadAff)))((concepts) => {
     const conceptResources = createResources(path2)(conceptCsvFiles);
     return bindVT2.bind((() => {
       const v = lookup7(ENTITIES)(fileMap);
       if (v.tag === "Nothing") {
-        return applicativeVT.pure([]);
+        return applicativeVT2.pure([]);
       }
       if (v.tag === "Just") {
-        return applicativeVT.pure(v._1);
+        return applicativeVT2.pure(v._1);
       }
       fail();
-    })())((entityFileInfos) => bindVT2.bind(traverse2(validateFileExists)(entityFileInfos))((entityFileInfos$p) => bindVT2.bind(readAndParseCsvFiles(mapMaybe((x) => x)(entityFileInfos$p)))((entityCsvFiles) => bindVT2.bind($$for(entityCsvFiles)((x) => validateEntities(x)(monadAff)))((entities) => {
+    })())((entityFileInfos) => bindVT2.bind(traverse2(validateFileExists)(entityFileInfos))((entityFileInfos$p) => bindVT2.bind(readAndParseCsvFiles(false)(mapMaybe((x) => x)(entityFileInfos$p)))((entityCsvFiles) => bindVT2.bind($$for(entityCsvFiles)((x) => validateEntities(x)(monadAff)))((entities) => {
       const entityResources = createResources(path2)(entityCsvFiles);
       return bindVT2.bind(validateBaseDataSet(concat(concepts))(concat(entities))(monadAff))((ds) => bindVT2.bind(traverse_3((c) => validateCsvHeaders(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT2.bind(traverse_3((c) => validateCsvHeaders(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT2.bind(getState2)((msgs) => {
         if (hasError(msgs)) {
-          return applicativeVT.pure($Tuple(ds, []));
+          return applicativeVT2.pure($Tuple(ds, []));
         }
         return bindVT2.bind(traverse_3((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT2.bind(traverse_3((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT2.bind((() => {
           const v = lookup7(DATAPOINTS)(fileMap);
           if (v.tag === "Nothing") {
-            return applicativeVT.pure([]);
+            return applicativeVT2.pure([]);
           }
           if (v.tag === "Just") {
             const $0 = v._1;
-            return bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating datapoints..."))))(() => applicativeVT.pure($0));
+            return bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating datapoints..."))))(() => applicativeVT2.pure($0));
           }
           fail();
         })())((datapointFiles) => bindVT2.bind($$for(groupAllBy((x) => (y) => compare12(x.collectionInfo.tag === "DataPoints" ? $Maybe("Just", $Tuple(x.collectionInfo._1.indicator, x.collectionInfo._1.pkeys)) : Nothing)(y.collectionInfo.tag === "DataPoints" ? $Maybe("Just", $Tuple(y.collectionInfo._1.indicator, y.collectionInfo._1.pkeys)) : Nothing))(datapointFiles))((group3) => {
@@ -16477,7 +16782,7 @@ var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(l
           if ($0.collectionInfo.tag === "DataPoints") {
             const $1 = $0.collectionInfo._1.indicator;
             const $2 = $0.collectionInfo._1.pkeys;
-            return bindVT2.bind(traverse1(validateFileExists)(group3))((group$p) => bindVT2.bind(readAndParseCsvFiles(mapMaybe((x) => x)(group$p)))((dpscsvFiles) => bindVT2.bind(validateDatapointsFileGroup($1)($2)(ds)(dpscsvFiles)(monadAff))(() => applicativeVT.pure(createResources(path2)(dpscsvFiles)))));
+            return bindVT2.bind(traverse1(validateFileExists)(group3))((group$p) => bindVT2.bind(readAndParseCsvFiles(false)(mapMaybe((x) => x)(group$p)))((dpscsvFiles) => bindVT2.bind(validateDatapointsFileGroup($1)($2)(ds)(dpscsvFiles)(monadAff))(() => applicativeVT2.pure(createResources(path2)(dpscsvFiles)))));
           }
           fail();
         }))((datapointResources_) => {
@@ -16485,26 +16790,26 @@ var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(l
           return bindVT2.bind((() => {
             const v = lookup7(SYNONYMS)(fileMap);
             if (v.tag === "Nothing") {
-              return applicativeVT.pure([]);
+              return applicativeVT2.pure([]);
             }
             if (v.tag === "Just") {
               const $0 = v._1;
-              return bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating synonym files..."))))(() => applicativeVT.pure($0));
+              return bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating synonym files..."))))(() => applicativeVT2.pure($0));
             }
             fail();
-          })())((synonymFileInfos) => bindVT2.bind(readAndParseCsvFiles(synonymFileInfos))((synonymCsvFiles) => bindVT2.bind(traverse_3((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(synonymCsvFiles))(() => {
+          })())((synonymFileInfos) => bindVT2.bind(readAndParseCsvFiles(false)(synonymFileInfos))((synonymCsvFiles) => bindVT2.bind(traverse_3((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(synonymCsvFiles))(() => {
             const synonymResources = createResources(path2)(synonymCsvFiles);
             return bindVT2.bind((() => {
               const v = lookup7(TRANSLATIONS)(fileMap);
               if (v.tag === "Nothing") {
-                return applicativeVT.pure([]);
+                return applicativeVT2.pure([]);
               }
               if (v.tag === "Just") {
                 const $0 = v._1;
-                return bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating translation files..."))))(() => applicativeVT.pure($0));
+                return bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating translation files..."))))(() => applicativeVT2.pure($0));
               }
               fail();
-            })())((translationFileInfos) => bindVT2.bind(readAndParseCsvFiles(translationFileInfos))((translationCsvFiles) => bindVT2.bind(traverse_3((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(translationCsvFiles))(() => {
+            })())((translationFileInfos) => bindVT2.bind(readAndParseCsvFiles(false)(translationFileInfos))((translationCsvFiles) => bindVT2.bind(traverse_3((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(translationCsvFiles))(() => {
               const actualResources = [...conceptResources, ...entityResources, ...datapointResources, ...synonymResources];
               return bindVT2.bind((() => {
                 const $0 = compareResources(resources)(actualResources);
@@ -16512,10 +16817,10 @@ var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(l
                   return emitErrorsAndContinue2($0._1);
                 }
                 if ($0.tag === "Right") {
-                  return applicativeVT.pure();
+                  return applicativeVT2.pure();
                 }
                 fail();
-              })())(() => applicativeVT.pure($Tuple(ds, actualResources)));
+              })())(() => applicativeVT2.pure($Tuple(ds, actualResources)));
             })));
           })));
         }))));
@@ -16554,47 +16859,69 @@ var bindVT3 = /* @__PURE__ */ bindExceptT({
 });
 var liftEffect3 = /* @__PURE__ */ (() => monadEffectExceptT(monadEffectState(monadEffectAff)).liftEffect)();
 var emitErrorsAndContinue3 = /* @__PURE__ */ emitErrorsAndContinue(monadAff);
-var applicativeVT2 = /* @__PURE__ */ applicativeExceptT({
+var applicativeVT3 = /* @__PURE__ */ applicativeExceptT({
   Applicative0: () => applicativeStateT(monadAff),
   Bind1: () => bindStateT(monadAff)
 });
-var forWithIndex_2 = /* @__PURE__ */ forWithIndex_(applicativeVT2)(foldableWithIndexArray);
-var checkAndFixFileFormat2 = /* @__PURE__ */ checkAndFixFileFormat(monadAff)(monadEffectAff);
 var fromArrayBy3 = /* @__PURE__ */ (() => fromArrayPurs(eqCollectionConstant.eq, hashableCollectionConstant.hash))();
-var identity21 = (x) => x;
+var identity19 = (x) => x;
 var lookup8 = /* @__PURE__ */ lookup4(hashableCollectionConstant);
 var emitErrorsAndStop3 = /* @__PURE__ */ emitErrorsAndStop(monadAff);
 var $$for2 = /* @__PURE__ */ (() => {
-  const traverse22 = traversableArray.traverse(applicativeVT2);
+  const traverse22 = traversableArray.traverse(applicativeVT3);
   return (x) => (f) => traverse22(f)(x);
 })();
-var traverse_4 = /* @__PURE__ */ traverse_(applicativeVT2)(foldableArray);
+var traverse_4 = /* @__PURE__ */ traverse_(applicativeVT3)(foldableArray);
 var getState3 = /* @__PURE__ */ getState(monadAff)(monoidArray);
-var compare13 = /* @__PURE__ */ (() => ordMaybe(ordTuple(ordString)(ordNonEmpty2(ordString))).compare)();
+var compare13 = /* @__PURE__ */ (() => {
+  const $0 = ordNonEmpty2(ordString);
+  return (x) => (y) => {
+    if (x.tag === "Nothing") {
+      if (y.tag === "Nothing") {
+        return EQ;
+      }
+      return LT;
+    }
+    if (y.tag === "Nothing") {
+      return GT;
+    }
+    if (x.tag === "Just" && y.tag === "Just") {
+      const v = ordString.compare(x._1._1)(y._1._1);
+      if (v === "LT") {
+        return LT;
+      }
+      if (v === "GT") {
+        return GT;
+      }
+      return $0.compare(x._1._2)(y._1._2);
+    }
+    fail();
+  };
+})();
 var forWithIndex = /* @__PURE__ */ (() => {
-  const $0 = traversableWithIndexArray.traverseWithIndex(applicativeVT2);
+  const $0 = traversableWithIndexArray.traverseWithIndex(applicativeVT3);
   return (b) => (a) => $0(a)(b);
 })();
 var emitWarningsAndContinue2 = /* @__PURE__ */ emitWarningsAndContinue(monadAff);
 var readDataPackageResources2 = (path2) => bindVT3.bind(liftEffect3(datapackageExists(path2)))((datapackage) => {
   if (datapackage.tag === "Left") {
-    return bindVT3.bind(emitErrorsAndContinue3(datapackage._1))(() => applicativeVT2.pure([]));
+    return bindVT3.bind(emitErrorsAndContinue3(datapackage._1))(() => applicativeVT3.pure([]));
   }
   if (datapackage.tag === "Right") {
     return bindVT3.bind(monadtransVT.lift(monadAff)(toAff2(readTextFile)(UTF8)(datapackage._1)))((content) => {
       const $0 = parseDataPackageResources(content);
       if ($0.tag === "Left") {
-        return bindVT3.bind(emitErrorsAndContinue3($0._1))(() => applicativeVT2.pure([]));
+        return bindVT3.bind(emitErrorsAndContinue3($0._1))(() => applicativeVT3.pure([]));
       }
       if ($0.tag === "Right") {
-        return applicativeVT2.pure($0._1);
+        return applicativeVT3.pure($0._1);
       }
       fail();
     });
   }
   fail();
 });
-var readAllFileInfoForValidation2 = (root) => (fs2) => (dictMonad) => {
+var readAllFileInfoForValidation2 = (root) => (fs) => (dictMonad) => {
   const applicativeVT1 = applicativeExceptT({
     Applicative0: () => applicativeStateT(dictMonad),
     Bind1: () => bindStateT(dictMonad)
@@ -16608,7 +16935,7 @@ var readAllFileInfoForValidation2 = (root) => (fs2) => (dictMonad) => {
       return $Maybe("Just", $0._1);
     }
     fail();
-  })(fs2));
+  })(fs));
   return bindExceptT({
     Applicative0: () => applicativeStateT(dictMonad),
     Bind1: () => bindStateT(dictMonad)
@@ -16628,172 +16955,281 @@ var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(mon
   "etl",
   "assets",
   "langsplit"
-])))((fs2) => {
-  const csvFiles = filterImpl((f) => stripSuffix(".csv")(f).tag !== "Nothing", fs2);
-  const totalCsvFiles = csvFiles.length;
-  return bindVT3.bind(forWithIndex_2(csvFiles)((i) => (f) => bindVT3.bind(liftEffect3(progress("checking format: " + showIntImpl(i + 1 | 0) + "/" + showIntImpl(totalCsvFiles))))(() => checkAndFixFileFormat2(fixFormat)(f))))(() => bindVT3.bind(liftEffect3(clearProgress))(() => bindVT3.bind(readAllFileInfoForValidation2(path2)(fs2)(monadAff))((ddfFiles) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
-    const fileMap = fromArrayBy3((x) => getCollectionType((() => {
+])))((fs) => bindVT3.bind(readAllFileInfoForValidation2(path2)(fs)(monadAff))((ddfFiles) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
+  const fileMap = fromArrayBy3((x) => {
+    const $0 = (() => {
       if (0 < x.length) {
         return x[0].collectionInfo;
       }
       fail();
-    })()))(identity21)(groupAllBy((x) => (y) => ordCollectionConstant.compare(getCollectionType(x.collectionInfo))(getCollectionType(y.collectionInfo)))(ddfFiles));
+    })();
+    if ($0.tag === "Concepts") {
+      return CONCEPTS;
+    }
+    if ($0.tag === "Entities") {
+      return ENTITIES;
+    }
+    if ($0.tag === "DataPoints") {
+      return DATAPOINTS;
+    }
+    if ($0.tag === "Synonyms") {
+      return SYNONYMS;
+    }
+    if ($0.tag === "Translations") {
+      return TRANSLATIONS;
+    }
+    if ($0.tag === "Other") {
+      return OTHERS;
+    }
+    fail();
+  })(identity19)(groupAllBy((x) => (y) => ordCollection.compare(x.collectionInfo)(y.collectionInfo))(ddfFiles));
+  return bindVT3.bind((() => {
+    const v = lookup8(CONCEPTS)(fileMap);
+    if (v.tag === "Nothing") {
+      return emitErrorsAndStop3([$Issue("CodedIssue", E_DATASET_NO_CONCEPT, emptyContext)]);
+    }
+    if (v.tag === "Just") {
+      return applicativeVT3.pure(v._1);
+    }
+    fail();
+  })())((conceptFileInfos) => bindVT3.bind(readAndParseCsvFiles(fixFormat)(conceptFileInfos))((conceptCsvFiles) => bindVT3.bind($$for2(conceptCsvFiles)((x) => validateConcepts(x)(monadAff)))((concepts) => {
+    const conceptResources = createResources(path2)(conceptCsvFiles);
     return bindVT3.bind((() => {
-      const v = lookup8(CONCEPTS)(fileMap);
+      const v = lookup8(ENTITIES)(fileMap);
       if (v.tag === "Nothing") {
-        return emitErrorsAndStop3([$Issue("CodedIssue", E_DATASET_NO_CONCEPT, emptyContext)]);
+        return applicativeVT3.pure([]);
       }
       if (v.tag === "Just") {
-        return applicativeVT2.pure(v._1);
+        return applicativeVT3.pure(v._1);
       }
       fail();
-    })())((conceptFileInfos) => bindVT3.bind(readAndParseCsvFiles(conceptFileInfos))((conceptCsvFiles) => bindVT3.bind($$for2(conceptCsvFiles)((x) => validateConcepts(x)(monadAff)))((concepts) => {
-      const conceptResources = createResources(path2)(conceptCsvFiles);
-      return bindVT3.bind((() => {
-        const v = lookup8(ENTITIES)(fileMap);
-        if (v.tag === "Nothing") {
-          return applicativeVT2.pure([]);
+    })())((entityFileInfos) => bindVT3.bind(readAndParseCsvFiles(fixFormat)(entityFileInfos))((entityCsvFiles) => bindVT3.bind($$for2(entityCsvFiles)((x) => validateEntities(x)(monadAff)))((entities) => {
+      const entityResources = createResources(path2)(entityCsvFiles);
+      return bindVT3.bind(validateBaseDataSet(concat(concepts))(concat(entities))(monadAff))((ds) => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(getState3)((msgs) => {
+        if (hasError(msgs)) {
+          return applicativeVT3.pure($Tuple(ds, []));
         }
-        if (v.tag === "Just") {
-          return applicativeVT2.pure(v._1);
-        }
-        fail();
-      })())((entityFileInfos) => bindVT3.bind(readAndParseCsvFiles(entityFileInfos))((entityCsvFiles) => bindVT3.bind($$for2(entityCsvFiles)((x) => validateEntities(x)(monadAff)))((entities) => {
-        const entityResources = createResources(path2)(entityCsvFiles);
-        return bindVT3.bind(validateBaseDataSet(concat(concepts))(concat(entities))(monadAff))((ds) => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(getState3)((msgs) => {
-          if (hasError(msgs)) {
-            return applicativeVT2.pure($Tuple(ds, []));
+        return bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind((() => {
+          const v = lookup8(DATAPOINTS)(fileMap);
+          if (v.tag === "Nothing") {
+            return applicativeVT3.pure([]);
           }
-          return bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind((() => {
-            const v = lookup8(DATAPOINTS)(fileMap);
-            if (v.tag === "Nothing") {
-              return applicativeVT2.pure([]);
-            }
-            if (v.tag === "Just") {
-              const $0 = v._1;
-              return bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating datapoints..."))))(() => applicativeVT2.pure($0));
-            }
-            fail();
-          })())((datapointFiles) => {
-            const datapointFileGroups = groupAllBy((x) => (y) => compare13(x.collectionInfo.tag === "DataPoints" ? $Maybe("Just", $Tuple(x.collectionInfo._1.indicator, x.collectionInfo._1.pkeys)) : Nothing)(y.collectionInfo.tag === "DataPoints" ? $Maybe("Just", $Tuple(y.collectionInfo._1.indicator, y.collectionInfo._1.pkeys)) : Nothing))(datapointFiles);
-            const total = datapointFileGroups.length;
-            return bindVT3.bind(forWithIndex(datapointFileGroups)((i) => (group3) => bindVT3.bind(liftEffect3(progress("validating datapoints: " + showIntImpl(i + 1 | 0) + "/" + showIntImpl(total) + " indicator groups")))(() => {
-              const $0 = (() => {
-                if (0 < group3.length) {
-                  return group3[0];
-                }
-                fail();
-              })();
-              if ($0.collectionInfo.tag === "DataPoints") {
-                const $1 = $0.collectionInfo._1.indicator;
-                const $2 = $0.collectionInfo._1.pkeys;
-                return bindVT3.bind(readAndParseCsvFiles(group3))((dpscsvFiles) => bindVT3.bind(validateDatapointsFileGroup($1)($2)(ds)(dpscsvFiles)(monadAff))(() => applicativeVT2.pure(createResources(path2)(dpscsvFiles))));
+          if (v.tag === "Just") {
+            const $0 = v._1;
+            return bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating datapoints..."))))(() => applicativeVT3.pure($0));
+          }
+          fail();
+        })())((datapointFiles) => {
+          const datapointFileGroups = groupAllBy((x) => (y) => compare13(x.collectionInfo.tag === "DataPoints" ? $Maybe("Just", $Tuple(x.collectionInfo._1.indicator, x.collectionInfo._1.pkeys)) : Nothing)(y.collectionInfo.tag === "DataPoints" ? $Maybe("Just", $Tuple(y.collectionInfo._1.indicator, y.collectionInfo._1.pkeys)) : Nothing))(datapointFiles);
+          const total = datapointFileGroups.length;
+          return bindVT3.bind(forWithIndex(datapointFileGroups)((i) => (group3) => bindVT3.bind(liftEffect3(progress("validating datapoints: " + showIntImpl(i + 1 | 0) + "/" + showIntImpl(total) + " indicator groups")))(() => {
+            const $0 = (() => {
+              if (0 < group3.length) {
+                return group3[0];
               }
               fail();
-            })))((datapointResources_) => bindVT3.bind(liftEffect3(clearProgress))(() => {
-              const datapointResources = concat(datapointResources_);
+            })();
+            if ($0.collectionInfo.tag === "DataPoints") {
+              const $1 = $0.collectionInfo._1.indicator;
+              const $2 = $0.collectionInfo._1.pkeys;
+              return bindVT3.bind(readAndParseCsvFiles(fixFormat)(group3))((dpscsvFiles) => bindVT3.bind(validateDatapointsFileGroup($1)($2)(ds)(dpscsvFiles)(monadAff))(() => applicativeVT3.pure(createResources(path2)(dpscsvFiles))));
+            }
+            fail();
+          })))((datapointResources_) => bindVT3.bind(liftEffect3(clearProgress))(() => {
+            const datapointResources = concat(datapointResources_);
+            return bindVT3.bind((() => {
+              const v = lookup8(SYNONYMS)(fileMap);
+              if (v.tag === "Nothing") {
+                return applicativeVT3.pure([]);
+              }
+              if (v.tag === "Just") {
+                const $0 = v._1;
+                return bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating synonym files..."))))(() => applicativeVT3.pure($0));
+              }
+              fail();
+            })())((synonymFileInfos) => bindVT3.bind(readAndParseCsvFiles(fixFormat)(synonymFileInfos))((synonymCsvFiles) => bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(synonymCsvFiles))(() => {
+              const synonymResources = createResources(path2)(synonymCsvFiles);
               return bindVT3.bind((() => {
-                const v = lookup8(SYNONYMS)(fileMap);
+                const v = lookup8(TRANSLATIONS)(fileMap);
                 if (v.tag === "Nothing") {
-                  return applicativeVT2.pure([]);
+                  return applicativeVT3.pure([]);
                 }
                 if (v.tag === "Just") {
                   const $0 = v._1;
-                  return bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating synonym files..."))))(() => applicativeVT2.pure($0));
+                  return bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating translation files..."))))(() => applicativeVT3.pure($0));
                 }
                 fail();
-              })())((synonymFileInfos) => bindVT3.bind(readAndParseCsvFiles(synonymFileInfos))((synonymCsvFiles) => bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(synonymCsvFiles))(() => {
-                const synonymResources = createResources(path2)(synonymCsvFiles);
-                return bindVT3.bind((() => {
-                  const v = lookup8(TRANSLATIONS)(fileMap);
-                  if (v.tag === "Nothing") {
-                    return applicativeVT2.pure([]);
+              })())((translationFileInfos) => bindVT3.bind(readAndParseCsvFiles(fixFormat)(translationFileInfos))((translationCsvFiles) => bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(translationCsvFiles))(() => {
+                const actualResources = [...conceptResources, ...entityResources, ...datapointResources, ...synonymResources];
+                return bindVT3.bind(readDataPackageResources2(path2))((expectedResources) => bindVT3.bind((() => {
+                  const $0 = compareResources(expectedResources)(actualResources);
+                  if ($0.tag === "Left") {
+                    if (dpIssueAsWarning) {
+                      return emitWarningsAndContinue2($0._1);
+                    }
+                    return emitErrorsAndStop3($0._1);
                   }
-                  if (v.tag === "Just") {
-                    const $0 = v._1;
-                    return bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating translation files..."))))(() => applicativeVT2.pure($0));
+                  if ($0.tag === "Right") {
+                    return applicativeVT3.pure();
                   }
                   fail();
-                })())((translationFileInfos) => bindVT3.bind(readAndParseCsvFiles(translationFileInfos))((translationCsvFiles) => bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(translationCsvFiles))(() => {
-                  const actualResources = [...conceptResources, ...entityResources, ...datapointResources, ...synonymResources];
-                  return bindVT3.bind(readDataPackageResources2(path2))((expectedResources) => bindVT3.bind((() => {
-                    const $0 = compareResources(expectedResources)(actualResources);
-                    if ($0.tag === "Left") {
-                      if (dpIssueAsWarning) {
-                        return emitWarningsAndContinue2($0._1);
-                      }
-                      return emitErrorsAndStop3($0._1);
-                    }
-                    if ($0.tag === "Right") {
-                      return applicativeVT2.pure();
-                    }
-                    fail();
-                  })())(() => applicativeVT2.pure($Tuple(ds, actualResources))));
-                })));
+                })())(() => applicativeVT3.pure($Tuple(ds, actualResources))));
               })));
-            }));
-          })));
-        }))));
-      })));
+            })));
+          }));
+        })));
+      }))));
     })));
-  }))));
-}));
+  })));
+}))));
 
 // output-es/Data.DataPackage/index.js
 var valueIsSymbol = { reflectSymbol: () => "value" };
 var primaryKeyIsSymbol2 = { reflectSymbol: () => "primaryKey" };
-var compare = /* @__PURE__ */ (() => ordRecord()((() => {
+var compare = /* @__PURE__ */ (() => {
   const $0 = ordNullable(ordString);
-  const $1 = $0.Eq0();
-  const $2 = ordArray(ordString);
-  const $3 = $2.Eq0();
-  const eqRowCons2 = { eqRecord: (v) => (ra) => (rb) => $3.eq(ra.primaryKey)(rb.primaryKey) && $1.eq(ra.value)(rb.value) };
-  return {
-    compareRecord: (v) => (ra) => (rb) => {
-      const left = $2.compare(ra.primaryKey)(rb.primaryKey);
-      if (left === "LT" || left === "GT" || left !== "EQ") {
-        return left;
-      }
-      const left$1 = $0.compare(ra.value)(rb.value);
-      if (left$1 === "LT" || left$1 === "GT" || left$1 !== "EQ") {
-        return left$1;
-      }
-      return EQ;
-    },
-    EqRecord0: () => eqRowCons2
+  const $1 = ordArray(ordString);
+  return (ra) => (rb) => {
+    const left = $1.compare(ra.primaryKey)(rb.primaryKey);
+    if (left === "LT" || left === "GT" || left !== "EQ") {
+      return left;
+    }
+    const left$1 = $0.compare(ra.value)(rb.value);
+    if (left$1 === "LT" || left$1 === "GT" || left$1 !== "EQ") {
+      return left$1;
+    }
+    return EQ;
   };
-})()).compare)();
+})();
 var readForeignMaybe2 = /* @__PURE__ */ readForeignMaybe(readForeignString);
 var readForeignArray3 = /* @__PURE__ */ readForeignArray(readForeignString);
-var readForeignArray1 = /* @__PURE__ */ readForeignArray(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons(primaryKeyIsSymbol2)(readForeignArray3)(/* @__PURE__ */ readForeignFieldsCons({
-  reflectSymbol: () => "resources"
-})(readForeignArray3)(/* @__PURE__ */ readForeignFieldsCons(valueIsSymbol)(/* @__PURE__ */ readForeignNullable(readForeignString))(readForeignFieldsNilRowRo)()())()())()()));
+var readForeignArray1 = /* @__PURE__ */ readForeignArray(/* @__PURE__ */ (() => {
+  const $0 = readForeignFieldsCons(primaryKeyIsSymbol2)(readForeignArray3)(readForeignFieldsCons({ reflectSymbol: () => "resources" })(readForeignArray3)(readForeignFieldsCons(valueIsSymbol)(readForeignNullable(readForeignString))(readForeignFieldsNilRowRo)()())()())()();
+  return {
+    readImpl: (o) => {
+      const $1 = $0.getFields($$Proxy)(o);
+      if ($1.tag === "Left") {
+        return $Either("Left", $1._1);
+      }
+      if ($1.tag === "Right") {
+        return $Either("Right", $1._1({}));
+      }
+      fail();
+    }
+  };
+})());
 var readForeignFieldsCons3 = /* @__PURE__ */ readForeignFieldsCons({ reflectSymbol: () => "name" })(readForeignMaybe2);
-var readForeignRecord1 = /* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons({ reflectSymbol: () => "id" })(readForeignString)(/* @__PURE__ */ readForeignFieldsCons3(readForeignFieldsNilRowRo)()())()());
+var readForeignRecord1 = /* @__PURE__ */ (() => {
+  const $0 = readForeignFieldsCons({ reflectSymbol: () => "id" })(readForeignString)(readForeignFieldsCons3(readForeignFieldsNilRowRo)()())()();
+  return {
+    readImpl: (o) => {
+      const $1 = $0.getFields($$Proxy)(o);
+      if ($1.tag === "Left") {
+        return $Either("Left", $1._1);
+      }
+      if ($1.tag === "Right") {
+        return $Either("Right", $1._1({}));
+      }
+      fail();
+    }
+  };
+})();
 var readForeignFieldsCons4 = /* @__PURE__ */ readForeignFieldsCons({ reflectSymbol: () => "name" })(readForeignNonEmptyString);
-var readJSON_2 = /* @__PURE__ */ readJSON_(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons({
-  reflectSymbol: () => "author"
-})(readForeignMaybe2)(/* @__PURE__ */ readForeignFieldsCons({ reflectSymbol: () => "created" })(readForeignMaybe2)(/* @__PURE__ */ readForeignFieldsCons({
-  reflectSymbol: () => "ddfSchema"
-})(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons({ reflectSymbol: () => "concepts" })(readForeignArray1)(/* @__PURE__ */ readForeignFieldsCons({
-  reflectSymbol: () => "datapoints"
-})(readForeignArray1)(/* @__PURE__ */ readForeignFieldsCons({ reflectSymbol: () => "entities" })(readForeignArray1)(/* @__PURE__ */ readForeignFieldsCons({
-  reflectSymbol: () => "synonyms"
-})(readForeignArray1)(readForeignFieldsNilRowRo)()())()())()())()()))(/* @__PURE__ */ readForeignFieldsCons({ reflectSymbol: () => "description" })(readForeignMaybe2)(/* @__PURE__ */ readForeignFieldsCons({
-  reflectSymbol: () => "language"
-})(/* @__PURE__ */ readForeignMaybe(readForeignRecord1))(/* @__PURE__ */ readForeignFieldsCons({ reflectSymbol: () => "license" })(readForeignMaybe2)(/* @__PURE__ */ readForeignFieldsCons3(/* @__PURE__ */ readForeignFieldsCons({
-  reflectSymbol: () => "resources"
-})(/* @__PURE__ */ readForeignArray(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons4(/* @__PURE__ */ readForeignFieldsCons({
-  reflectSymbol: () => "path"
-})(readForeignNonEmptyString)(/* @__PURE__ */ readForeignFieldsCons({ reflectSymbol: () => "schema" })(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons({
-  reflectSymbol: () => "fields"
-})(/* @__PURE__ */ readForeignArray(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons({ reflectSymbol: () => "constraints" })(/* @__PURE__ */ readForeignMaybe(/* @__PURE__ */ readForeignRecord()(/* @__PURE__ */ readForeignFieldsCons({
-  reflectSymbol: () => "enum"
-})(/* @__PURE__ */ readForeignArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()())))(/* @__PURE__ */ readForeignFieldsCons4(readForeignFieldsNilRowRo)()())()())))(/* @__PURE__ */ readForeignFieldsCons(primaryKeyIsSymbol2)(/* @__PURE__ */ readForeignNonEmptyArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()())()()))(readForeignFieldsNilRowRo)()())()())()())))(/* @__PURE__ */ readForeignFieldsCons({
-  reflectSymbol: () => "title"
-})(readForeignMaybe2)(/* @__PURE__ */ readForeignFieldsCons({ reflectSymbol: () => "translations" })(/* @__PURE__ */ readForeignMaybe(/* @__PURE__ */ readForeignArray(readForeignRecord1)))(/* @__PURE__ */ readForeignFieldsCons({
-  reflectSymbol: () => "version"
-})(readForeignMaybe2)(readForeignFieldsNilRowRo)()())()())()())()())()())()())()())()())()())()())()()));
+var readJSON_2 = /* @__PURE__ */ readJSON_(/* @__PURE__ */ (() => {
+  const $0 = readForeignFieldsCons({ reflectSymbol: () => "author" })(readForeignMaybe2)(readForeignFieldsCons({ reflectSymbol: () => "created" })(readForeignMaybe2)(readForeignFieldsCons({
+    reflectSymbol: () => "ddfSchema"
+  })((() => {
+    const $02 = readForeignFieldsCons({ reflectSymbol: () => "concepts" })(readForeignArray1)(readForeignFieldsCons({ reflectSymbol: () => "datapoints" })(readForeignArray1)(readForeignFieldsCons({
+      reflectSymbol: () => "entities"
+    })(readForeignArray1)(readForeignFieldsCons({ reflectSymbol: () => "synonyms" })(readForeignArray1)(readForeignFieldsNilRowRo)()())()())()())()();
+    return {
+      readImpl: (o) => {
+        const $1 = $02.getFields($$Proxy)(o);
+        if ($1.tag === "Left") {
+          return $Either("Left", $1._1);
+        }
+        if ($1.tag === "Right") {
+          return $Either("Right", $1._1({}));
+        }
+        fail();
+      }
+    };
+  })())(readForeignFieldsCons({ reflectSymbol: () => "description" })(readForeignMaybe2)(readForeignFieldsCons({ reflectSymbol: () => "language" })(readForeignMaybe(readForeignRecord1))(readForeignFieldsCons({
+    reflectSymbol: () => "license"
+  })(readForeignMaybe2)(readForeignFieldsCons3(readForeignFieldsCons({ reflectSymbol: () => "resources" })(readForeignArray((() => {
+    const $02 = readForeignFieldsCons4(readForeignFieldsCons({ reflectSymbol: () => "path" })(readForeignNonEmptyString)(readForeignFieldsCons({
+      reflectSymbol: () => "schema"
+    })((() => {
+      const $03 = readForeignFieldsCons({ reflectSymbol: () => "fields" })(readForeignArray((() => {
+        const $04 = readForeignFieldsCons({ reflectSymbol: () => "constraints" })(readForeignMaybe((() => {
+          const $05 = readForeignFieldsCons({ reflectSymbol: () => "enum" })(readForeignArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()();
+          return {
+            readImpl: (o) => {
+              const $1 = $05.getFields($$Proxy)(o);
+              if ($1.tag === "Left") {
+                return $Either("Left", $1._1);
+              }
+              if ($1.tag === "Right") {
+                return $Either("Right", $1._1({}));
+              }
+              fail();
+            }
+          };
+        })()))(readForeignFieldsCons4(readForeignFieldsNilRowRo)()())()();
+        return {
+          readImpl: (o) => {
+            const $1 = $04.getFields($$Proxy)(o);
+            if ($1.tag === "Left") {
+              return $Either("Left", $1._1);
+            }
+            if ($1.tag === "Right") {
+              return $Either("Right", $1._1({}));
+            }
+            fail();
+          }
+        };
+      })()))(readForeignFieldsCons(primaryKeyIsSymbol2)(readForeignNonEmptyArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()())()();
+      return {
+        readImpl: (o) => {
+          const $1 = $03.getFields($$Proxy)(o);
+          if ($1.tag === "Left") {
+            return $Either("Left", $1._1);
+          }
+          if ($1.tag === "Right") {
+            return $Either("Right", $1._1({}));
+          }
+          fail();
+        }
+      };
+    })())(readForeignFieldsNilRowRo)()())()())()();
+    return {
+      readImpl: (o) => {
+        const $1 = $02.getFields($$Proxy)(o);
+        if ($1.tag === "Left") {
+          return $Either("Left", $1._1);
+        }
+        if ($1.tag === "Right") {
+          return $Either("Right", $1._1({}));
+        }
+        fail();
+      }
+    };
+  })()))(readForeignFieldsCons({ reflectSymbol: () => "title" })(readForeignMaybe2)(readForeignFieldsCons({ reflectSymbol: () => "translations" })(readForeignMaybe(readForeignArray(readForeignRecord1)))(readForeignFieldsCons({
+    reflectSymbol: () => "version"
+  })(readForeignMaybe2)(readForeignFieldsNilRowRo)()())()())()())()())()())()())()())()())()())()())()();
+  return {
+    readImpl: (o) => {
+      const $1 = $0.getFields($$Proxy)(o);
+      if ($1.tag === "Left") {
+        return $Either("Left", $1._1);
+      }
+      if ($1.tag === "Right") {
+        return $Either("Right", $1._1({}));
+      }
+      fail();
+    }
+  };
+})());
 var lookup9 = /* @__PURE__ */ lookup4(hashableString);
 var hashableList2 = /* @__PURE__ */ hashableList(hashableString);
 var member3 = /* @__PURE__ */ member(hashableList2);
@@ -16825,8 +17261,8 @@ var permConcat = (v) => (v1) => {
   }
   return arrayBind(v)((x) => arrayBind(v1)((y) => [[...x, ...y]]));
 };
-var isDomainOrSet = (dataset) => (concept2) => {
-  const $0 = lookup5(concept2)(dataset.concepts);
+var isDomainOrSet = (dataset) => (concept) => {
+  const $0 = lookup5(concept)(dataset.concepts);
   if ($0.tag === "Just") {
     return $0._1.conceptType.tag === "EntityDomainC" || $0._1.conceptType.tag === "EntitySetC";
   }
@@ -16915,7 +17351,7 @@ var generateDataPackage = (root) => (dataset) => (resources) => {
       }
       fail();
     };
-    return _bind(foldM(monadAff)((schemaAcc) => (res) => _bind(readAndParseCsv(concat3([root, res.path])))((v) => {
+    return _bind(foldM(monadAff)((schemaAcc) => (res) => _bind(readAndParseCsvPlain(concat3([root, res.path])))((v) => {
       const primaryKeys = arrayMap(toString3)(res.schema.primaryKey);
       const v1 = partitionImpl(isDomainOrSet(dataset), primaryKeys);
       const $0 = res.name;
@@ -16923,16 +17359,36 @@ var generateDataPackage = (root) => (dataset) => (resources) => {
         foldableHashSet.foldr,
         v1.yes.length === 0 ? empty2 : foldRows(v)((row) => (acc) => {
           const filtered = filterKeys(ordString)((x) => elem(eqString)(x)(v1.yes))(row);
-          const values3 = values(filtered);
-          if (member3(values3)(acc._1)) {
+          const go = (m$p, z$p) => {
+            if (m$p.tag === "Leaf") {
+              return z$p;
+            }
+            if (m$p.tag === "Node") {
+              return go(m$p._5, $List("Cons", m$p._4, go(m$p._6, z$p)));
+            }
+            fail();
+          };
+          const values2 = go(filtered, Nil);
+          if (member3(values2)(acc._1)) {
             return acc;
           }
           return $Tuple(
-            insert6(values3)(acc._1),
-            append1(acc._2)(fromArray4(permutations(fromFoldableImpl(
-              foldableList.foldr,
-              values(mapMaybeWithKey(ordString)((k) => (v1$1) => whichSets(dataset, k, v1$1))(filtered))
-            ))))
+            insert6(values2)(acc._1),
+            append1(acc._2)(fromArray4(permutations((() => {
+              const go$1 = (m$p, z$p) => {
+                if (m$p.tag === "Leaf") {
+                  return z$p;
+                }
+                if (m$p.tag === "Node") {
+                  return go$1(m$p._5, $List("Cons", m$p._4, go$1(m$p._6, z$p)));
+                }
+                fail();
+              };
+              return fromFoldableImpl(
+                foldableList.foldr,
+                go$1(mapMaybeWithKey(ordString)((k) => (v1$1) => whichSets(dataset, k, v1$1))(filtered), Nil)
+              );
+            })())))
           );
         })($Tuple(empty2, empty2))._2
       ))(permutations(mapMaybe((x) => whichSets(dataset, x, ""))(v1.no)))))((() => {
@@ -16967,7 +17423,15 @@ var generateDataPackage = (root) => (dataset) => (resources) => {
 };
 
 // output-es/Main/index.js
-var runValidationT2 = /* @__PURE__ */ runValidationT(monadAff)(monoidArray);
+var runValidationT = (v) => _bind(v([]))((v1) => _pure((() => {
+  if (v1._1.tag === "Left") {
+    return $Tuple([...v1._2, ...v1._1._1], Nothing);
+  }
+  if (v1._1.tag === "Right") {
+    return $Tuple(v1._2, $Maybe("Just", v1._1._1));
+  }
+  fail();
+})()));
 var write4 = /* @__PURE__ */ (() => writeForeignTuple(writeForeignBoolean)((() => {
   const $0 = writeForeignFieldsCons({ reflectSymbol: () => "errorCode" })(writeForeignString)(writeForeignFieldsCons({ reflectSymbol: () => "file" })(writeForeignString)(writeForeignFieldsCons({
     reflectSymbol: () => "isWarning"
@@ -16980,7 +17444,7 @@ var validate$p = (opts2) => fromAff((() => {
   const path2 = opts2.targetPath;
   const onlyErrors = opts2.onlyErrors;
   const gendp = opts2.generateDP;
-  return _bind(runValidationT2(validate2(path2)(gendp)(false)))((v) => {
+  return _bind(runValidationT(validate2(path2)(gendp)(false)))((v) => {
     const $0 = v._1;
     const msgsToShow = onlyErrors ? filterImpl((x) => !x.isWarning, $0) : $0;
     return _bind((() => {
@@ -17021,12 +17485,12 @@ var runMain = (opts2) => {
     (() => {
       const gendp = opts2.generateDP;
       const fixFormat = opts2.fixFormat;
-      return _bind(_liftEffect(log2("v2.2.0")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v2.2.1")))(() => _bind((() => {
         if (mode === "FileNameBased") {
-          return runValidationT2(validate2(path2)(gendp)(fixFormat));
+          return runValidationT(validate2(path2)(gendp)(fixFormat));
         }
         if (mode === "DataPackageBased") {
-          return runValidationT2(validate(path2));
+          return runValidationT(validate(path2));
         }
         fail();
       })())((v) => {
@@ -17071,7 +17535,7 @@ export {
   main,
   resetProgressCallback,
   runMain,
-  runValidationT2 as runValidationT,
+  runValidationT,
   setProgressCallback,
   validate$p,
   write4 as write
