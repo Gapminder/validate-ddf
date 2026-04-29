@@ -18,7 +18,7 @@ import Data.Show.Generic (genericShow)
 import Data.String as Str
 import Data.String.NonEmpty (NonEmptyString, fromString)
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
-import Data.Validation.Issue (Issue(..), Issues, mkIssueWithValue, withMessage)
+import Data.Validation.Issue (Issue(..), Issues, mkIssueWithValue, withConcept, withMessage)
 import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, invalid)
 import Foreign (MultipleErrors)
@@ -83,26 +83,40 @@ parseNonEmptyString input =
     Just str -> pure str
 
 -- | parse a domain value
-parseDomainVal :: String -> HashSet String -> String -> V Issues Value
-parseDomainVal _ domain input =
-  case fromString input of
-    Nothing -> invalid $ [ mkIssueWithValue E_VAL_CONSTRAINT_DOMAIN input ]
-    Just s ->
-      if HS.member input domain then
-        pure $ DomainVal s
-      else
-        invalid $ [ mkIssueWithValue E_VAL_CONSTRAINT_DOMAIN input ]
+-- | When `allowEmpty` is true, empty strings are accepted and returned as `StrVal ""`.
+parseDomainVal :: Boolean -> String -> HashSet String -> String -> V Issues Value
+parseDomainVal allowEmpty domain domainVals input =
+  let
+    msg = show input <> " is not valid value in " <> domain <> " domain."
+    addMessage issue = issue # withMessage msg
+  in
+    case fromString input of
+      Nothing ->
+        if allowEmpty then
+          pure $ StrVal ""
+        else
+          invalid $ [ mkIssueWithValue E_VAL_CONSTRAINT_DOMAIN input # addMessage ]
+      Just s ->
+        if HS.member input domainVals then
+          pure $ DomainVal s
+        else
+          invalid $ [ mkIssueWithValue E_VAL_CONSTRAINT_DOMAIN input # addMessage ]
 
--- | parse a domain value with constrain
+-- | parse a domain value with constraint
 parseConstrainedDomainVal :: HashSet String -> String -> V Issues Value
-parseConstrainedDomainVal constrain input =
-  case fromString input of
-    Nothing -> invalid $ [ mkIssueWithValue E_VAL_CONSTRAINT_FILENAME input ]
-    Just s ->
-      if HS.member input constrain then
-        pure $ DomainVal s
-      else
-        invalid $ [ mkIssueWithValue E_VAL_CONSTRAINT_FILENAME input ]
+parseConstrainedDomainVal constraint input =
+  let
+    constraint_str = Str.joinWith ", " $ HS.toArray constraint
+    msg = show input <> " is not valid value within the constraints [ " <> constraint_str <> " ]"
+    addMessage issue = issue # withMessage msg
+  in
+    case fromString input of
+      Nothing -> invalid $ [ mkIssueWithValue E_VAL_CONSTRAINT_FILENAME input # addMessage ]
+      Just s ->
+        if HS.member input constraint then
+          pure $ DomainVal s
+        else
+          invalid $ [ mkIssueWithValue E_VAL_CONSTRAINT_FILENAME input # addMessage ]
 
 parseStrVal :: String -> V Issues Value
 parseStrVal x = pure $ StrVal x

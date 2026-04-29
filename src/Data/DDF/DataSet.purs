@@ -412,7 +412,7 @@ parseBaseDataSet conceptsInput entitiesInput =
               -- because they are reversed concepts they won't be in
               -- concept table.
               [ Tuple "concept"
-                  ( Value.parseDomainVal "concept"
+                  ( Value.parseDomainVal false "concept"
                       $ HS.fromArray
                       $ HM.keys ds.concepts
                   )
@@ -439,18 +439,18 @@ makeValueParser dataset@(DataSet ds) k =
       BooleanC -> parseBoolVal
       IntervalC -> parseStrVal
       EntityDomainC ->
-        parseDomainVal k entvals
+        parseDomainVal true k entvals
         where
         entities = case HM.lookup k ds.entities of
           Nothing -> []
           Just es -> es
         entvals = HS.fromArray $ map (Ent.getId >>> Id.value) entities
       EntitySetC -> case getDomainForEntitySet dataset k of
-        Nothing -> parseDomainVal k HS.empty
+        Nothing -> parseDomainVal true k HS.empty
         Just domain -> case getEntities dataset domain (Just k) of
-          Nothing -> parseDomainVal k HS.empty
+          Nothing -> parseDomainVal true k HS.empty
           Just ents ->
-            parseDomainVal k entvals
+            parseDomainVal true k entvals
             where
             entvals = HS.fromArray $ map (Ent.getId >>> Id.value) ents
       RoleC -> parseStrVal

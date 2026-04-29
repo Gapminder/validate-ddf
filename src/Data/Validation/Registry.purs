@@ -395,7 +395,7 @@ errorSuggestion = case _ of
   E_VAL_BOOL -> ""
   E_VAL_STR -> ""
   E_VAL_CONSTRAINT_FILENAME -> ""
-  E_VAL_CONSTRAINT_DOMAIN -> ""
+  E_VAL_CONSTRAINT_DOMAIN -> "Please consult the entity domain file for all valid values."
   E_VAL_EMPTY -> ""
   E_CONCEPT_ID_RESERVED -> ""
   E_CONCEPT_ID_INVALID -> ""
