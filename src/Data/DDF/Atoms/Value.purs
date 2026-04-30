@@ -140,6 +140,15 @@ parseStrVal x = pure $ StrVal x
 parseStrVal' :: String -> Value
 parseStrVal' = StrVal
 
+-- | parse a space-separated list of strings (e.g. "a b c" -> ["a", "b", "c"]).
+-- | Multiple spaces and leading/trailing spaces are handled by filtering out empties.
+parseListVal :: String -> V Issues Value
+parseListVal input =
+  let
+    parts = Arr.filter (not Str.null) $ Str.split (Str.Pattern " ") input
+  in
+    pure $ ListVal parts
+
 parseBoolVal :: String -> V Issues Value
 parseBoolVal "TRUE" = pure $ BoolVal true
 parseBoolVal "true" = pure $ BoolVal true
