@@ -404,18 +404,20 @@ parseBaseDataSet conceptsInput entitiesInput =
     `andThen`
       ( \dataset@(DataSet ds) ->
           let
+            -- create value parsers for each concept, depending on their concept types.
             ps = map (\x -> Tuple x (makeValueParser dataset x))
               (HM.keys $ getConcepts dataset)
-            -- Add concept parser
+            -- append concept and concept_type parser.
+            -- because they are reversed concepts they won't be in
+            -- concept table, we need to add them manually.
             ps' = ps <>
-              -- append concept and concept_type parser.
-              -- because they are reversed concepts they won't be in
-              -- concept table.
+              -- values in `concept` column MUST be one of the dataset concepts.
               [ Tuple "concept"
-                  ( Value.parseDomainVal false "concept"
+                  ( Value.parseConceptVal
                       $ HS.fromArray
                       $ HM.keys ds.concepts
                   )
+              -- concept type checking happened in concept parsing, so we don't need to re-check them.
               , Tuple "concept_type" Value.parseStrVal
               ]
           in

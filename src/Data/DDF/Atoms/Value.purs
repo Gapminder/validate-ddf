@@ -82,6 +82,21 @@ parseNonEmptyString input =
     Nothing -> invalid [ mkIssueWithValue E_VAL_EMPTY input ]
     Just str -> pure str
 
+-- | parse a concept value — the value MUST be one of the concept IDs provided.
+parseConceptVal :: HashSet String -> String -> V Issues Value
+parseConceptVal conceptVals input =
+  let
+    msg = show input <> " is not a valid concept in this dataset."
+    addMessage issue = issue # withMessage msg
+  in
+    case fromString input of
+      Nothing -> invalid $ [ mkIssueWithValue E_VAL_CONSTRAINT_CONCEPT input # addMessage ]
+      Just s ->
+        if HS.member input conceptVals then
+          pure $ DomainVal s
+        else
+          invalid $ [ mkIssueWithValue E_VAL_CONSTRAINT_CONCEPT input # addMessage ]
+
 -- | parse a domain value
 -- | When `allowEmpty` is true, empty strings are accepted and returned as `StrVal ""`.
 parseDomainVal :: Boolean -> String -> HashSet String -> String -> V Issues Value
