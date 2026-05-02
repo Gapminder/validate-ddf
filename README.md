@@ -66,6 +66,6 @@ const { success, errors } = await validate("/path/to/dataset", {
 
 ### create new version
 1. update version in package.json
-2. update version in src/Main.purs
+2. update version in src/Main.purs, look for `validatorVersion`
 3. build the app and module bundles: `npm run bundle`, see if tests look good `npm test` 
 4. `npm publish`

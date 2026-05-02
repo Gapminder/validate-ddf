@@ -18,15 +18,15 @@ async function validate(
     }
   }
 
-  const success = result[0];
-  const messages = result[1];
+  const { success, errors: messages, validatorVersion } = result;
   if (success) {
     return {
       success: "Validation successful.",
       errors: messages.length > 0 ? messages : null,
+      validatorVersion,
     };
   } else {
-    return { success: null, errors: messages };
+    return { success: null, errors: messages, validatorVersion };
   }
 }
 

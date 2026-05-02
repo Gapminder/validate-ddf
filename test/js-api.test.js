@@ -14,6 +14,7 @@ test("valid-minimal: returns success", async () => {
   const result = await validate(DATASETS + "valid-minimal");
   assert.equal(result.success, "Validation successful.");
   assert.equal(result.errors, null);
+  assert.match(result.validatorVersion, /^v\d+\.\d+\.\d+$/);
 });
 
 test("error-no-concepts: returns errors", async () => {

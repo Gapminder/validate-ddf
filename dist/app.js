@@ -17521,7 +17521,7 @@ var runMain = (opts2) => {
     (() => {
       const gendp = opts2.generateDP;
       const fixFormat = opts2.fixFormat;
-      return _bind(_liftEffect(log2("v2.3.0")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v2.3.1")))(() => _bind((() => {
         if (mode === "FileNameBased") {
           return runValidationT(validate2(path2)(gendp)(fixFormat));
         }

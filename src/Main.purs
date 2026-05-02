@@ -35,6 +35,9 @@ import Yoga.JSON as JSON
 -- | validation options
 type ValidateOptions = { onlyErrors :: Boolean, generateDP :: Boolean, targetPath :: FilePath }
 
+validatorVersion :: String
+validatorVersion = "v2.3.1"
+
 -- | Set a custom progress callback for use by the JS API.
 -- | The callback receives a progress message string (e.g. "validating datapoints: 3/30 indicator groups").
 -- | Call resetProgressCallback when done.
@@ -71,7 +74,7 @@ validate' opts = Promise.fromAff do
 
   let
     success = not $ hasError msgs
-  pure $ JSON.write $ Tuple success msgsToShow
+  pure $ JSON.write { success, errors: msgsToShow, validatorVersion }
 
 -- | a function that accepts cli options and run the validation
 runMain :: CliOptions -> Effect Unit
@@ -83,7 +86,7 @@ runMain opts = launchAff_ do
     gendp = _.generateDP opts -- when true, emit warnings for datapackage errors
     fixFormat = _.fixFormat opts
 
-  liftEffect $ log "v2.3.0"
+  liftEffect $ log validatorVersion
   (Tuple msgs res) <- case mode of
     FileNameBased -> runValidationT $ VFN.validate path gendp fixFormat
     DataPackageBased -> runValidationT $ VDP.validate path

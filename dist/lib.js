@@ -14304,7 +14304,6 @@ var readProp = /* @__PURE__ */ unsafeReadProp(monadIdentity);
 var writeForeignString = { writeImpl: unsafeCoerce };
 var writeForeignNonEmptyStrin = { writeImpl: unsafeCoerce };
 var writeForeignInt = { writeImpl: unsafeCoerce };
-var writeForeignForeign = { writeImpl: (x) => x };
 var writeForeignFieldsNilRowR = { writeImplFields: (v) => (v1) => identity14 };
 var writeForeignBoolean = { writeImpl: unsafeCoerce };
 var readForeignString = { readImpl: /* @__PURE__ */ readString(monadIdentity) };
@@ -14336,7 +14335,6 @@ var writeForeignNullable = (dictWriteForeign) => ({
     fail();
   }
 });
-var writeForeignTuple = (dictWriteForeign) => (dictWriteForeign1) => ({ writeImpl: (v) => arrayMap(writeForeignForeign.writeImpl)([dictWriteForeign.writeImpl(v._1), dictWriteForeign1.writeImpl(v._2)]) });
 var sequenceCombining = (dictMonoid) => {
   const mempty = dictMonoid.mempty;
   return (dictFoldable) => (dictApplicative) => dictFoldable.foldl((acc) => (elem5) => {
@@ -17579,14 +17577,20 @@ var runValidationT = (v) => _bind(v([]))((v1) => _pure((() => {
   }
   fail();
 })()));
-var write4 = /* @__PURE__ */ (() => writeForeignTuple(writeForeignBoolean)((() => {
-  const $0 = writeForeignFieldsCons({ reflectSymbol: () => "errorCode" })(writeForeignString)(writeForeignFieldsCons({ reflectSymbol: () => "file" })(writeForeignString)(writeForeignFieldsCons({
-    reflectSymbol: () => "isWarning"
-  })(writeForeignBoolean)(writeForeignFieldsCons({ reflectSymbol: () => "lineNo" })(writeForeignInt)(writeForeignFieldsCons({
-    reflectSymbol: () => "message"
-  })(writeForeignString)(writeForeignFieldsCons({ reflectSymbol: () => "suggestions" })(writeForeignString)(writeForeignFieldsNilRowR)()()())()()())()()())()()())()()())()()();
-  return { writeImpl: (xs) => arrayMap((rec) => $0.writeImplFields($$Proxy)(rec)({}))(xs) };
-})()).writeImpl)();
+var write4 = /* @__PURE__ */ (() => {
+  const $0 = writeForeignFieldsCons({ reflectSymbol: () => "errors" })((() => {
+    const $02 = writeForeignFieldsCons({ reflectSymbol: () => "errorCode" })(writeForeignString)(writeForeignFieldsCons({ reflectSymbol: () => "file" })(writeForeignString)(writeForeignFieldsCons({
+      reflectSymbol: () => "isWarning"
+    })(writeForeignBoolean)(writeForeignFieldsCons({ reflectSymbol: () => "lineNo" })(writeForeignInt)(writeForeignFieldsCons({
+      reflectSymbol: () => "message"
+    })(writeForeignString)(writeForeignFieldsCons({ reflectSymbol: () => "suggestions" })(writeForeignString)(writeForeignFieldsNilRowR)()()())()()())()()())()()())()()())()()();
+    return { writeImpl: (xs) => arrayMap((rec) => $02.writeImplFields($$Proxy)(rec)({}))(xs) };
+  })())(writeForeignFieldsCons({ reflectSymbol: () => "success" })(writeForeignBoolean)(writeForeignFieldsCons({
+    reflectSymbol: () => "validatorVersion"
+  })(writeForeignString)(writeForeignFieldsNilRowR)()()())()()())()()();
+  return (rec) => $0.writeImplFields($$Proxy)(rec)({});
+})();
+var validatorVersion = "v2.3.1";
 var validate$p = (opts2) => fromAff((() => {
   const path2 = opts2.targetPath;
   const onlyErrors = opts2.onlyErrors;
@@ -17619,7 +17623,7 @@ var validate$p = (opts2) => fromAff((() => {
         return $1;
       }
       return _pure();
-    })())(() => _pure(write4($Tuple(!hasError($0), msgsToShow))));
+    })())(() => _pure(write4({ success: !hasError($0), errors: msgsToShow, validatorVersion: "v2.3.1" })));
   });
 })());
 var setProgressCallback = setProgressHandler;
@@ -17632,7 +17636,7 @@ var runMain = (opts2) => {
     (() => {
       const gendp = opts2.generateDP;
       const fixFormat = opts2.fixFormat;
-      return _bind(_liftEffect(log2("v2.3.0")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v2.3.1")))(() => _bind((() => {
         if (mode === "FileNameBased") {
           return runValidationT(validate2(path2)(gendp)(fixFormat));
         }
@@ -17685,5 +17689,6 @@ export {
   runValidationT,
   setProgressCallback,
   validate$p,
+  validatorVersion,
   write4 as write
 };
