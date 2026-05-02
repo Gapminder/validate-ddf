@@ -35,4 +35,18 @@ spec =
       it "error-dataset-entitydomain-invalid: should detect E_DATASET_ENTITYDOMAIN_INVAILD" do
         expectError E_DATASET_ENTITYDOMAIN_INVAILD "test/datasets/error-dataset-entitydomain-invalid"
 
-      pending "error-dataset-entity-drillup-invalid: should detect E_DATASET_ENTITY_DRILLUP_INVALID"
+      it "error-dataset-drillup-json-format: should detect E_VAL_JSON for JSON-array drill_up" do
+        expectError E_VAL_JSON "test/datasets/error-drillup-json-format"
+
+    describe "List Field Errors" do
+      it "error-scales-json-format: should detect E_VAL_JSON for JSON-array scales" do
+        expectError E_VAL_JSON "test/datasets/error-scales-json-format"
+
+      it "error-scales-invalid-value: should detect E_GENERAL for unknown scale value" do
+        expectError E_GENERAL "test/datasets/error-scales-invalid-value"
+
+      it "error-tags-comma-format: should detect E_GENERAL for comma-separated tags" do
+        expectError E_GENERAL "test/datasets/error-tags-comma-format"
+
+      it "error-tags-unknown-value: should detect E_GENERAL for tag not in entity domain" do
+        expectError E_GENERAL "test/datasets/error-tags-unknown-value"
