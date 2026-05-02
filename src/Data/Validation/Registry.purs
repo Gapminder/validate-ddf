@@ -86,6 +86,7 @@ type ErrorContext =
   , csvContext :: Maybe CsvContext
   , datasetContext :: Maybe DatasetContext
   , message :: Maybe String -- Additional freeform message/reason
+  , suggestion :: Maybe String -- Per-issue suggestion (overrides errorSuggestion)
   }
 
 -- | Empty error context - use as starting point
@@ -99,6 +100,7 @@ emptyContext =
   , csvContext: Nothing
   , datasetContext: Nothing
   , message: Nothing
+  , suggestion: Nothing
   }
 
 -- | Helper constructors for creating contexts

@@ -1345,6 +1345,13 @@ var unsafeClamp = (x) => {
 };
 
 // output-es/Data.String.Common/foreign.js
+var replaceAll = function(s1) {
+  return function(s2) {
+    return function(s3) {
+      return s3.replace(new RegExp(s1.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"), "g"), s2);
+    };
+  };
+};
 var split = function(sep2) {
   return function(s) {
     return s.split(sep2);
@@ -2306,6 +2313,19 @@ var stripPrefix = (v) => (str) => {
   return Nothing;
 };
 var indexOf = /* @__PURE__ */ _indexOf(Just)(Nothing);
+var contains = (pat) => {
+  const $0 = indexOf(pat);
+  return (x) => {
+    const $1 = $0(x);
+    if ($1.tag === "Nothing") {
+      return false;
+    }
+    if ($1.tag === "Just") {
+      return true;
+    }
+    fail();
+  };
+};
 var charAt2 = /* @__PURE__ */ _charAt(Just)(Nothing);
 
 // output-es/Data.Unfoldable1/foreign.js
@@ -9926,7 +9946,8 @@ var emptyContext = {
   datapointContext: Nothing,
   csvContext: Nothing,
   datasetContext: Nothing,
-  message: Nothing
+  message: Nothing,
+  suggestion: Nothing
 };
 
 // output-es/Data.Validation.Issue/index.js
@@ -15287,6 +15308,12 @@ var genSetMemberships = (v) => mapWithIndexPurs((v$1) => (es) => fromArrayBy((x)
   }
   fail();
 })((xs) => map22(value)(unions(arrayMap((x) => fromArray1([x.entityDomain, ...x.entitySets]))(xs))))(groupAllBy((x) => (y) => ordString.compare(x.entityId)(y.entityId))(es)))(v.entities);
+var csvDisplay = (s) => {
+  if (contains('"')(s) || contains(",")(s)) {
+    return '"' + replaceAll('"')('""')(s) + '"';
+  }
+  return s;
+};
 var checkTagValues = (concepts) => (entities) => {
   const v = lookup5("tag")(entities);
   const tagEntities = (() => {
@@ -15373,7 +15400,8 @@ var checkListFields = (concepts) => {
                   E_VAL_JSON,
                   {
                     ...emptyContext,
-                    message: $Maybe("Just", 'drill_up must use space-separated format, not a JSON array (e.g. "foo bar" instead of ["foo","bar"])')
+                    message: $Maybe("Just", "drill_up " + csvDisplay(v1$1._1) + ": must use space-separated format, not a JSON array"),
+                    suggestion: $Maybe("Just", 'e.g. "foo bar" (space-separated)')
                   }
                 )
               ]
@@ -15406,7 +15434,8 @@ var checkListFields = (concepts) => {
                   E_VAL_JSON,
                   {
                     ...emptyContext,
-                    message: $Maybe("Just", 'scales must use space-separated format, not a JSON array (e.g. "linear log" instead of ["linear","log"])')
+                    message: $Maybe("Just", "scales " + csvDisplay(v1$2._1) + ": must use space-separated format, not a JSON array"),
+                    suggestion: $Maybe("Just", 'e.g. "linear log" (space-separated)')
                   }
                 )
               ]
@@ -15447,7 +15476,8 @@ var checkListFields = (concepts) => {
                 E_GENERAL,
                 {
                   ...emptyContext,
-                  message: $Maybe("Just", 'tags must use space-separated format, not comma-separated (e.g. "foo bar" instead of "foo,bar")')
+                  message: $Maybe("Just", "tags " + csvDisplay(v1._1) + ": must use space-separated format, not comma-separated"),
+                  suggestion: $Maybe("Just", 'e.g. "foo bar" (space-separated)')
                 }
               )
             ]
@@ -15783,7 +15813,15 @@ var messageFromIssue = (v) => {
         fail();
       })(),
       errorCode: errorCodeToString(v._1),
-      suggestions: errorSuggestion(v._1),
+      suggestions: (() => {
+        if (v._2.suggestion.tag === "Just") {
+          return v._2.suggestion._1;
+        }
+        if (v._2.suggestion.tag === "Nothing") {
+          return errorSuggestion(v._1);
+        }
+        fail();
+      })(),
       isWarning: true
     };
   }
@@ -17521,7 +17559,7 @@ var runMain = (opts2) => {
     (() => {
       const gendp = opts2.generateDP;
       const fixFormat = opts2.fixFormat;
-      return _bind(_liftEffect(log2("v2.3.1")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v2.3.2")))(() => _bind((() => {
         if (mode === "FileNameBased") {
           return runValidationT(validate2(path2)(gendp)(fixFormat));
         }

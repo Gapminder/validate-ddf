@@ -43,7 +43,9 @@ messageFromIssue (CodedIssue code ctx) =
       Just { lineNo } -> lineNo
       Nothing -> -1
     errCode = errorCodeToString code
-    suggestion = errorSuggestion code
+    suggestion = case ctx.suggestion of
+      Just s -> s
+      Nothing -> errorSuggestion code
   in
     { message: msg
     , file: fp

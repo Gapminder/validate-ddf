@@ -121,6 +121,10 @@ withDatasetContext dc = updateContext (\ctx -> ctx { datasetContext = Just dc })
 withMessage :: String -> Issue -> Issue
 withMessage msg = updateContext (\ctx -> ctx { message = Just msg })
 
+-- | Add per-issue suggestion (overrides the static errorSuggestion for this code)
+withSuggestion :: String -> Issue -> Issue
+withSuggestion s = updateContext (\ctx -> ctx { suggestion = Just s })
+
 -- Convenience helpers that build contexts from primitives
 
 -- | Add file location (filepath + line number) to an issue

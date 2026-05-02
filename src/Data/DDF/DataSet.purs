@@ -59,13 +59,14 @@ import Data.Map as M
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Set (Set)
+import Data.String (Pattern(..), Replacement(..), contains, replaceAll) as S
 import Data.String.NonEmpty (toString)
 import Data.String.NonEmpty as NES
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.String.Utils as Str
 import Data.Traversable (for, for_, sequence, sequence_, traverse, traverse_)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, toInvaildItem, updateMessage, withConceptField, withEntity, withFileLocation, withRowInfo)
+import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, toInvaildItem, updateMessage, withConceptField, withEntity, withFileLocation, withRowInfo, withSuggestion)
 import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither, validation)
 import Debug (trace)
@@ -291,6 +292,15 @@ basedataset cdb edb = DataSet
 validScales :: Array String
 validScales = [ "linear", "log", "time", "ordinal", "point", "svg" ]
 
+-- | Re-encode a parsed CSV field value for display in error messages,
+-- | so users can search for it in the raw CSV file.
+csvDisplay :: String -> String
+csvDisplay s =
+  if S.contains (S.Pattern "\"") s || S.contains (S.Pattern ",") s then
+    "\"" <> S.replaceAll (S.Pattern "\"") (S.Replacement "\"\"") s <> "\""
+  else
+    s
+
 -- | Check format and element validity for concept list fields:
 -- | - drill_up: space-separated entity set IDs in the same domain
 -- | - scales: space-separated values from a fixed list
@@ -308,8 +318,10 @@ checkListFields concepts =
                 if Str.startsWith "[" val then
                   withRowInfo fp i
                     $ invalid
-                        [ mkIssueWithMessage E_VAL_JSON
-                            "drill_up must use space-separated format, not a JSON array (e.g. \"foo bar\" instead of [\"foo\",\"bar\"])"
+                        [ withSuggestion "e.g. \"foo bar\" (space-separated)"
+                            $ mkIssueWithMessage E_VAL_JSON
+                                ( "drill_up " <> csvDisplay val <> ": must use space-separated format, not a JSON array"
+                                )
                         ]
                 else
                   case Conc.getProp c "domain" of
@@ -330,8 +342,10 @@ checkListFields concepts =
                 if Str.startsWith "[" val then
                   withRowInfo fp i
                     $ invalid
-                        [ mkIssueWithMessage E_VAL_JSON
-                            "scales must use space-separated format, not a JSON array (e.g. \"linear log\" instead of [\"linear\",\"log\"])"
+                        [ withSuggestion "e.g. \"linear log\" (space-separated)"
+                            $ mkIssueWithMessage E_VAL_JSON
+                                ( "scales " <> csvDisplay val <> ": must use space-separated format, not a JSON array"
+                                )
                         ]
                 else
                   withRowInfo fp i
@@ -358,8 +372,10 @@ checkListFields concepts =
                 if Str.includes "," val then
                   withRowInfo fp i
                     $ invalid
-                        [ mkIssueWithMessage E_GENERAL
-                            "tags must use space-separated format, not comma-separated (e.g. \"foo bar\" instead of \"foo,bar\")"
+                        [ withSuggestion "e.g. \"foo bar\" (space-separated)"
+                            $ mkIssueWithMessage E_GENERAL
+                                ( "tags " <> csvDisplay val <> ": must use space-separated format, not comma-separated"
+                                )
                         ]
                 else
                   pure unit
