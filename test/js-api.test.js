@@ -52,6 +52,22 @@ test("onProgress callback is called at least once", async () => {
   );
 });
 
+test("onProgress fires multiple times (not just at end)", async () => {
+  // Regression test: readFileSync + Promise.resolve() looks async to PureScript
+  // but is actually sync, blocking the event loop. Real async readFile yields
+  // between files. With valid-minimal (concepts + entities + datapoints), at
+  // least 3 distinct progress phases should fire.
+  const messages = [];
+  await validate(DATASETS + "valid-minimal", {
+    onProgress: (msg) => messages.push(msg),
+  });
+  const distinct = new Set(messages);
+  assert.ok(
+    distinct.size >= 2,
+    `expected multiple distinct progress messages, got: ${JSON.stringify([...distinct])}`,
+  );
+});
+
 test("onProgress is reset after validation (handler does not leak)", async () => {
   let callCount = 0;
   await validate(DATASETS + "valid-minimal", {

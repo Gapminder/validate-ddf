@@ -9229,7 +9229,7 @@ var parse = function(data, opts2 = {}) {
 };
 
 // output-es/Data.Csv/foreign.js
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFile, readFileSync, writeFileSync } from "node:fs";
 var UTF8_BOM = [239, 187, 191];
 function hasBOM(buf) {
   return buf[0] === UTF8_BOM[0] && buf[1] === UTF8_BOM[1] && buf[2] === UTF8_BOM[2];
@@ -9244,38 +9244,40 @@ function isValidUTF8(buf) {
 }
 function parseCsvPlainImpl(path2) {
   return function() {
-    const result = parseCsvContent(readFileSync(path2, { encoding: "utf8" }));
-    return Promise.resolve(result);
+    return new Promise((resolve2, reject) => {
+      readFile(path2, { encoding: "utf8" }, (err, content) => {
+        if (err) reject(err);
+        else resolve2(parseCsvContent(content));
+      });
+    });
   };
 }
 function parseCsvImpl(path2) {
   return function(fixFormat) {
     return function() {
-      const result = (() => {
-        const buf = readFileSync(path2);
-        const formatIssues = [];
-        const bom = hasBOM(buf);
-        if (bom) {
-          formatIssues.push("BOM");
-        }
-        if (!isValidUTF8(buf)) {
-          formatIssues.push("ENCODING");
-        }
-        const content = (bom ? buf.slice(3) : buf).toString("utf8");
-        if (content.includes("\r\n")) {
-          formatIssues.push("CRLF");
-        }
-        let contentToParse = content;
-        if (fixFormat && formatIssues.length > 0) {
-          if (formatIssues.includes("CRLF")) {
-            contentToParse = contentToParse.replace(/\r\n/g, "\n");
+      return new Promise((resolve2, reject) => {
+        readFile(path2, (err, buf) => {
+          if (err) {
+            reject(err);
+            return;
           }
-          writeFileSync(path2, contentToParse, { encoding: "utf8" });
-        }
-        const parsed = parseCsvContent(contentToParse);
-        return { ...parsed, formatIssues };
-      })();
-      return Promise.resolve(result);
+          const formatIssues = [];
+          const bom = hasBOM(buf);
+          if (bom) formatIssues.push("BOM");
+          if (!isValidUTF8(buf)) formatIssues.push("ENCODING");
+          const content = (bom ? buf.slice(3) : buf).toString("utf8");
+          if (content.includes("\r\n")) formatIssues.push("CRLF");
+          let contentToParse = content;
+          if (fixFormat && formatIssues.length > 0) {
+            if (formatIssues.includes("CRLF")) {
+              contentToParse = contentToParse.replace(/\r\n/g, "\n");
+            }
+            writeFileSync(path2, contentToParse, { encoding: "utf8" });
+          }
+          const parsed = parseCsvContent(contentToParse);
+          resolve2({ ...parsed, formatIssues });
+        });
+      });
     };
   };
 }
@@ -12368,7 +12370,7 @@ import {
   mkdir,
   readdir,
   utimes,
-  readFile,
+  readFile as readFile2,
   writeFile,
   appendFile,
   open,
@@ -12421,7 +12423,7 @@ var readTextFile = (encoding) => (file) => (cb) => {
       fail();
     })()
   };
-  return () => readFile(file, $0, handleCallback(cb));
+  return () => readFile2(file, $0, handleCallback(cb));
 };
 var readdir2 = (file) => (cb) => () => readdir(file, handleCallback(cb));
 var stat2 = (file) => (cb) => () => stat(file, handleCallback(cb));
@@ -17133,12 +17135,12 @@ var readAllFileInfoForValidation2 = (root) => (fs) => (dictMonad) => {
     }
   ]))(() => applicativeVT1.pure(ddfFiles));
 };
-var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("reading file list..."))))(() => bindVT3.bind(monadtransVT.lift(monadAff)(getFiles(path2)([
+var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("reading file list..."))))(() => bindVT3.bind(liftEffect3(progress("reading file list...")))(() => bindVT3.bind(monadtransVT.lift(monadAff)(getFiles(path2)([
   ".git",
   "etl",
   "assets",
   "langsplit"
-])))((fs) => bindVT3.bind(readAllFileInfoForValidation2(path2)(fs)(monadAff))((ddfFiles) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
+])))((fs) => bindVT3.bind(readAllFileInfoForValidation2(path2)(fs)(monadAff))((ddfFiles) => bindVT3.bind(liftEffect3(progress("validating concepts and entities...")))(() => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
   const fileMap = fromArrayBy3((x) => {
     const $0 = (() => {
       if (0 < x.length) {
@@ -17188,7 +17190,7 @@ var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(mon
       fail();
     })())((entityFileInfos) => bindVT3.bind(readAndParseCsvFiles(fixFormat)(entityFileInfos))((entityCsvFiles) => bindVT3.bind($$for2(entityCsvFiles)((x) => validateEntities(x)(monadAff)))((entities) => {
       const entityResources = createResources(path2)(entityCsvFiles);
-      return bindVT3.bind(validateBaseDataSet(concat(concepts))(concat(entities))(monadAff))((ds) => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(getState3)((msgs) => {
+      return bindVT3.bind(liftEffect3(progress("cross-validating concepts and entities...")))(() => bindVT3.bind(validateBaseDataSet(concat(concepts))(concat(entities))(monadAff))((ds) => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(getState3)((msgs) => {
         if (hasError(msgs)) {
           return applicativeVT3.pure($Tuple(ds, []));
         }
@@ -17261,10 +17263,10 @@ var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(mon
             })));
           }));
         })));
-      }))));
+      })))));
     })));
   })));
-}))));
+}))))));
 
 // output-es/Data.DataPackage/index.js
 var valueIsSymbol = { reflectSymbol: () => "value" };
@@ -17628,7 +17630,7 @@ var write4 = /* @__PURE__ */ (() => {
   })(writeForeignString)(writeForeignFieldsNilRowR)()()())()()())()()();
   return (rec) => $0.writeImplFields($$Proxy)(rec)({});
 })();
-var validatorVersion = "v2.3.2";
+var validatorVersion = "v2.3.3";
 var validate$p = (opts2) => fromAff((() => {
   const path2 = opts2.targetPath;
   const onlyErrors = opts2.onlyErrors;
@@ -17661,7 +17663,7 @@ var validate$p = (opts2) => fromAff((() => {
         return $1;
       }
       return _pure();
-    })())(() => _pure(write4({ success: !hasError($0), errors: msgsToShow, validatorVersion: "v2.3.2" })));
+    })())(() => _pure(write4({ success: !hasError($0), errors: msgsToShow, validatorVersion: "v2.3.3" })));
   });
 })());
 var setProgressCallback = setProgressHandler;
@@ -17674,7 +17676,7 @@ var runMain = (opts2) => {
     (() => {
       const gendp = opts2.generateDP;
       const fixFormat = opts2.fixFormat;
-      return _bind(_liftEffect(log2("v2.3.2")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v2.3.3")))(() => _bind((() => {
         if (mode === "FileNameBased") {
           return runValidationT(validate2(path2)(gendp)(fixFormat));
         }

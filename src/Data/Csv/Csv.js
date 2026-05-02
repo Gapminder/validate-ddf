@@ -1,5 +1,5 @@
 import { parse } from 'csv-parse/sync';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFile, readFileSync, writeFileSync } from 'node:fs';
 
 const UTF8_BOM = [0xEF, 0xBB, 0xBF];
 
@@ -21,8 +21,12 @@ function isValidUTF8(buf) {
 // and other non-validation callers that don't need BOM/CRLF/UTF-8 detection.
 export function parseCsvPlainImpl(path) {
   return function () {
-    const result = parseCsvContent(readFileSync(path, { encoding: 'utf8' }));
-    return Promise.resolve(result);
+    return new Promise((resolve, reject) => {
+      readFile(path, { encoding: 'utf8' }, (err, content) => {
+        if (err) reject(err);
+        else resolve(parseCsvContent(content));
+      });
+    });
   };
 }
 
@@ -32,42 +36,39 @@ export function parseCsvPlainImpl(path) {
 export function parseCsvImpl(path) {
   return function (fixFormat) {
     return function () {
-      const result = (() => {
-        // 1. Read file as buffer (single read)
-        const buf = readFileSync(path);
-        const formatIssues = [];
+      return new Promise((resolve, reject) => {
+        // 1. Read file as buffer (async — yields the event loop so the HTTP
+        //    server in the sidecar process can respond to progress polls
+        //    between files, even during large dataset validation).
+        readFile(path, (err, buf) => {
+          if (err) { reject(err); return; }
 
-        // 2. Check format issues
-        const bom = hasBOM(buf);
-        if (bom) {
-          formatIssues.push('BOM');
-        }
+          const formatIssues = [];
 
-        if (!isValidUTF8(buf)) {
-          formatIssues.push('ENCODING');
-        }
+          // 2. Check format issues
+          const bom = hasBOM(buf);
+          if (bom) formatIssues.push('BOM');
+          if (!isValidUTF8(buf)) formatIssues.push('ENCODING');
 
-        // 3. Get content string (strip BOM if present)
-        const content = (bom ? buf.slice(3) : buf).toString('utf8');
-        if (content.includes('\r\n')) {
-          formatIssues.push('CRLF');
-        }
+          // 3. Get content string (strip BOM if present)
+          const content = (bom ? buf.slice(3) : buf).toString('utf8');
+          if (content.includes('\r\n')) formatIssues.push('CRLF');
 
-        // 4. Optionally fix and write back
-        let contentToParse = content;
-        if (fixFormat && formatIssues.length > 0) {
-          if (formatIssues.includes('CRLF')) {
-            contentToParse = contentToParse.replace(/\r\n/g, '\n');
+          // 4. Optionally fix and write back
+          let contentToParse = content;
+          if (fixFormat && formatIssues.length > 0) {
+            if (formatIssues.includes('CRLF')) {
+              contentToParse = contentToParse.replace(/\r\n/g, '\n');
+            }
+            // BOM already stripped above; ENCODING writes replacement chars per UTF-8 decode
+            writeFileSync(path, contentToParse, { encoding: 'utf8' });
           }
-          // BOM already stripped above; ENCODING writes replacement chars per UTF-8 decode
-          writeFileSync(path, contentToParse, { encoding: 'utf8' });
-        }
 
-        // 5. Parse CSV
-        const parsed = parseCsvContent(contentToParse);
-        return { ...parsed, formatIssues };
-      })();
-      return Promise.resolve(result);
+          // 5. Parse CSV
+          const parsed = parseCsvContent(contentToParse);
+          resolve({ ...parsed, formatIssues });
+        });
+      });
     };
   };
 }

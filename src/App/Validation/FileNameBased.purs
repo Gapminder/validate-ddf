@@ -75,6 +75,7 @@ readDataPackageResources path = do
 validate :: FilePath -> Boolean -> Boolean -> ValidationT Messages Aff (Tuple DataSet (Array Resource))
 validate path dpIssueAsWarning fixFormat = do
   lift $ liftEffect $ log "reading file list..."
+  liftEffect $ progress "reading file list..."
 
   let
     ignored = [ ".git", "etl", "assets", "langsplit" ]
@@ -82,6 +83,7 @@ validate path dpIssueAsWarning fixFormat = do
 
   ddfFiles <- readAllFileInfoForValidation path fs
 
+  liftEffect $ progress "validating concepts and entities..."
   lift $ liftEffect $ log "validating concepts and entities..."
 
   let
@@ -121,6 +123,7 @@ validate path dpIssueAsWarning fixFormat = do
     entityResources = DataPackage.createResources path entityCsvFiles
 
   -- create a base dataset from concepts and entities
+  liftEffect $ progress "cross-validating concepts and entities..."
   ds <- validateBaseDataSet (Arr.concat concepts) (Arr.concat entities)
   -- validate all headers in concepts and entities files
   -- this will emit errors
