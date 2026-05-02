@@ -2,12 +2,13 @@ module Test.Unit.Value where
 
 import Prelude
 
-import Data.DDF.Atoms.Value (parseBoolVal, parseJsonListVal, parseNumVal, parseStrVal, parseTimeVal)
+import Data.DDF.Atoms.Value (Value(ListVal), parseBoolVal, parseJsonListVal, parseListVal, parseNumVal, parseStrVal, parseTimeVal)
 import Data.Foldable (for_)
-import Data.Validation.Semigroup (isValid)
+import Data.Either (Either(..))
+import Data.Validation.Semigroup (isValid, toEither)
 import Effect.Aff (Aff)
 import Test.Spec (Spec, describe, it, pending)
-import Test.Spec.Assertions (shouldNotSatisfy, shouldSatisfy)
+import Test.Spec.Assertions (shouldEqual, shouldNotSatisfy, shouldSatisfy)
 
 spec :: Spec Unit
 spec =
@@ -157,3 +158,24 @@ spec =
         parseJsonListVal "" `shouldSatisfy` isValid
 
       pending "should support general JSON value parsing (not just string arrays)"
+
+    describe "List Values" do
+      let
+        getList = case _ of
+          Right (ListVal xs) -> xs
+          _ -> [ "unexpected parse failure" ]
+
+      it "should parse space-separated values" do
+        getList (toEither $ parseListVal "a b c") `shouldEqual` [ "a", "b", "c" ]
+
+      it "should handle multiple spaces" do
+        getList (toEither $ parseListVal "a  b") `shouldEqual` [ "a", "b" ]
+
+      it "should handle leading and trailing spaces" do
+        getList (toEither $ parseListVal " a b ") `shouldEqual` [ "a", "b" ]
+
+      it "should return empty list for empty string" do
+        getList (toEither $ parseListVal "") `shouldEqual` []
+
+      it "should handle single value" do
+        getList (toEither $ parseListVal "hello") `shouldEqual` [ "hello" ]

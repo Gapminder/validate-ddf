@@ -9395,6 +9395,7 @@ var E_VAL_JSON = /* @__PURE__ */ $ErrorCode("E_VAL_JSON");
 var E_VAL_BOOL = /* @__PURE__ */ $ErrorCode("E_VAL_BOOL");
 var E_VAL_CONSTRAINT_FILENAME = /* @__PURE__ */ $ErrorCode("E_VAL_CONSTRAINT_FILENAME");
 var E_VAL_CONSTRAINT_DOMAIN = /* @__PURE__ */ $ErrorCode("E_VAL_CONSTRAINT_DOMAIN");
+var E_VAL_CONSTRAINT_CONCEPT = /* @__PURE__ */ $ErrorCode("E_VAL_CONSTRAINT_CONCEPT");
 var E_CONCEPT_ID_RESERVED = /* @__PURE__ */ $ErrorCode("E_CONCEPT_ID_RESERVED");
 var E_CONCEPT_TIME_INVALID = /* @__PURE__ */ $ErrorCode("E_CONCEPT_TIME_INVALID");
 var E_CONCEPT_FIELD_EMPTY = /* @__PURE__ */ $ErrorCode("E_CONCEPT_FIELD_EMPTY");
@@ -9452,7 +9453,10 @@ var errorSuggestion = (v) => {
     return "";
   }
   if (v === "E_VAL_CONSTRAINT_DOMAIN") {
-    return "";
+    return "Please consult the entity domain file for all valid values.";
+  }
+  if (v === "E_VAL_CONSTRAINT_CONCEPT") {
+    return "Please consult the concepts file for all valid concepts.";
   }
   if (v === "E_VAL_EMPTY") {
     return "";
@@ -9600,6 +9604,9 @@ var errorMessageTemplate = (v) => {
   }
   if (v === "E_VAL_CONSTRAINT_DOMAIN") {
     return "value violates domain constraint";
+  }
+  if (v === "E_VAL_CONSTRAINT_CONCEPT") {
+    return "value is not a valid concept in this dataset";
   }
   if (v === "E_VAL_EMPTY") {
     return "value is empty";
@@ -9845,6 +9852,9 @@ var errorCodeToString = (v) => {
   }
   if (v === "E_VAL_CONSTRAINT_DOMAIN") {
     return "E_VAL_CONSTRAINT_DOMAIN";
+  }
+  if (v === "E_VAL_CONSTRAINT_CONCEPT") {
+    return "E_VAL_CONSTRAINT_CONCEPT";
   }
   if (v === "E_VAL_EMPTY") {
     return "E_VAL_EMPTY";
@@ -11149,6 +11159,9 @@ var parseEntityHeader = (x) => {
 };
 
 // output-es/Data.String.Utils/foreign.js
+function includesImpl(searchString, str) {
+  return str.includes(searchString);
+}
 function startsWithImpl(searchString, s) {
   return s.startsWith(searchString);
 }
@@ -14571,10 +14584,6 @@ var renderHumanError = (x) => {
 
 // output-es/Data.DDF.Atoms.Value/index.js
 var $Value = (tag, _1) => ({ tag, _1 });
-var readJSON = /* @__PURE__ */ (() => {
-  const $0 = readForeignArray(readForeignString).readImpl;
-  return (x) => bindExceptT2.bind(parseJSON(x))($0);
-})();
 var member2 = /* @__PURE__ */ member(hashableString);
 var parseTimeVal = (input) => {
   const inputlen = toCodePointArray(input).length;
@@ -14623,44 +14632,24 @@ var parseNumVal = (input) => {
   }
   fail();
 };
-var parseJsonListVal = (input) => {
+var parseDomainVal = (allowEmpty) => (domain) => (domainVals) => (input) => {
+  const msg = showStringImpl(input) + " is not valid value in " + domain + " domain.";
   if (input === "") {
-    return $Either("Right", $Value("JsonListVal", []));
-  }
-  const output = readJSON(input);
-  if (output.tag === "Left") {
-    const $0 = (err) => {
-      const $02 = errorToJSON(err);
-      return $Issue(
-        "CodedIssue",
-        E_VAL_JSON,
-        { ...emptyContext, message: $Maybe("Just", $02.message + " at " + $02.path), valueContext: $Maybe("Just", { value: input }) }
-      );
-    };
-    return $Either(
-      "Left",
-      fromFoldableImpl(foldableNonEmptyList.foldr, $NonEmpty($0(output._1._1), listMap(($1) => $0($1))(output._1._2)))
-    );
-  }
-  if (output.tag === "Right") {
-    return $Either("Right", $Value("JsonListVal", output._1));
-  }
-  fail();
-};
-var parseDomainVal = (v) => (domain) => (input) => {
-  if (input === "") {
+    if (allowEmpty) {
+      return $Either("Right", $Value("StrVal", ""));
+    }
     return $Either(
       "Left",
       [
         $Issue(
           "CodedIssue",
           E_VAL_CONSTRAINT_DOMAIN,
-          { ...emptyContext, valueContext: $Maybe("Just", { value: input }) }
+          { ...emptyContext, message: $Maybe("Just", msg), valueContext: $Maybe("Just", { value: input }) }
         )
       ]
     );
   }
-  if (member2(input)(domain)) {
+  if (member2(input)(domainVals)) {
     return $Either("Right", $Value("DomainVal", input));
   }
   return $Either(
@@ -14669,7 +14658,35 @@ var parseDomainVal = (v) => (domain) => (input) => {
       $Issue(
         "CodedIssue",
         E_VAL_CONSTRAINT_DOMAIN,
-        { ...emptyContext, valueContext: $Maybe("Just", { value: input }) }
+        { ...emptyContext, message: $Maybe("Just", msg), valueContext: $Maybe("Just", { value: input }) }
+      )
+    ]
+  );
+};
+var parseConceptVal = (conceptVals) => (input) => {
+  const msg = showStringImpl(input) + " is not a valid concept in this dataset.";
+  if (input === "") {
+    return $Either(
+      "Left",
+      [
+        $Issue(
+          "CodedIssue",
+          E_VAL_CONSTRAINT_CONCEPT,
+          { ...emptyContext, message: $Maybe("Just", msg), valueContext: $Maybe("Just", { value: input }) }
+        )
+      ]
+    );
+  }
+  if (member2(input)(conceptVals)) {
+    return $Either("Right", $Value("DomainVal", input));
+  }
+  return $Either(
+    "Left",
+    [
+      $Issue(
+        "CodedIssue",
+        E_VAL_CONSTRAINT_CONCEPT,
+        { ...emptyContext, message: $Maybe("Just", msg), valueContext: $Maybe("Just", { value: input }) }
       )
     ]
   );
@@ -14932,6 +14949,8 @@ var fromArray3 = /* @__PURE__ */ fromArray2(hashableString);
 var fromArray1 = /* @__PURE__ */ fromArray2(hashableId);
 var map22 = /* @__PURE__ */ map2(hashableString);
 var unions = /* @__PURE__ */ (() => foldableArray.foldMap(monoidHashSet(hashableId))(identity2))();
+var for_22 = /* @__PURE__ */ for_2(foldableArray);
+var member3 = /* @__PURE__ */ member(hashableString);
 var compare1 = (x) => (y) => {
   const v = ordString.compare(x._1)(y._1);
   if (v === "LT") {
@@ -14942,9 +14961,9 @@ var compare1 = (x) => (y) => {
   }
   return ordString.compare(x._2)(y._2);
 };
-var for_22 = /* @__PURE__ */ for_2(foldableArray);
 var sequence3 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV3)(identity3))();
 var fromArray22 = /* @__PURE__ */ fromArrayPurs(eqStringImpl, hashString)(fst)(snd);
+var validScales = ["linear", "log", "time", "ordinal", "point", "svg"];
 var unsafeLookupHM = (dictHashable) => {
   const lookup1 = lookup4(dictHashable);
   return (dictShow) => (k) => (m) => {
@@ -15282,7 +15301,7 @@ var makeValueParser = (v) => (k) => {
     return parseStrVal;
   }
   if ($0.conceptType.tag === "EntityDomainC") {
-    return parseDomainVal(k)(fromArray3(arrayMap((x) => x.entityId)((() => {
+    return parseDomainVal(true)(k)(fromArray3(arrayMap((x) => x.entityId)((() => {
       const v2 = lookup5(k)(v.entities);
       if (v2.tag === "Nothing") {
         return [];
@@ -15296,15 +15315,15 @@ var makeValueParser = (v) => (k) => {
   if ($0.conceptType.tag === "EntitySetC") {
     const v2 = getDomainForEntitySet(v)(k);
     if (v2.tag === "Nothing") {
-      return parseDomainVal(k)(empty2);
+      return parseDomainVal(true)(k)(empty2);
     }
     if (v2.tag === "Just") {
       const v3 = getEntities(v)(v2._1)($Maybe("Just", k));
       if (v3.tag === "Nothing") {
-        return parseDomainVal(k)(empty2);
+        return parseDomainVal(true)(k)(empty2);
       }
       if (v3.tag === "Just") {
-        return parseDomainVal(k)(fromArray3(arrayMap((x) => x.entityId)(v3._1)));
+        return parseDomainVal(true)(k)(fromArray3(arrayMap((x) => x.entityId)(v3._1)));
       }
     }
     fail();
@@ -15329,6 +15348,185 @@ var genSetMemberships = (v) => mapWithIndexPurs((v$1) => (es) => fromArrayBy((x)
   }
   fail();
 })((xs) => map22(value)(unions(arrayMap((x) => fromArray1([x.entityDomain, ...x.entitySets]))(xs))))(groupAllBy((x) => (y) => ordString.compare(x.entityId)(y.entityId))(es)))(v.entities);
+var checkTagValues = (concepts) => (entities) => {
+  const v = lookup5("tag")(entities);
+  const tagEntities = (() => {
+    if (v.tag === "Nothing") {
+      return empty2;
+    }
+    if (v.tag === "Just") {
+      return fromArray3(arrayMap((x) => x.entityId)(v._1));
+    }
+    fail();
+  })();
+  if (isEmpty2(tagEntities)) {
+    return applicativeV3.pure(entities);
+  }
+  const $0 = for_22(values(concepts))((c) => {
+    const v$1 = lookup2("tags")(c.props);
+    if (v$1.tag === "Nothing") {
+      return applicativeV3.pure();
+    }
+    if (v$1.tag === "Just") {
+      const $02 = (() => {
+        if (c._info.tag === "Nothing") {
+          return $ItemInfo("", -1);
+        }
+        if (c._info.tag === "Just") {
+          return c._info._1;
+        }
+        fail();
+      })();
+      return withRowInfo($02._1)($02._2)(traverse_2((x) => {
+        if (elem(eqString)(x)(["_none", "_root"]) || member3(x)(tagEntities)) {
+          return applicativeV3.pure();
+        }
+        return $Either(
+          "Left",
+          [
+            $Issue(
+              "CodedIssue",
+              E_GENERAL,
+              { ...emptyContext, message: $Maybe("Just", '"' + x + '" is not a valid tag; not found in "tag" entity domain') }
+            )
+          ]
+        );
+      })(filterImpl((a) => a !== "", split(" ")(v$1._1))));
+    }
+    fail();
+  });
+  if ($0.tag === "Left") {
+    return $Either("Left", $0._1);
+  }
+  if ($0.tag === "Right") {
+    return applicativeV3.pure(entities);
+  }
+  fail();
+};
+var checkListFields = (concepts) => {
+  const $0 = for_22(values(concepts))((c) => {
+    const $02 = (() => {
+      if (c._info.tag === "Nothing") {
+        return $ItemInfo("", -1);
+      }
+      if (c._info.tag === "Just") {
+        return c._info._1;
+      }
+      fail();
+    })();
+    const $1 = applyV(semigroupArray);
+    const $2 = applyV(semigroupArray);
+    const v1 = lookup2("tags")(c.props);
+    return $1.apply($1.Functor0().map((v) => identity)((() => {
+      const v1$1 = lookup2("drill_up")(c.props);
+      const v1$2 = lookup2("scales")(c.props);
+      return $2.apply($2.Functor0().map((v) => identity)((() => {
+        if (v1$1.tag === "Nothing") {
+          return applicativeV3.pure();
+        }
+        if (v1$1.tag === "Just") {
+          if (startsWithImpl("[", v1$1._1)) {
+            return withRowInfo($02._1)($02._2)($Either(
+              "Left",
+              [
+                $Issue(
+                  "CodedIssue",
+                  E_VAL_JSON,
+                  {
+                    ...emptyContext,
+                    message: $Maybe("Just", 'drill_up must use space-separated format, not a JSON array (e.g. "foo bar" instead of ["foo","bar"])')
+                  }
+                )
+              ]
+            ));
+          }
+          const v2 = lookup2("domain")(c.props);
+          if (v2.tag === "Nothing") {
+            return applicativeV3.pure();
+          }
+          if (v2.tag === "Just") {
+            const $3 = v2._1;
+            return withRowInfo($02._1)($02._2)(traverse_2((x) => lookupSetWithInDomain(concepts)(x)($3))(filterImpl(
+              (a) => a !== "",
+              split(" ")(v1$1._1)
+            )));
+          }
+        }
+        fail();
+      })()))((() => {
+        if (v1$2.tag === "Nothing") {
+          return applicativeV3.pure();
+        }
+        if (v1$2.tag === "Just") {
+          if (startsWithImpl("[", v1$2._1)) {
+            return withRowInfo($02._1)($02._2)($Either(
+              "Left",
+              [
+                $Issue(
+                  "CodedIssue",
+                  E_VAL_JSON,
+                  {
+                    ...emptyContext,
+                    message: $Maybe("Just", 'scales must use space-separated format, not a JSON array (e.g. "linear log" instead of ["linear","log"])')
+                  }
+                )
+              ]
+            ));
+          }
+          return withRowInfo($02._1)($02._2)(traverse_2((x) => {
+            if (elem(eqString)(x)(validScales)) {
+              return applicativeV3.pure();
+            }
+            return $Either(
+              "Left",
+              [
+                $Issue(
+                  "CodedIssue",
+                  E_GENERAL,
+                  {
+                    ...emptyContext,
+                    message: $Maybe("Just", '"' + x + '" is not a valid scale; must be one of: linear, log, time, ordinal, point, svg')
+                  }
+                )
+              ]
+            );
+          })(filterImpl((a) => a !== "", split(" ")(v1$2._1))));
+        }
+        fail();
+      })());
+    })()))((() => {
+      if (v1.tag === "Nothing") {
+        return applicativeV3.pure();
+      }
+      if (v1.tag === "Just") {
+        if (includesImpl(",", v1._1)) {
+          return withRowInfo($02._1)($02._2)($Either(
+            "Left",
+            [
+              $Issue(
+                "CodedIssue",
+                E_GENERAL,
+                {
+                  ...emptyContext,
+                  message: $Maybe("Just", 'tags must use space-separated format, not comma-separated (e.g. "foo bar" instead of "foo,bar")')
+                }
+              )
+            ]
+          ));
+        }
+        return applicativeV3.pure();
+      }
+      fail();
+    })());
+  });
+  if ($0.tag === "Left") {
+    return $Either("Left", $0._1);
+  }
+  if ($0.tag === "Right") {
+    return applicativeV3.pure(concepts);
+  }
+  fail();
+};
 var checkDuplicatedEntities = (input) => {
   const dups = findDups((x) => (y) => compare1($Tuple(
     x.entityId,
@@ -15401,58 +15599,6 @@ var checkDuplicatedConcepts = (input) => {
     return applicativeV3.pure(input);
   }
   return $Either("Left", arrayMap(makeIssue)(dups));
-};
-var checkDrillup = (concepts) => {
-  const $0 = for_22(values(concepts))((c) => {
-    const v = lookup2("drill_up")(c.props);
-    if (v.tag === "Nothing") {
-      return applicativeV3.pure();
-    }
-    if (v.tag === "Just") {
-      const $02 = (() => {
-        if (c._info.tag === "Nothing") {
-          return $ItemInfo("", -1);
-        }
-        if (c._info.tag === "Just") {
-          return c._info._1;
-        }
-        fail();
-      })();
-      const $1 = lookup2("domain")(c.props);
-      const domain = (() => {
-        if ($1.tag === "Just") {
-          return $1._1;
-        }
-        fail();
-      })();
-      return withRowInfo($02._1)($02._2)((() => {
-        const $2 = parseJsonListVal(v._1);
-        if ($2.tag === "Left") {
-          return $Either("Left", $2._1);
-        }
-        if ($2.tag === "Right") {
-          return traverse_2((x) => lookupSetWithInDomain(concepts)(x)(domain))((() => {
-            if ($2._1.tag === "ListVal") {
-              return $2._1._1;
-            }
-            if ($2._1.tag === "JsonListVal") {
-              return $2._1._1;
-            }
-            return [];
-          })());
-        }
-        fail();
-      })());
-    }
-    fail();
-  });
-  if ($0.tag === "Left") {
-    return $Either("Left", $0._1);
-  }
-  if ($0.tag === "Right") {
-    return applicativeV3.pure(concepts);
-  }
-  fail();
 };
 var checkDomainAndSetExists = (concepts) => (entities) => {
   const $0 = sequence3(toArrayBy((domain) => (ents) => {
@@ -15618,7 +15764,7 @@ var parseBaseDataSet = (conceptsInput) => (entitiesInput) => {
       return $Either("Left", $0._1);
     }
     if ($0.tag === "Right") {
-      return checkDrillup($0._1);
+      return checkListFields($0._1);
     }
     fail();
   })();
@@ -15633,7 +15779,8 @@ var parseBaseDataSet = (conceptsInput) => (entitiesInput) => {
           return $Either("Left", $22._1);
         }
         if ($22.tag === "Right") {
-          return checkDomainAndSetExists($1._1)($22._1);
+          const $32 = applyV(semigroupArray);
+          return $32.apply($32.Functor0().map((v) => identity)(checkDomainAndSetExists($1._1)($22._1)))(checkTagValues($1._1)($22._1));
         }
         fail();
       })();
@@ -15655,7 +15802,7 @@ var parseBaseDataSet = (conceptsInput) => (entitiesInput) => {
       ...$3,
       _valueParsers: fromArray22([
         ...arrayMap((x) => $Tuple(x, makeValueParser($3)(x)))(keys2($3.concepts)),
-        $Tuple("concept", parseDomainVal("concept")(fromArray3(keys2($3.concepts)))),
+        $Tuple("concept", parseConceptVal(fromArray3(keys2($3.concepts)))),
         $Tuple("concept_type", parseStrVal)
       ])
     });
@@ -17232,7 +17379,7 @@ var readJSON_2 = /* @__PURE__ */ readJSON_(/* @__PURE__ */ (() => {
 })());
 var lookup9 = /* @__PURE__ */ lookup4(hashableString);
 var hashableList2 = /* @__PURE__ */ hashableList(hashableString);
-var member3 = /* @__PURE__ */ member(hashableList2);
+var member4 = /* @__PURE__ */ member(hashableList2);
 var insert6 = /* @__PURE__ */ insert4(hashableList2);
 var hashableArray2 = /* @__PURE__ */ hashableArray(hashableString);
 var fromArray4 = /* @__PURE__ */ fromArray2(hashableArray2);
@@ -17369,7 +17516,7 @@ var generateDataPackage = (root) => (dataset) => (resources) => {
             fail();
           };
           const values2 = go(filtered, Nil);
-          if (member3(values2)(acc._1)) {
+          if (member4(values2)(acc._1)) {
             return acc;
           }
           return $Tuple(
@@ -17485,7 +17632,7 @@ var runMain = (opts2) => {
     (() => {
       const gendp = opts2.generateDP;
       const fixFormat = opts2.fixFormat;
-      return _bind(_liftEffect(log2("v2.2.1")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v2.3.0")))(() => _bind((() => {
         if (mode === "FileNameBased") {
           return runValidationT(validate2(path2)(gendp)(fixFormat));
         }

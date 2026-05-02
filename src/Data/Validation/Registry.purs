@@ -143,6 +143,7 @@ data ErrorCode
   | E_VAL_STR
   | E_VAL_CONSTRAINT_FILENAME
   | E_VAL_CONSTRAINT_DOMAIN
+  | E_VAL_CONSTRAINT_CONCEPT
   | E_VAL_EMPTY
   -- Concept Errors
   | E_CONCEPT_ID_RESERVED
@@ -210,6 +211,7 @@ errorCodeToString = case _ of
   E_VAL_STR -> "E_VAL_STR"
   E_VAL_CONSTRAINT_FILENAME -> "E_VAL_CONSTRAINT_FILENAME"
   E_VAL_CONSTRAINT_DOMAIN -> "E_VAL_CONSTRAINT_DOMAIN"
+  E_VAL_CONSTRAINT_CONCEPT -> "E_VAL_CONSTRAINT_CONCEPT"
   E_VAL_EMPTY -> "E_VAL_EMPTY"
   E_CONCEPT_ID_RESERVED -> "E_CONCEPT_ID_RESERVED"
   E_CONCEPT_ID_INVALID -> "E_CONCEPT_ID_INVALID"
@@ -262,6 +264,7 @@ errorMessageTemplate = case _ of
   E_VAL_STR -> "invalid string value"
   E_VAL_CONSTRAINT_FILENAME -> "value violates filename constraint"
   E_VAL_CONSTRAINT_DOMAIN -> "value violates domain constraint"
+  E_VAL_CONSTRAINT_CONCEPT -> "value is not a valid concept in this dataset"
   E_VAL_EMPTY -> "value is empty"
   E_CONCEPT_ID_RESERVED -> "concept ID is a reserved word"
   E_CONCEPT_ID_INVALID -> "concept ID contains invalid characters"
@@ -395,7 +398,8 @@ errorSuggestion = case _ of
   E_VAL_BOOL -> ""
   E_VAL_STR -> ""
   E_VAL_CONSTRAINT_FILENAME -> ""
-  E_VAL_CONSTRAINT_DOMAIN -> ""
+  E_VAL_CONSTRAINT_DOMAIN -> "Please consult the entity domain file for all valid values."
+  E_VAL_CONSTRAINT_CONCEPT -> "Please consult the concepts file for all valid concepts."
   E_VAL_EMPTY -> ""
   E_CONCEPT_ID_RESERVED -> ""
   E_CONCEPT_ID_INVALID -> ""

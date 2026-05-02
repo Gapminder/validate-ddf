@@ -1,0 +1,11 @@
+concept,concept_type,domain,name,drill_up,scales,tags
+geo,entity_domain,,Geography,,,
+region,entity_set,geo,Region,,,
+name,string,,Name,,,
+domain,string,,Domain,,,
+year,time,,Year,,,
+drill_up,string,,Drill Up,,,
+scales,string,,Scales,,,
+tags,string,,Tags,,,
+country,entity_set,geo,Country,region,,
+population,measure,,Population,,,"_root,_none"
