@@ -66,7 +66,7 @@ import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.String.Utils as Str
 import Data.Traversable (for, for_, sequence, sequence_, traverse, traverse_)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, toInvaildItem, updateMessage, withConceptField, withEntity, withFileLocation, withRowInfo, withSuggestion)
+import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, toInvaildItem, updateMessage, withConceptField, withEntity, withFileLocation, withMessage, withRowInfo, withSuggestion)
 import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither, validation)
 import Debug (trace)
@@ -599,13 +599,14 @@ parseDataPoints ds (DataPoints dp) =
   in
     for_ conceptsInDp \c ->
       let
-        validateConcept = getValueParser ds (Id.value c)
-          `andThen`
-            (\vp -> parseColumnValues vp (unsafeLookup c dp.values) (dp.itemInfo))
+        -- Only wrap the parser lookup with line 1 — "concept not found" errors
+        -- have no file context yet. parseColumnValues sets its own per-row contexts.
+        parserResult = case mbFileContext of
+          Just (Tuple fp ln) -> withRowInfo fp ln (getValueParser ds (Id.value c))
+          Nothing -> getValueParser ds (Id.value c)
       in
-        case mbFileContext of
-          Just (Tuple fp ln) -> withRowInfo fp ln validateConcept
-          Nothing -> validateConcept
+        parserResult `andThen`
+          (\vp -> parseColumnValues vp (unsafeLookup c dp.values) (dp.itemInfo))
 
 -- | check if concept exists in the dataset
 conceptExists :: DataSet -> Identifier -> V Issues Identifier
@@ -615,16 +616,32 @@ conceptExists (DataSet { concepts }) concept =
     Just _ -> pure concept
 
 parseColumnValues :: ValueParser -> Array String -> Array ItemInfo -> V Issues Unit
-parseColumnValues parser vals iteminfo = traverse_ run allValues
+parseColumnValues parser vals iteminfo =
+  traverse_ run nonEmptyValues <> traverse_ runEmpty emptyValues
   where
-  -- find all unique values
+  -- deduplicate: one representative row per unique value
   allValues = HM.values $ HM.fromArrayBy fst identity $ Arr.zip vals iteminfo
+  nonEmptyValues = Arr.filter (\t -> fst t /= "") allValues
+  emptyValues = Arr.filter (\t -> fst t == "") allValues
+  -- count in the original (non-deduplicated) array for the summary message
+  emptyCount = Arr.length $ Arr.filter (_ == "") vals
 
   run (Tuple v it) =
     let
       (Tuple fp i) = pathAndRow it
     in
       withRowInfo fp i (parser v `andThen` (\_ -> pure unit))
+
+  -- For empty strings: if the parser rejects them, report one aggregated error
+  -- with the row count instead of a single misleading line number.
+  -- lineNo = -1 suppresses the line number in the output.
+  runEmpty (Tuple _ it) =
+    let
+      (Tuple fp _) = pathAndRow it
+      countMsg = "empty value found in " <> show emptyCount <> " rows"
+    in
+      lmap (map (withFileLocation fp (-1) >>> withMessage countMsg))
+        (parser "" `andThen` (\_ -> pure unit))
 
 -- | For Synonyms and Translations, we only need to parse all values in the columns.
 parseCsvFileValues :: DataSet -> CsvFile -> V Issues Unit

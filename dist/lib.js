@@ -3734,6 +3734,8 @@ var concatArray = function(xs) {
 };
 
 // output-es/Data.Semigroup/index.js
+var semigroupUnit = { append: (v) => (v1) => {
+} };
 var semigroupArray = { append: concatArray };
 
 // output-es/Data.Monoid/index.js
@@ -10699,6 +10701,15 @@ var applyV = (dictSemigroup) => ({
   },
   Functor0: () => functorEither
 });
+var semigroupV = (dictSemigroup) => {
+  const $0 = applyV(dictSemigroup);
+  return (dictSemigroup1) => ({
+    append: (() => {
+      const $1 = dictSemigroup1.append;
+      return (a) => (b) => $0.apply($0.Functor0().map($1)(a))(b);
+    })()
+  });
+};
 
 // output-es/Data.DDF.Concept/index.js
 var $ConceptType = (tag, _1) => ({ tag, _1 });
@@ -14963,6 +14974,7 @@ var applicativeV3 = /* @__PURE__ */ (() => {
 var fromArrayBy = /* @__PURE__ */ fromArrayPurs(eqStringImpl, hashString);
 var identity16 = (x) => x;
 var traverse_2 = /* @__PURE__ */ traverse_(applicativeV3)(foldableArray);
+var append1 = /* @__PURE__ */ (() => semigroupV(semigroupArray)(semigroupUnit).append)();
 var lookup5 = /* @__PURE__ */ lookup4(hashableString);
 var for_2 = /* @__PURE__ */ for_(applicativeV3);
 var for_1 = /* @__PURE__ */ for_2(foldableArray);
@@ -15039,16 +15051,49 @@ var parseColumnValues$p = (fp) => (concept) => (parser) => (vals) => (index3) =>
   }
   fail();
 })(values(fromArrayBy(fst)(identity16)(zipWithImpl(Tuple, vals, index3))));
-var parseColumnValues = (parser) => (vals) => (iteminfo) => traverse_2((v) => withRowInfo(v._2._1)(v._2._2)((() => {
-  const $0 = parser(v._1);
-  if ($0.tag === "Left") {
-    return $Either("Left", $0._1);
-  }
-  if ($0.tag === "Right") {
-    return applicativeV3.pure();
-  }
-  fail();
-})()))(values(fromArrayBy(fst)(identity16)(zipWithImpl(Tuple, vals, iteminfo))));
+var parseColumnValues = (parser) => (vals) => (iteminfo) => {
+  const emptyCount = filterImpl((v) => v === "", vals).length;
+  const allValues = values(fromArrayBy(fst)(identity16)(zipWithImpl(Tuple, vals, iteminfo)));
+  return append1(traverse_2((v) => withRowInfo(v._2._1)(v._2._2)((() => {
+    const $0 = parser(v._1);
+    if ($0.tag === "Left") {
+      return $Either("Left", $0._1);
+    }
+    if ($0.tag === "Right") {
+      return applicativeV3.pure();
+    }
+    fail();
+  })()))(filterImpl((t) => t._1 !== "", allValues)))(traverse_2((v) => {
+    const $0 = v._2._1;
+    const $1 = arrayMap((() => {
+      const $12 = "empty value found in " + showIntImpl(emptyCount) + " rows";
+      return (x) => {
+        const $22 = x.tag === "CodedIssue" ? $Issue("CodedIssue", x._1, { ...x._2, fileContext: $Maybe("Just", { filepath: $0, lineNo: -1 }) }) : x;
+        if ($22.tag === "CodedIssue") {
+          return $Issue("CodedIssue", $22._1, { ...$22._2, message: $Maybe("Just", $12) });
+        }
+        return $22;
+      };
+    })());
+    const $2 = parser("");
+    const $3 = (() => {
+      if ($2.tag === "Left") {
+        return $Either("Left", $2._1);
+      }
+      if ($2.tag === "Right") {
+        return applicativeV3.pure();
+      }
+      fail();
+    })();
+    if ($3.tag === "Left") {
+      return $Either("Left", $1($3._1));
+    }
+    if ($3.tag === "Right") {
+      return $Either("Right", $3._1);
+    }
+    fail();
+  })(filterImpl((t) => t._1 === "", allValues)));
+};
 var makeIssue$p = (e) => {
   const $0 = (() => {
     if (e._info.tag === "Nothing") {
@@ -15250,16 +15295,14 @@ var parseCsvFileValues = (ds) => (v) => {
 var parseDataPoints2 = (ds) => (v) => {
   if (0 < v.itemInfo.length) {
     return for_1(snoc(v.by)(v.indicatorId))((c) => {
-      const $0 = getValueParser(ds)(c);
-      return withRowInfo(v.itemInfo[0]._1)(1)((() => {
-        if ($0.tag === "Left") {
-          return $Either("Left", $0._1);
-        }
-        if ($0.tag === "Right") {
-          return parseColumnValues($0._1)(unsafeLookup(showId)(ordId)(c)(v.values))(v.itemInfo);
-        }
-        fail();
-      })());
+      const $0 = withRowInfo(v.itemInfo[0]._1)(1)(getValueParser(ds)(c));
+      if ($0.tag === "Left") {
+        return $Either("Left", $0._1);
+      }
+      if ($0.tag === "Right") {
+        return parseColumnValues($0._1)(unsafeLookup(showId)(ordId)(c)(v.values))(v.itemInfo);
+      }
+      fail();
     });
   }
   return for_1(snoc(v.by)(v.indicatorId))((c) => {
@@ -17421,7 +17464,7 @@ var member4 = /* @__PURE__ */ member(hashableList2);
 var insert6 = /* @__PURE__ */ insert4(hashableList2);
 var hashableArray2 = /* @__PURE__ */ hashableArray(hashableString);
 var fromArray4 = /* @__PURE__ */ fromArray2(hashableArray2);
-var append1 = /* @__PURE__ */ (() => {
+var append12 = /* @__PURE__ */ (() => {
   const unionWith2 = unionWith(hashableArray2);
   return (v) => (v1) => unionWith2($$const)(v)(v1);
 })();
@@ -17559,7 +17602,7 @@ var generateDataPackage = (root) => (dataset) => (resources) => {
           }
           return $Tuple(
             insert6(values2)(acc._1),
-            append1(acc._2)(fromArray4(permutations((() => {
+            append12(acc._2)(fromArray4(permutations((() => {
               const go$1 = (m$p, z$p) => {
                 if (m$p.tag === "Leaf") {
                   return z$p;
@@ -17630,7 +17673,7 @@ var write4 = /* @__PURE__ */ (() => {
   })(writeForeignString)(writeForeignFieldsNilRowR)()()())()()())()()();
   return (rec) => $0.writeImplFields($$Proxy)(rec)({});
 })();
-var validatorVersion = "v2.3.3";
+var validatorVersion = "v2.4.0";
 var validate$p = (opts2) => fromAff((() => {
   const path2 = opts2.targetPath;
   const onlyErrors = opts2.onlyErrors;
@@ -17663,7 +17706,7 @@ var validate$p = (opts2) => fromAff((() => {
         return $1;
       }
       return _pure();
-    })())(() => _pure(write4({ success: !hasError($0), errors: msgsToShow, validatorVersion: "v2.3.3" })));
+    })())(() => _pure(write4({ success: !hasError($0), errors: msgsToShow, validatorVersion: "v2.4.0" })));
   });
 })());
 var setProgressCallback = setProgressHandler;
@@ -17676,7 +17719,7 @@ var runMain = (opts2) => {
     (() => {
       const gendp = opts2.generateDP;
       const fixFormat = opts2.fixFormat;
-      return _bind(_liftEffect(log2("v2.3.3")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v2.4.0")))(() => _bind((() => {
         if (mode === "FileNameBased") {
           return runValidationT(validate2(path2)(gendp)(fixFormat));
         }
