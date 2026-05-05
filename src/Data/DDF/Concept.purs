@@ -16,10 +16,12 @@ import Data.Map as M
 import Data.Map.Extra (mapKeys)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
+import Data.String (Pattern(..), Replacement(..))
 import Data.String as Str
 import Data.String.NonEmpty (NonEmptyString, toString)
+import Data.String.Utils (includes, startsWith)
 import Data.Tuple (Tuple(..))
-import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, withConcept, withConceptField)
+import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, withConcept, withConceptField, withMessage)
 import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, andThen, invalid)
 import Safe.Coerce (coerce)
@@ -174,6 +176,8 @@ parseConcept input =
       `andThen`
         checkRestrictedConecptIds
       `andThen`
+        checkListFieldFormats
+      `andThen`
         (\c -> pure $ setInfo input._info c)
 
 -- | some concept type require a column exists
@@ -208,6 +212,43 @@ checkRestrictedConecptIds input@(Concept c) = case c.conceptType of
               # withConcept (Id.value c.conceptId)
           ]
   _ -> pure input
+
+-- | Re-encode a parsed CSV field value for display in error messages,
+-- | so users can search for it in the raw CSV file.
+csvDisplay :: String -> String
+csvDisplay s =
+  if Str.contains (Pattern "\"") s || Str.contains (Pattern ",") s then
+    "\"" <> Str.replaceAll (Pattern "\"") (Replacement "\"\"") s <> "\""
+  else
+    s
+
+-- | check format of concept list fields (drill_up, scales, tags).
+-- | These fields must use space-separated format, not JSON arrays or comma-separated.
+-- | Value validation (against entity domains) happens later in DataSet.
+checkListFieldFormats :: Concept -> V Issues Concept
+checkListFieldFormats c@(Concept { conceptId, props }) =
+  let
+    cid = Id.value conceptId
+    checkFormat fieldName isValid errorCode =
+      case M.lookup (Id.unsafeCreate fieldName) props of
+        Nothing -> pure unit
+        Just val ->
+          if isValid val then
+            pure unit
+          else
+            invalid
+              [ mkIssue errorCode
+                  # withConceptField cid fieldName
+                  # withMessage ("value: " <> csvDisplay val)
+              ]
+  in
+    -- drill_up must NOT start with '['
+    checkFormat "drill_up" (not startsWith "[") E_CONCEPT_DRILLUP_FORMAT
+      -- scales must NOT start with '['
+      *> checkFormat "scales" (not startsWith "[") E_CONCEPT_SCALES_FORMAT
+      -- tags must NOT contain ','
+      *> checkFormat "tags" (not includes ",") E_CONCEPT_TAGS_FORMAT
+      $> c
 
 hasFieldAndGetValue :: ConceptInput' -> String -> V Issues String
 hasFieldAndGetValue input field =

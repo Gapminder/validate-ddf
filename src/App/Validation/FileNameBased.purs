@@ -122,6 +122,10 @@ validate path dpIssueAsWarning fixFormat = do
   let
     entityResources = DataPackage.createResources path entityCsvFiles
 
+  -- stop if concept/entity parsing produced errors (e.g. format issues)
+  msgs <- getState
+  when (hasError msgs) $ vError []
+
   -- create a base dataset from concepts and entities
   liftEffect $ progress "cross-validating concepts and entities..."
   ds <- validateBaseDataSet (Arr.concat concepts) (Arr.concat entities)
