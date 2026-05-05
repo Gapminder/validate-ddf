@@ -309,32 +309,30 @@ checkListFields concepts =
                   Just domain ->
                     withRowInfo fp i
                       $ parseListVal val
-                          `andThen`
-                            ( \lst ->
-                                traverse_
-                                  (\x -> lookupSetWithInDomain concepts x domain)
-                                  (Value.getListValues lst)
-                            )
+                          `andThen` \lst ->
+                            traverse_
+                              (\x -> lookupSetWithInDomain concepts x domain)
+                              (Value.getListValues lst)
+
           checkScales =
             case Conc.getProp c "scales" of
               Nothing -> pure unit
               Just val ->
                 withRowInfo fp i
                   $ parseListVal val
-                      `andThen`
-                        ( \lst ->
-                            traverse_
-                              ( \x ->
-                                  if x `Arr.elem` validScales then
-                                    pure unit
-                                  else
-                                    invalid
-                                      [ mkIssue E_DATASET_CONCEPT_SCALES_INVALID
-                                          # withMessage ("\"" <> x <> "\"")
-                                      ]
-                              )
-                              (Value.getListValues lst)
-                        )
+                      `andThen` \lst ->
+                        traverse_
+                          ( \x ->
+                              if x `Arr.elem` validScales then
+                                pure unit
+                              else
+                                invalid
+                                  [ mkIssue E_DATASET_CONCEPT_SCALES_INVALID
+                                      # withMessage ("\"" <> x <> "\"")
+                                  ]
+                          )
+                          (Value.getListValues lst)
+
         in
           checkDrillUp *> checkScales
     )
@@ -360,22 +358,20 @@ checkTagValues concepts entities =
               Just val ->
                 let
                   Tuple fp i = pathAndRow $ Conc.getInfo c
+                  checkItem x =
+                    if x `Arr.elem` [ "_none", "_root" ] || HS.member x tagEntities then
+                      pure unit
+                    else
+                      invalid
+                        [ mkIssue E_DATASET_CONCEPT_TAGS_INVALID
+                            # withMessage ("\"" <> x <> "\"")
+                        ]
                 in
                   withRowInfo fp i
                     $ parseListVal val
                         `andThen`
                           ( \lst ->
-                              traverse_
-                                ( \x ->
-                                    if x `Arr.elem` [ "_none", "_root" ] || HS.member x tagEntities then
-                                      pure unit
-                                    else
-                                      invalid
-                                        [ mkIssue E_DATASET_CONCEPT_TAGS_INVALID
-                                            # withMessage ("\"" <> x <> "\"")
-                                        ]
-                                )
-                                (Value.getListValues lst)
+                              traverse_ checkItem (Value.getListValues lst)
                           )
         )
         `andThen` (\_ -> pure entities)

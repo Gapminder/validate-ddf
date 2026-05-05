@@ -6,9 +6,10 @@ module Data.DDF.Concept where
 import Prelude
 
 import Data.DDF.Atoms.Header (Header(..))
+import Data.Either (Either(..))
 import Data.DDF.Atoms.Identifier (Identifier)
 import Data.DDF.Atoms.Identifier as Id
-import Data.DDF.Atoms.Value (Value, ValueParser, isEmpty, parseStrVal')
+import Data.DDF.Atoms.Value (Value, ValueParser, getListValues, isEmpty, parseListVal, parseStrVal')
 import Data.DDF.Internal (ItemInfo, iteminfo)
 import Data.List (elem)
 import Data.Map (Map)
@@ -19,11 +20,11 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.String (Pattern(..), Replacement(..))
 import Data.String as Str
 import Data.String.NonEmpty (NonEmptyString, toString)
-import Data.String.Utils (includes, startsWith)
+import Data.Traversable (traverse_)
 import Data.Tuple (Tuple(..))
 import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, withConcept, withConceptField, withMessage)
 import Data.Validation.Registry (ErrorCode(..))
-import Data.Validation.Semigroup (V, andThen, invalid)
+import Data.Validation.Semigroup (V, andThen, invalid, toEither)
 import Safe.Coerce (coerce)
 
 -- | Each Concept MUST have an Id and concept type.
@@ -223,31 +224,34 @@ csvDisplay s =
     s
 
 -- | check format of concept list fields (drill_up, scales, tags).
--- | These fields must use space-separated format, not JSON arrays or comma-separated.
+-- | Each value must be a space-separated list of valid identifiers.
 -- | Value validation (against entity domains) happens later in DataSet.
 checkListFieldFormats :: Concept -> V Issues Concept
 checkListFieldFormats c@(Concept { conceptId, props }) =
   let
     cid = Id.value conceptId
-    checkFormat fieldName isValid errorCode =
+    checkField fieldName errorCode =
       case M.lookup (Id.unsafeCreate fieldName) props of
         Nothing -> pure unit
         Just val ->
-          if isValid val then
-            pure unit
-          else
-            invalid
-              [ mkIssue errorCode
-                  # withConceptField cid fieldName
-                  # withMessage ("value: " <> csvDisplay val)
-              ]
+          let
+            parsed =
+              parseListVal val
+                `andThen` \lst ->
+                  traverse_ (\x -> void $ Id.parseId x) (getListValues lst)
+          in
+            case toEither parsed of
+              Right _ -> pure unit
+              Left _ ->
+                invalid
+                  [ mkIssue errorCode
+                      # withConceptField cid fieldName
+                      # withMessage ("value: " <> csvDisplay val)
+                  ]
   in
-    -- drill_up must NOT start with '['
-    checkFormat "drill_up" (not startsWith "[") E_CONCEPT_DRILLUP_FORMAT
-      -- scales must NOT start with '['
-      *> checkFormat "scales" (not startsWith "[") E_CONCEPT_SCALES_FORMAT
-      -- tags must NOT contain ','
-      *> checkFormat "tags" (not includes ",") E_CONCEPT_TAGS_FORMAT
+    checkField "drill_up" E_CONCEPT_DRILLUP_FORMAT
+      *> checkField "scales" E_CONCEPT_SCALES_FORMAT
+      *> checkField "tags" E_CONCEPT_TAGS_FORMAT
       $> c
 
 hasFieldAndGetValue :: ConceptInput' -> String -> V Issues String
