@@ -1,0 +1,28 @@
+{
+  "language": { "name": "English", "id": "en-US" },
+  "resources": [
+    {
+      "name": "ddf--concepts",
+      "path": "ddf--concepts.csv",
+      "schema": {
+        "fields": [
+          { "name": "concept" }, { "name": "concept_type" },
+          { "name": "domain" }, { "name": "name" },
+          { "name": "drill_up" }
+        ],
+        "primaryKey": [ "concept" ]
+      }
+    },
+    {
+      "name": "ddf--entities--geo--country",
+      "path": "ddf--entities--geo--country.csv",
+      "schema": {
+        "fields": [
+          { "name": "geo" }, { "name": "name" },
+          { "name": "is--region" }, { "name": "is--country" }
+        ],
+        "primaryKey": [ "geo" ]
+      }
+    }
+  ]
+}
