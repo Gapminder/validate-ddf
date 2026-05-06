@@ -5,11 +5,11 @@ module Data.DDF.Concept where
 
 import Prelude
 
+import Data.Array as Arr
 import Data.DDF.Atoms.Header (Header(..))
 import Data.Either (Either(..))
 import Data.DDF.Atoms.Identifier (Identifier)
 import Data.DDF.Atoms.Identifier as Id
-import Data.DDF.Atoms.Value (Value, ValueParser, getListValues, isEmpty, parseListVal, parseStrVal')
 import Data.DDF.Internal (ItemInfo, iteminfo)
 import Data.List (elem)
 import Data.Map (Map)
@@ -19,18 +19,24 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
 import Data.String (Pattern(..), Replacement(..))
 import Data.String as Str
-import Data.String.NonEmpty (NonEmptyString, toString)
-import Data.Traversable (traverse_)
+import Data.Traversable (traverse, traverse_)
 import Data.Tuple (Tuple(..))
 import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, withConcept, withConceptField, withMessage)
 import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, andThen, invalid, toEither)
+import Data.String.NonEmpty (toString)
 import Safe.Coerce (coerce)
 
 -- | Each Concept MUST have an Id and concept type.
+-- | Fixed fields (domain, drill_up, scales, tags) are pre-parsed from CSV
+-- | and stored explicitly. Custom properties go into the props map.
 newtype Concept = Concept
   { conceptId :: Identifier
   , conceptType :: ConceptType
+  , domain :: Maybe Identifier
+  , drill_up :: Maybe (Array Identifier)
+  , scales :: Maybe (Array Identifier)
+  , tags :: Maybe (Array Identifier)
   , props :: Props
   , _info :: Maybe ItemInfo -- additional information to use in the app, not in DDF data model
   }
@@ -43,10 +49,9 @@ instance eqConcept :: Eq Concept where
 instance showConcept :: Show Concept where
   show (Concept a) = show a
 
--- | Properties type
--- the Key MUST be valid identifier
--- We will validate values in the properties (such as domain)
--- while we parse entire dataset, so just use String here
+-- | Properties type for custom / user-defined concept properties.
+-- | Fixed fields (domain, drill_up, scales, tags) are stored in dedicated
+-- | fields above and removed from props during parsing.
 type Props = Map Identifier String
 
 -- | Types of concept
@@ -99,11 +104,19 @@ parseConceptType x = ado
 reservedConcepts :: Array Identifier
 reservedConcepts = map Id.unsafeCreate [ "concept", "concept_type" ]
 
--- | create concept
+-- | create concept with default empty fixed fields
 concept :: Identifier -> ConceptType -> Props -> Concept
-concept conceptId conceptType props = Concept { conceptId, conceptType, props, _info }
-  where
-  _info = Nothing
+concept conceptId conceptType props =
+  Concept
+    { conceptId
+    , conceptType
+    , domain: Nothing
+    , drill_up: Nothing
+    , scales: Nothing
+    , tags: Nothing
+    , props
+    , _info: Nothing
+    }
 
 -- | set additional infos
 setInfo :: (Maybe ItemInfo) -> Concept -> Concept
@@ -138,6 +151,19 @@ getProp :: Concept -> String -> Maybe String
 getProp (Concept c) p =
   M.lookup (Id.unsafeCreate p) c.props
 
+-- | Fixed field accessors
+getDomain :: Concept -> Maybe Identifier
+getDomain (Concept c) = c.domain
+
+getDrillUp :: Concept -> Maybe (Array Identifier)
+getDrillUp (Concept c) = c.drill_up
+
+getScales :: Concept -> Maybe (Array Identifier)
+getScales (Concept c) = c.scales
+
+getTags :: Concept -> Maybe (Array Identifier)
+getTags (Concept c) = c.tags
+
 -- | The unvalidated concept record, which comes from reading csvfile.
 type ConceptInput =
   { conceptId :: String
@@ -152,50 +178,77 @@ type ConceptInput' =
   , _info :: Maybe ItemInfo
   }
 
--- | convert a ConceptInput into valid Concept or errors
+-- | convert a ConceptInput into valid Concept or errors.
+-- | Fixed fields (domain, drill_up, scales, tags) are popped from props,
+-- | parsed, and stored in explicit fields on the Concept.
 parseConcept :: ConceptInput -> V Issues Concept
 parseConcept input =
   let
     -- coerce Header to Identifier because they are both string
     -- FIXME: double check the Header -> Identifier convertion.
     props = mapKeys coerce input.props :: Map Identifier String
-    input' = { conceptId: input.conceptId, props: props, _info: input._info }
+    input0 = { conceptId: input.conceptId, props: props, _info: input._info }
   in
-    hasFieldAndPopValue input' "concept_type"
-      `andThen`
-        ( \(Tuple conceptTypeStr input'') ->
-            concept
-              <$>
-                ( notReserved input.conceptId
-                    `andThen` Id.parseId
-                )
-              <*> parseConceptType conceptTypeStr
-              <*> pure input''.props
-        )
-      `andThen`
-        checkMandatoryField
-      `andThen`
-        checkRestrictedConecptIds
-      `andThen`
-        checkListFieldFormats
-      `andThen`
-        (\c -> pure $ setInfo input._info c)
+    popConceptType input0
+      `andThen` \(Tuple conceptTypeStr input1) ->
+        popAndParseDomain input1
+          `andThen` \(Tuple domain input2) ->
+            popAndParseListField "drill_up" E_CONCEPT_DRILLUP_FORMAT input2
+              `andThen` \(Tuple drill_up input3) ->
+                popAndParseListField "scales" E_CONCEPT_SCALES_FORMAT input3
+                  `andThen` \(Tuple scales input4) ->
+                    popAndParseListField "tags" E_CONCEPT_TAGS_FORMAT input4
+                      `andThen` \(Tuple tags input5) ->
+                        buildAndValidate
+                          { conceptId: input.conceptId
+                          , conceptTypeStr
+                          , domain
+                          , drill_up
+                          , scales
+                          , tags
+                          , props: input5.props
+                          , _info: input._info
+                          }
+  where
+  buildConcept parsedId parsedType domain' drill_up' scales' tags' props' =
+    Concept
+      { conceptId: parsedId
+      , conceptType: parsedType
+      , domain: domain'
+      , drill_up: drill_up'
+      , scales: scales'
+      , tags: tags'
+      , props: props'
+      , _info: Nothing
+      }
+
+  buildAndValidate r =
+    notReserved r.conceptId
+      `andThen` Id.parseId
+      `andThen` \parsedId ->
+        parseConceptType r.conceptTypeStr
+          `andThen` \parsedType ->
+            let
+              c = buildConcept parsedId parsedType r.domain r.drill_up r.scales r.tags r.props
+            in
+              checkMandatoryField c
+                `andThen` checkRestrictedConecptIds
+                `andThen` \c' -> pure $ setInfo r._info c'
 
 -- | some concept type require a column exists
 -- | for example if concept type is entity_set, then it
 -- | must have non empty domain.
 checkMandatoryField :: Concept -> V Issues Concept
 checkMandatoryField input@(Concept c) =
-  let
-    input' = { conceptId: Id.value c.conceptId, props: c.props, _info: c._info }
-  in
-    case c.conceptType of
-      EntitySetC -> ado
-        hasFieldAndGetValue input' "domain"
-          `andThen`
-            nonEmptyField input' "domain"
-        in input
-      _ -> pure input
+  case c.conceptType of
+    EntitySetC -> case c.domain of
+      Nothing ->
+        invalid
+          [ mkIssue E_CONCEPT_FIELD_MISSING
+              # withConceptField (Id.value c.conceptId) "domain"
+          ]
+      Just _ -> pure input
+    _ -> pure input
 
 -- | some concept type has restricted possible concept ID values
 -- | for example if concept type is time, then concept ID must
@@ -223,55 +276,52 @@ csvDisplay s =
   else
     s
 
--- | check format of concept list fields (drill_up, scales, tags).
--- | Each value must be a space-separated list of valid identifiers.
--- | Value validation (against entity domains) happens later in DataSet.
-checkListFieldFormats :: Concept -> V Issues Concept
-checkListFieldFormats c@(Concept { conceptId, props }) =
-  let
-    cid = Id.value conceptId
-    checkField fieldName errorCode =
-      case M.lookup (Id.unsafeCreate fieldName) props of
-        Nothing -> pure unit
-        Just val ->
-          let
-            parsed =
-              parseListVal val
-                `andThen` \lst ->
-                  traverse_ (\x -> void $ Id.parseId x) (getListValues lst)
-          in
-            case toEither parsed of
-              Right _ -> pure unit
-              Left _ ->
-                invalid
-                  [ mkIssue errorCode
-                      # withConceptField cid fieldName
-                      # withMessage ("value: " <> csvDisplay val)
-                  ]
-  in
-    checkField "drill_up" E_CONCEPT_DRILLUP_FORMAT
-      *> checkField "scales" E_CONCEPT_SCALES_FORMAT
-      *> checkField "tags" E_CONCEPT_TAGS_FORMAT
-      $> c
-
-hasFieldAndGetValue :: ConceptInput' -> String -> V Issues String
-hasFieldAndGetValue input field =
-  case M.lookup (Id.unsafeCreate field) input.props of
-    Nothing -> invalid [ mkIssue E_CONCEPT_FIELD_MISSING # withConceptField input.conceptId field ]
-    Just v -> pure v
-
-hasFieldAndPopValue :: ConceptInput' -> String -> V Issues (Tuple String ConceptInput')
-hasFieldAndPopValue input field =
-  case M.pop (Id.unsafeCreate field) input.props of
-    Nothing -> invalid [ mkIssue E_CONCEPT_FIELD_MISSING # withConceptField input.conceptId field ]
+-- | Pop and parse the concept_type field from ConceptInput'.
+popConceptType :: ConceptInput' -> V Issues (Tuple String ConceptInput')
+popConceptType input =
+  case M.pop (Id.unsafeCreate "concept_type") input.props of
+    Nothing -> invalid [ mkIssue E_CONCEPT_FIELD_MISSING # withConceptField input.conceptId "concept_type" ]
     Just (Tuple v props') -> pure $ Tuple v (input { props = props' })
 
-nonEmptyField :: ConceptInput' -> String -> String -> V Issues String
-nonEmptyField input field value =
-  if Str.null value then
-    invalid [ mkIssue E_CONCEPT_FIELD_EMPTY # withConceptField input.conceptId field ]
-  else
-    pure value
+-- | Pop and parse the domain field as a valid Identifier.
+-- | Returns Nothing if absent or empty, Just if present and parseable.
+popAndParseDomain :: ConceptInput' -> V Issues (Tuple (Maybe Identifier) ConceptInput')
+popAndParseDomain input =
+  case M.pop (Id.unsafeCreate "domain") input.props of
+    Nothing -> pure (Tuple Nothing input)
+    Just (Tuple val props') ->
+      let
+        input' = input { props = props' }
+      in
+        if Str.null val then
+          pure (Tuple Nothing input')
+        else
+          Id.parseId val
+            `andThen` \id -> pure (Tuple (Just id) input')
+
+-- | Pop and parse a list field (drill_up, scales, tags).
+-- | Each token is validated as a valid identifier and stored as Identifier.
+-- | Format errors are reported with the given ErrorCode.
+-- | Returns Nothing if absent, Just (possibly empty array) if present.
+popAndParseListField
+  :: String -> ErrorCode -> ConceptInput' -> V Issues (Tuple (Maybe (Array Identifier)) ConceptInput')
+popAndParseListField fieldName errorCode input =
+  case M.pop (Id.unsafeCreate fieldName) input.props of
+    Nothing -> pure (Tuple Nothing input)
+    Just (Tuple val props') ->
+      let
+        input' = input { props = props' }
+        parts = Arr.filter (not Str.null) $ Str.split (Pattern " ") val
+        parsed = traverse Id.parseId parts
+      in
+        case toEither parsed of
+          Right vals -> pure (Tuple (Just vals) input')
+          Left _ ->
+            invalid
+              [ mkIssue errorCode
+                  # withConceptField input.conceptId fieldName
+                  # withMessage ("value: " <> csvDisplay val)
+              ]
 
 hasProp :: String -> Props -> Boolean
 hasProp f props = M.member (Id.unsafeCreate f) props
@@ -303,6 +353,10 @@ unsafeCreate concept_id concept_type props_ info =
   Concept
     { conceptId: conceptId
     , conceptType: conceptType
+    , domain: Nothing
+    , drill_up: Nothing
+    , scales: Nothing
+    , tags: Nothing
     , props: props
     , _info: Just info
     }

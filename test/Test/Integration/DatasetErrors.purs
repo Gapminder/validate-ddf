@@ -48,5 +48,8 @@ spec =
       it "error-tags-comma-format: should detect E_CONCEPT_TAGS_FORMAT for comma-separated tags" do
         expectError E_CONCEPT_TAGS_FORMAT "test/datasets/error-tags-comma-format"
 
+      it "error-drillup-missing-domain: should detect E_DATASET_CONCEPT_MISSING_DOMAIN when drill_up present but domain missing" do
+        expectError E_DATASET_CONCEPT_MISSING_DOMAIN "test/datasets/error-drillup-missing-domain"
+
       it "error-tags-unknown-value: should detect E_DATASET_CONCEPT_TAGS_INVALID for tag not in entity domain" do
         expectError E_DATASET_CONCEPT_TAGS_INVALID "test/datasets/error-tags-unknown-value"
