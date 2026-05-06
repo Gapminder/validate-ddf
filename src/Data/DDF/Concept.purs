@@ -20,7 +20,6 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.String (Pattern(..), Replacement(..))
 import Data.String as Str
 import Data.Traversable (traverse, traverse_)
-import Data.Tuple (Tuple(..))
 import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, withConcept, withConceptField, withMessage)
 import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, andThen, invalid, toEither)
@@ -173,69 +172,75 @@ type ConceptInput =
   , _info :: Maybe ItemInfo
   }
 
--- | ConceptInput with props converted to Map Identifier String
-type ConceptInput' =
-  { conceptId :: String
-  , props :: Map Identifier String
-  , _info :: Maybe ItemInfo
-  }
+-- | Look up and parse the concept_type field (required).
+parseConceptTypeFromProps :: Maybe String -> String -> V Issues ConceptType
+parseConceptTypeFromProps Nothing conceptId =
+  invalid [ mkIssue E_CONCEPT_FIELD_MISSING # withConceptField conceptId "concept_type" ]
+parseConceptTypeFromProps (Just v) _ = parseConceptType v
+
+-- | Look up and parse the domain field (optional).
+-- | Returns Nothing if absent or empty, Just the parsed identifier otherwise.
+parseDomainField :: Maybe String -> String -> V Issues (Maybe Identifier)
+parseDomainField Nothing _ = pure Nothing
+parseDomainField (Just val) _ | Str.null val = pure Nothing
+parseDomainField (Just val) _ = Id.parseId val <#> Just
+
+-- | Look up and parse a list field (optional): drill_up, scales, tags.
+-- | Each whitespace-separated token is validated as an identifier.
+-- | Returns Nothing if absent.
+parseListField :: String -> ErrorCode -> Maybe String -> String -> V Issues (Maybe (Array Identifier))
+parseListField _ _ Nothing _ = pure Nothing
+parseListField fieldName errorCode (Just val) conceptId =
+  let
+    parts = Arr.filter (not Str.null) $ Str.split (Pattern " ") val
+    parsed = traverse Id.parseId parts
+  in
+    case toEither parsed of
+      Right ids -> pure (Just ids)
+      Left _ ->
+        invalid
+          [ mkIssue errorCode
+              # withConceptField conceptId fieldName
+              # withMessage ("value: " <> csvDisplay val)
+          ]
 
 -- | convert a ConceptInput into valid Concept or errors.
--- | Fixed fields (domain, drill_up, scales, tags) are popped from props,
--- | parsed, and stored in explicit fields on the Concept.
+-- | Fixed fields are looked up from props and parsed; fixed keys are
+-- | removed to leave custom properties; independent checks become
+-- | applicative to accumulate all errors.
 parseConcept :: ConceptInput -> V Issues Concept
 parseConcept input =
   let
-    -- coerce Header to Identifier because they are both string
-    -- FIXME: double check the Header -> Identifier convertion.
     props = mapKeys coerce input.props :: Map Identifier String
-    input0 = { conceptId: input.conceptId, props: props, _info: input._info }
-  in
-    popConceptType input0
-      `andThen` \(Tuple conceptTypeStr input1) ->
-        popAndParseDomain input1
-          `andThen` \(Tuple domain input2) ->
-            popAndParseListField "drill_up" E_CONCEPT_DRILLUP_FORMAT input2
-              `andThen` \(Tuple drill_up input3) ->
-                popAndParseListField "scales" E_CONCEPT_SCALES_FORMAT input3
-                  `andThen` \(Tuple scales input4) ->
-                    popAndParseListField "tags" E_CONCEPT_TAGS_FORMAT input4
-                      `andThen` \(Tuple tags input5) ->
-                        buildAndValidate
-                          { conceptId: input.conceptId
-                          , conceptTypeStr
-                          , domain
-                          , drill_up
-                          , scales
-                          , tags
-                          , props: input5.props
-                          , _info: input._info
-                          }
-  where
-  buildConcept parsedId parsedType domain' drill_up' scales' tags' props' =
-    Concept
-      { conceptId: parsedId
-      , conceptType: parsedType
-      , domain: domain'
-      , drill_up: drill_up'
-      , scales: scales'
-      , tags: tags'
-      , props: props'
-      , _info: Nothing
-      }
+    fixedKeys = map Id.unsafeCreate [ "concept_type", "domain", "drill_up", "scales", "tags" ]
+    lookup_ key = M.lookup (Id.unsafeCreate key) props
+    remainingProps = Arr.foldl (flip M.delete) props fixedKeys
 
-  buildAndValidate r =
-    notReserved r.conceptId
-      `andThen` Id.parseId
-      `andThen` \parsedId ->
-        parseConceptType r.conceptTypeStr
-          `andThen` \parsedType ->
-            let
-              c = buildConcept parsedId parsedType r.domain r.drill_up r.scales r.tags r.props
-            in
-              checkMandatoryField c
-                `andThen` checkRestrictedConecptIds
-                `andThen` \c' -> pure $ setInfo r._info c'
+    parsed = ado
+      parsedId <- notReserved input.conceptId `andThen` Id.parseId
+      parsedType <- parseConceptTypeFromProps (lookup_ "concept_type") input.conceptId
+      domain <- parseDomainField (lookup_ "domain") input.conceptId
+      drill_up <- parseListField "drill_up" E_CONCEPT_DRILLUP_FORMAT (lookup_ "drill_up") input.conceptId
+      scales <- parseListField "scales" E_CONCEPT_SCALES_FORMAT (lookup_ "scales") input.conceptId
+      tags <- parseListField "tags" E_CONCEPT_TAGS_FORMAT (lookup_ "tags") input.conceptId
+      let
+        c = Concept
+          { conceptId: parsedId
+          , conceptType: parsedType
+          , domain
+          , drill_up
+          , scales
+          , tags
+          , props: remainingProps
+          , _info: Nothing
+          }
+      in c
+  in
+    parsed
+      `andThen` \c -> ado
+        _ <- checkMandatoryField c
+        _ <- checkRestrictedConecptIds c
+        in setInfo input._info c
 
 -- | some concept type require a column exists
 -- | for example if concept type is entity_set, then it
@@ -277,53 +282,6 @@ csvDisplay s =
     "\"" <> Str.replaceAll (Pattern "\"") (Replacement "\"\"") s <> "\""
   else
     s
-
--- | Pop and parse the concept_type field from ConceptInput'.
-popConceptType :: ConceptInput' -> V Issues (Tuple String ConceptInput')
-popConceptType input =
-  case M.pop (Id.unsafeCreate "concept_type") input.props of
-    Nothing -> invalid [ mkIssue E_CONCEPT_FIELD_MISSING # withConceptField input.conceptId "concept_type" ]
-    Just (Tuple v props') -> pure $ Tuple v (input { props = props' })
-
--- | Pop and parse the domain field as a valid Identifier.
--- | Returns Nothing if absent or empty, Just if present and parseable.
-popAndParseDomain :: ConceptInput' -> V Issues (Tuple (Maybe Identifier) ConceptInput')
-popAndParseDomain input =
-  case M.pop (Id.unsafeCreate "domain") input.props of
-    Nothing -> pure (Tuple Nothing input)
-    Just (Tuple val props') ->
-      let
-        input' = input { props = props' }
-      in
-        if Str.null val then
-          pure (Tuple Nothing input')
-        else
-          Id.parseId val
-            `andThen` \id -> pure (Tuple (Just id) input')
-
--- | Pop and parse a list field (drill_up, scales, tags).
--- | Each token is validated as a valid identifier and stored as Identifier.
--- | Format errors are reported with the given ErrorCode.
--- | Returns Nothing if absent, Just (possibly empty array) if present.
-popAndParseListField
-  :: String -> ErrorCode -> ConceptInput' -> V Issues (Tuple (Maybe (Array Identifier)) ConceptInput')
-popAndParseListField fieldName errorCode input =
-  case M.pop (Id.unsafeCreate fieldName) input.props of
-    Nothing -> pure (Tuple Nothing input)
-    Just (Tuple val props') ->
-      let
-        input' = input { props = props' }
-        parts = Arr.filter (not Str.null) $ Str.split (Pattern " ") val
-        parsed = traverse Id.parseId parts
-      in
-        case toEither parsed of
-          Right vals -> pure (Tuple (Just vals) input')
-          Left _ ->
-            invalid
-              [ mkIssue errorCode
-                  # withConceptField input.conceptId fieldName
-                  # withMessage ("value: " <> csvDisplay val)
-              ]
 
 hasProp :: String -> Props -> Boolean
 hasProp f props = M.member (Id.unsafeCreate f) props
