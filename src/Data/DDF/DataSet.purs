@@ -453,43 +453,53 @@ lookupSetWithInDomain concepts set domain =
 
       )
 
--- | parse a base dataset
+-- | Parse a base dataset from concepts and entities input.
+-- | The validation follows these steps:
+-- |   1. Parse concepts independently (non-empty, no duplicates, entity sets have valid domains)
+-- |   2. Parse entity domains and validate them against concepts
+-- |   3. Validate concept fields that may reference entities (tags, scales, drill_up)
+-- |   4. Build value parsers for datapoint validation
 parseBaseDataSet :: ConceptsInput -> EntitiesInput -> V Issues DataSet
--- FIXME: How should I use types to make the requirements more clear?
 parseBaseDataSet conceptsInput entitiesInput =
-  parseConcepts conceptsInput
-    `andThen`
-      checkListFields
-    `andThen`
-      ( \cdb ->
-          parseEntityDomains cdb entitiesInput
-            `andThen`
-              (\edb -> checkDomainAndSetExists cdb edb *> checkTagValues cdb edb)
-            `andThen`
-              (\edb -> pure $ basedataset cdb edb)
-      )
-    `andThen`
-      ( \dataset@(DataSet ds) ->
-          let
-            -- create value parsers for each concept, depending on their concept types.
-            ps = map (\x -> Tuple x (makeValueParser dataset x))
-              (HM.keys $ getConcepts dataset)
-            -- append concept and concept_type parser.
-            -- because they are reversed concepts they won't be in
-            -- concept table, we need to add them manually.
-            ps' = ps <>
-              -- values in `concept` column MUST be one of the dataset concepts.
-              [ Tuple "concept"
-                  ( Value.parseConceptVal
-                      $ HS.fromArray
-                      $ HM.keys ds.concepts
-                  )
-              -- concept type checking happened in concept parsing, so we don't need to re-check them.
-              , Tuple "concept_type" Value.parseStrVal
-              ]
-          in
-            pure $ DataSet (ds { _valueParsers = HM.fromArray ps' })
-      )
+  let
+    parseEntities :: ConceptDB -> V Issues { cdb :: ConceptDB, edb :: EntityDB }
+    parseEntities cdb =
+      parseEntityDomains cdb entitiesInput
+        `andThen` checkDomainAndSetExists cdb
+        `andThen` \edb -> pure { cdb, edb }
+
+    validateFields :: { cdb :: ConceptDB, edb :: EntityDB } -> V Issues DataSet
+    validateFields { cdb, edb } =
+      checkListFields cdb
+        `andThen` \_ ->
+          checkTagValues cdb edb
+            `andThen` \_ ->
+              pure (basedataset cdb edb)
+                `andThen` buildValueParsers
+  in
+    parseConcepts conceptsInput
+      `andThen` parseEntities
+      `andThen` validateFields
+
+-- | Build value parsers for each concept in the dataset.
+-- | These parsers are used to validate datapoint values and CSV file columns.
+-- | The "concept" and "concept_type" reserved columns are added manually.
+buildValueParsers :: DataSet -> V Issues DataSet
+buildValueParsers dataset@(DataSet ds) =
+  let
+    ps = map (\x -> Tuple x (makeValueParser dataset x))
+      $ HM.keys
+      $ getConcepts dataset
+    ps' = ps <>
+      [ Tuple "concept"
+          ( Value.parseConceptVal
+              $ HS.fromArray
+              $ HM.keys ds.concepts
+          )
+      , Tuple "concept_type" Value.parseStrVal
+      ]
+  in
+    pure $ DataSet (ds { _valueParsers = HM.fromArray ps' })
 
 unsafeLookupHM :: forall k v. Hashable k => Show k => k -> HashMap k v -> v
 unsafeLookupHM k m = case HM.lookup k m of
