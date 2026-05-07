@@ -34,6 +34,8 @@ newtype Concept = Concept
   , conceptType :: ConceptType
   , domain :: Maybe Identifier
   , drill_up :: Maybe (Array Identifier)
+  -- scales and tags are fixed properties that required by open numbers datasets.
+  -- they are not part of DDF spec, and are likely be updated/removed in the future.
   , scales :: Maybe (Array Identifier)
   , tags :: Maybe (Array Identifier)
   , props :: Props
@@ -111,8 +113,6 @@ concept conceptId conceptType props =
     , conceptType
     , domain: Nothing
     , drill_up: Nothing
-    -- scales and tags are fixed properties that required by open numbers datasets.
-    -- they are not part of DDF spec, and are likely be updated/removed in the future.
     , scales: Nothing
     , tags: Nothing
     , props
