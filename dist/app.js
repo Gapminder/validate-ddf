@@ -9358,15 +9358,16 @@ var show = /* @__PURE__ */ showArrayImpl(showStringImpl);
 var E_VAL_ID = /* @__PURE__ */ $ErrorCode("E_VAL_ID");
 var E_VAL_NUM = /* @__PURE__ */ $ErrorCode("E_VAL_NUM");
 var E_VAL_TIME = /* @__PURE__ */ $ErrorCode("E_VAL_TIME");
-var E_VAL_JSON = /* @__PURE__ */ $ErrorCode("E_VAL_JSON");
 var E_VAL_BOOL = /* @__PURE__ */ $ErrorCode("E_VAL_BOOL");
 var E_VAL_CONSTRAINT_FILENAME = /* @__PURE__ */ $ErrorCode("E_VAL_CONSTRAINT_FILENAME");
 var E_VAL_CONSTRAINT_DOMAIN = /* @__PURE__ */ $ErrorCode("E_VAL_CONSTRAINT_DOMAIN");
 var E_VAL_CONSTRAINT_CONCEPT = /* @__PURE__ */ $ErrorCode("E_VAL_CONSTRAINT_CONCEPT");
 var E_CONCEPT_ID_RESERVED = /* @__PURE__ */ $ErrorCode("E_CONCEPT_ID_RESERVED");
 var E_CONCEPT_TIME_INVALID = /* @__PURE__ */ $ErrorCode("E_CONCEPT_TIME_INVALID");
-var E_CONCEPT_FIELD_EMPTY = /* @__PURE__ */ $ErrorCode("E_CONCEPT_FIELD_EMPTY");
 var E_CONCEPT_FIELD_MISSING = /* @__PURE__ */ $ErrorCode("E_CONCEPT_FIELD_MISSING");
+var E_CONCEPT_DRILLUP_FORMAT = /* @__PURE__ */ $ErrorCode("E_CONCEPT_DRILLUP_FORMAT");
+var E_CONCEPT_SCALES_FORMAT = /* @__PURE__ */ $ErrorCode("E_CONCEPT_SCALES_FORMAT");
+var E_CONCEPT_TAGS_FORMAT = /* @__PURE__ */ $ErrorCode("E_CONCEPT_TAGS_FORMAT");
 var E_ENTITY_INCONSISTENT_DOMAIN = /* @__PURE__ */ $ErrorCode("E_ENTITY_INCONSISTENT_DOMAIN");
 var E_ENTITY_ID_EMPTY = /* @__PURE__ */ $ErrorCode("E_ENTITY_ID_EMPTY");
 var E_DATASET_NO_CONCEPT = /* @__PURE__ */ $ErrorCode("E_DATASET_NO_CONCEPT");
@@ -9377,6 +9378,8 @@ var E_DATASET_CONCEPT_MISSING_DOMAIN = /* @__PURE__ */ $ErrorCode("E_DATASET_CON
 var E_DATASET_ENTITYSET_UNDEFINED = /* @__PURE__ */ $ErrorCode("E_DATASET_ENTITYSET_UNDEFINED");
 var E_DATASET_ENTITYDOMAIN_INVAILD = /* @__PURE__ */ $ErrorCode("E_DATASET_ENTITYDOMAIN_INVAILD");
 var E_DATASET_ENTITY_DUPLICATED = /* @__PURE__ */ $ErrorCode("E_DATASET_ENTITY_DUPLICATED");
+var E_DATASET_CONCEPT_SCALES_INVALID = /* @__PURE__ */ $ErrorCode("E_DATASET_CONCEPT_SCALES_INVALID");
+var E_DATASET_CONCEPT_TAGS_INVALID = /* @__PURE__ */ $ErrorCode("E_DATASET_CONCEPT_TAGS_INVALID");
 var E_DATAPACKAGE_NOT_FOUND = /* @__PURE__ */ $ErrorCode("E_DATAPACKAGE_NOT_FOUND");
 var E_DATAPACKAGE_PARSE_ERROR = /* @__PURE__ */ $ErrorCode("E_DATAPACKAGE_PARSE_ERROR");
 var E_DATAPACKAGE_RESOURCE_MISSING = /* @__PURE__ */ $ErrorCode("E_DATAPACKAGE_RESOURCE_MISSING");
@@ -9448,6 +9451,21 @@ var errorSuggestion = (v) => {
   }
   if (v === "E_CONCEPT_FIELD_MISSING") {
     return "";
+  }
+  if (v === "E_CONCEPT_DRILLUP_FORMAT") {
+    return 'e.g. "set_a set_b" (space-separated)';
+  }
+  if (v === "E_CONCEPT_SCALES_FORMAT") {
+    return 'e.g. "linear log" (space-separated)';
+  }
+  if (v === "E_CONCEPT_TAGS_FORMAT") {
+    return 'e.g. "poverty health" (space-separated)';
+  }
+  if (v === "E_DATASET_CONCEPT_SCALES_INVALID") {
+    return "valid scales: linear, log, time, ordinal, point, svg, rank";
+  }
+  if (v === "E_DATASET_CONCEPT_TAGS_INVALID") {
+    return 'check that the tag value exists in the "tag" entity domain';
   }
   if (v === "E_ENTITY_INCONSISTENT_DOMAIN") {
     return "";
@@ -9599,6 +9617,15 @@ var errorMessageTemplate = (v) => {
   if (v === "E_CONCEPT_FIELD_MISSING") {
     return "required concept field is missing";
   }
+  if (v === "E_CONCEPT_DRILLUP_FORMAT") {
+    return "drill_up must be a space-separated list of identifiers";
+  }
+  if (v === "E_CONCEPT_SCALES_FORMAT") {
+    return "scales must be a space-separated list of identifiers";
+  }
+  if (v === "E_CONCEPT_TAGS_FORMAT") {
+    return "tags must be a space-separated list of identifiers";
+  }
   if (v === "E_ENTITY_INCONSISTENT_DOMAIN") {
     return "entity has inconsistent domain";
   }
@@ -9619,6 +9646,12 @@ var errorMessageTemplate = (v) => {
   }
   if (v === "E_DATASET_CONCEPT_MISSING_DOMAIN") {
     return "concept is missing domain field";
+  }
+  if (v === "E_DATASET_CONCEPT_SCALES_INVALID") {
+    return "invalid scale value";
+  }
+  if (v === "E_DATASET_CONCEPT_TAGS_INVALID") {
+    return 'tag value not found in "tag" entity domain';
   }
   if (v === "E_DATASET_ENTITYSET_UNDEFINED") {
     return "entity set is not defined";
@@ -9847,6 +9880,15 @@ var errorCodeToString = (v) => {
   if (v === "E_CONCEPT_FIELD_MISSING") {
     return "E_CONCEPT_FIELD_MISSING";
   }
+  if (v === "E_CONCEPT_DRILLUP_FORMAT") {
+    return "E_CONCEPT_DRILLUP_FORMAT";
+  }
+  if (v === "E_CONCEPT_SCALES_FORMAT") {
+    return "E_CONCEPT_SCALES_FORMAT";
+  }
+  if (v === "E_CONCEPT_TAGS_FORMAT") {
+    return "E_CONCEPT_TAGS_FORMAT";
+  }
   if (v === "E_ENTITY_INCONSISTENT_DOMAIN") {
     return "E_ENTITY_INCONSISTENT_DOMAIN";
   }
@@ -9879,6 +9921,12 @@ var errorCodeToString = (v) => {
   }
   if (v === "E_DATASET_ENTITY_DUPLICATED") {
     return "E_DATASET_ENTITY_DUPLICATED";
+  }
+  if (v === "E_DATASET_CONCEPT_SCALES_INVALID") {
+    return "E_DATASET_CONCEPT_SCALES_INVALID";
+  }
+  if (v === "E_DATASET_CONCEPT_TAGS_INVALID") {
+    return "E_DATASET_CONCEPT_TAGS_INVALID";
   }
   if (v === "E_DATAPACKAGE_NOT_FOUND") {
     return "E_DATAPACKAGE_NOT_FOUND";
@@ -10656,6 +10704,10 @@ var semigroupV = (dictSemigroup) => {
 
 // output-es/Data.DDF.Concept/index.js
 var $ConceptType = (tag, _1) => ({ tag, _1 });
+var applicativeV = /* @__PURE__ */ (() => {
+  const applyV1 = applyV(semigroupArray);
+  return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
+})();
 var elem4 = /* @__PURE__ */ (() => {
   const any1 = foldableArray.foldMap(/* @__PURE__ */ (() => {
     const semigroupDisj1 = { append: (v) => (v1) => v || v1 };
@@ -10664,7 +10716,6 @@ var elem4 = /* @__PURE__ */ (() => {
   return (dictEq) => (x) => any1(dictEq.eq(x));
 })();
 var elem1 = /* @__PURE__ */ elem4(eqString);
-var pop2 = /* @__PURE__ */ pop(ordId);
 var lookup2 = (k) => {
   const go = (go$a0$copy) => {
     let go$a0 = go$a0$copy, go$c = true, go$r;
@@ -10697,6 +10748,7 @@ var lookup2 = (k) => {
   };
   return go;
 };
+var traverse = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV))();
 var elem22 = /* @__PURE__ */ elem4(eqId);
 var apply3 = /* @__PURE__ */ (() => applyV(semigroupArray).apply)();
 var StringC = /* @__PURE__ */ $ConceptType("StringC");
@@ -10709,6 +10761,24 @@ var RoleC = /* @__PURE__ */ $ConceptType("RoleC");
 var CompositeC = /* @__PURE__ */ $ConceptType("CompositeC");
 var TimeC = /* @__PURE__ */ $ConceptType("TimeC");
 var reservedConcepts = /* @__PURE__ */ arrayMap(unsafeCreate)(["concept", "concept_type"]);
+var parseDomainField = (v) => (v1) => {
+  if (v.tag === "Nothing") {
+    return applicativeV.pure(Nothing);
+  }
+  if (v.tag === "Just") {
+    if (v._1 === "") {
+      return applicativeV.pure(Nothing);
+    }
+    const $0 = parseId(v._1);
+    if ($0.tag === "Left") {
+      return $Either("Left", $0._1);
+    }
+    if ($0.tag === "Right") {
+      return $Either("Right", $Maybe("Just", $0._1));
+    }
+  }
+  fail();
+};
 var parseConceptType = (x) => {
   const $0 = parseId(x);
   if ($0.tag === "Left") {
@@ -10751,6 +10821,24 @@ var parseConceptType = (x) => {
   }
   fail();
 };
+var parseConceptTypeFromProps = (v) => (v1) => {
+  if (v.tag === "Nothing") {
+    return $Either(
+      "Left",
+      [
+        $Issue(
+          "CodedIssue",
+          E_CONCEPT_FIELD_MISSING,
+          { ...emptyContext, conceptContext: $Maybe("Just", { concept: v1, field: $Maybe("Just", "concept_type") }) }
+        )
+      ]
+    );
+  }
+  if (v.tag === "Just") {
+    return parseConceptType(v._1);
+  }
+  fail();
+};
 var notReserved = (conceptId) => {
   if (elem1(conceptId)(arrayMap(value)(reservedConcepts))) {
     return $Either(
@@ -10764,63 +10852,11 @@ var notReserved = (conceptId) => {
       ]
     );
   }
-  return $Either("Right", conceptId);
-};
-var nonEmptyField = (input) => (field) => (value2) => {
-  if (value2 === "") {
-    return $Either(
-      "Left",
-      [
-        $Issue(
-          "CodedIssue",
-          E_CONCEPT_FIELD_EMPTY,
-          { ...emptyContext, conceptContext: $Maybe("Just", { concept: input.conceptId, field: $Maybe("Just", field) }) }
-        )
-      ]
-    );
-  }
-  return $Either("Right", value2);
+  return applicativeV.pure(conceptId);
 };
 var isEntitySet = (v) => v.conceptType.tag === "EntitySetC";
 var isEntityDomain = (v) => v.conceptType.tag === "EntityDomainC";
-var hasFieldAndPopValue = (input) => (field) => {
-  const v = pop2(field === "" ? "undefined_id" : field)(input.props);
-  if (v.tag === "Nothing") {
-    return $Either(
-      "Left",
-      [
-        $Issue(
-          "CodedIssue",
-          E_CONCEPT_FIELD_MISSING,
-          { ...emptyContext, conceptContext: $Maybe("Just", { concept: input.conceptId, field: $Maybe("Just", field) }) }
-        )
-      ]
-    );
-  }
-  if (v.tag === "Just") {
-    return $Either("Right", $Tuple(v._1._1, { ...input, props: v._1._2 }));
-  }
-  fail();
-};
-var hasFieldAndGetValue = (input) => (field) => {
-  const v = lookup2(field === "" ? "undefined_id" : field)(input.props);
-  if (v.tag === "Nothing") {
-    return $Either(
-      "Left",
-      [
-        $Issue(
-          "CodedIssue",
-          E_CONCEPT_FIELD_MISSING,
-          { ...emptyContext, conceptContext: $Maybe("Just", { concept: input.conceptId, field: $Maybe("Just", field) }) }
-        )
-      ]
-    );
-  }
-  if (v.tag === "Just") {
-    return $Either("Right", v._1);
-  }
-  fail();
-};
+var getId = (v) => v.conceptId;
 var eqConceptType = {
   eq: (x) => (y) => {
     if (x.tag === "StringC") {
@@ -10853,10 +10889,44 @@ var eqConceptType = {
     return x.tag === "CustomC" && y.tag === "CustomC" && x._1 === y._1;
   }
 };
+var csvDisplay = (s) => {
+  if (contains('"')(s) || contains(",")(s)) {
+    return '"' + replaceAll('"')('""')(s) + '"';
+  }
+  return s;
+};
+var parseListField = (v) => (v1) => (v2) => (v3) => {
+  if (v2.tag === "Nothing") {
+    return applicativeV.pure(Nothing);
+  }
+  if (v2.tag === "Just") {
+    const $0 = traverse(parseId)(filterImpl((a) => a !== "", split(" ")(v2._1)));
+    if ($0.tag === "Right") {
+      return applicativeV.pure($Maybe("Just", $0._1));
+    }
+    if ($0.tag === "Left") {
+      return $Either(
+        "Left",
+        [
+          $Issue(
+            "CodedIssue",
+            v1,
+            {
+              ...emptyContext,
+              conceptContext: $Maybe("Just", { concept: v3, field: $Maybe("Just", v) }),
+              message: $Maybe("Just", "value: " + csvDisplay(v2._1))
+            }
+          )
+        ]
+      );
+    }
+  }
+  fail();
+};
 var checkRestrictedConecptIds = (v) => {
   if (v.conceptType.tag === "TimeC") {
     if (elem22(v.conceptId)(arrayMap(unsafeCreate)(["year", "month", "day", "week", "quarter", "time"]))) {
-      return $Either("Right", v);
+      return applicativeV.pure(v);
     }
     return $Either(
       "Left",
@@ -10869,18 +10939,46 @@ var checkRestrictedConecptIds = (v) => {
       ]
     );
   }
-  return $Either("Right", v);
+  return applicativeV.pure(v);
 };
 var checkMandatoryField = (v) => {
-  const input$p = { conceptId: v.conceptId, props: v.props, _info: v._info };
   if (v.conceptType.tag === "EntitySetC") {
-    const $0 = hasFieldAndGetValue(input$p)("domain");
+    if (v.domain.tag === "Nothing") {
+      return $Either(
+        "Left",
+        [
+          $Issue(
+            "CodedIssue",
+            E_CONCEPT_FIELD_MISSING,
+            { ...emptyContext, conceptContext: $Maybe("Just", { concept: v.conceptId, field: $Maybe("Just", "domain") }) }
+          )
+        ]
+      );
+    }
+    if (v.domain.tag === "Just") {
+      return applicativeV.pure(v);
+    }
+    fail();
+  }
+  return applicativeV.pure(v);
+};
+var parseConcept = (input) => {
+  const props = mapKeysWith(ordId)((x) => (y) => x)(unsafeCoerce)(input.props);
+  const remainingProps = foldlArray((b) => (a) => $$delete2(ordId)(a)(b))(props)(arrayMap(unsafeCreate)([
+    "concept_type",
+    "domain",
+    "drill_up",
+    "scales",
+    "tags"
+  ]));
+  const $0 = apply3(apply3(apply3(apply3(apply3((() => {
+    const $02 = notReserved(input.conceptId);
     const $1 = (() => {
-      if ($0.tag === "Left") {
-        return $Either("Left", $0._1);
+      if ($02.tag === "Left") {
+        return $Either("Left", $02._1);
       }
-      if ($0.tag === "Right") {
-        return nonEmptyField(input$p)("domain")($0._1);
+      if ($02.tag === "Right") {
+        return parseId($02._1);
       }
       fail();
     })();
@@ -10888,74 +10986,30 @@ var checkMandatoryField = (v) => {
       return $Either("Left", $1._1);
     }
     if ($1.tag === "Right") {
-      return $Either("Right", v);
+      return $Either(
+        "Right",
+        (() => {
+          const $2 = $1._1;
+          return (v1) => (v2) => (v3) => (v4) => (v5) => ({ conceptId: $2, conceptType: v1, domain: v2, drill_up: v3, scales: v4, tags: v5, props: remainingProps, _info: Nothing });
+        })()
+      );
     }
     fail();
+  })())(parseConceptTypeFromProps(lookup2("concept_type")(props))(input.conceptId)))(parseDomainField(lookup2("domain")(props))(input.conceptId)))(parseListField("drill_up")(E_CONCEPT_DRILLUP_FORMAT)(lookup2("drill_up")(props))(input.conceptId)))(parseListField("scales")(E_CONCEPT_SCALES_FORMAT)(lookup2("scales")(props))(input.conceptId)))(parseListField("tags")(E_CONCEPT_TAGS_FORMAT)(lookup2("tags")(props))(input.conceptId));
+  if ($0.tag === "Left") {
+    return $Either("Left", $0._1);
   }
-  return $Either("Right", v);
-};
-var parseConcept = (input) => {
-  const $0 = hasFieldAndPopValue({
-    conceptId: input.conceptId,
-    props: mapKeysWith(ordId)((x) => (y) => x)(unsafeCoerce)(input.props),
-    _info: input._info
-  })("concept_type");
-  const $1 = (() => {
-    if ($0.tag === "Left") {
-      return $Either("Left", $0._1);
-    }
-    if ($0.tag === "Right") {
-      return apply3(apply3((() => {
-        const $12 = notReserved(input.conceptId);
-        const $22 = (() => {
-          if ($12.tag === "Left") {
-            return $Either("Left", $12._1);
-          }
-          if ($12.tag === "Right") {
-            return parseId($12._1);
-          }
-          fail();
-        })();
-        if ($22.tag === "Left") {
-          return $Either("Left", $22._1);
-        }
-        if ($22.tag === "Right") {
-          return $Either(
-            "Right",
-            (() => {
-              const $32 = $22._1;
-              return (conceptType) => (props) => ({ conceptId: $32, conceptType, props, _info: Nothing });
-            })()
-          );
-        }
-        fail();
-      })())(parseConceptType($0._1._1)))($Either("Right", $0._1._2.props));
-    }
-    fail();
-  })();
-  const $2 = (() => {
-    if ($1.tag === "Left") {
-      return $Either("Left", $1._1);
-    }
-    if ($1.tag === "Right") {
-      return checkMandatoryField($1._1);
-    }
-    fail();
-  })();
-  const $3 = (() => {
-    if ($2.tag === "Left") {
-      return $Either("Left", $2._1);
-    }
-    if ($2.tag === "Right") {
-      return checkRestrictedConecptIds($2._1);
-    }
-    fail();
-  })();
-  if ($3.tag === "Left") {
-    return $Either("Left", $3._1);
-  }
-  if ($3.tag === "Right") {
-    return $Either("Right", { ...$3._1, _info: input._info });
+  if ($0.tag === "Right") {
+    return apply3((() => {
+      const $1 = checkMandatoryField($0._1);
+      if ($1.tag === "Left") {
+        return $Either("Left", $1._1);
+      }
+      if ($1.tag === "Right") {
+        return $Either("Right", (v1) => ({ ...$0._1, _info: input._info }));
+      }
+      fail();
+    })())(checkRestrictedConecptIds($0._1));
   }
   fail();
 };
@@ -11136,9 +11190,6 @@ var parseEntityHeader = (x) => {
 };
 
 // output-es/Data.String.Utils/foreign.js
-function includesImpl(searchString, str) {
-  return str.includes(searchString);
-}
 function startsWithImpl(searchString, s) {
   return s.startsWith(searchString);
 }
@@ -12561,7 +12612,7 @@ var findDups = (func) => {
 
 // output-es/Data.DDF.Csv.CsvFile/index.js
 var show2 = /* @__PURE__ */ showArrayImpl(showStringImpl);
-var applicativeV = /* @__PURE__ */ (() => {
+var applicativeV2 = /* @__PURE__ */ (() => {
   const applyV1 = applyV(semigroupArray);
   return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
 })();
@@ -12583,7 +12634,7 @@ var sort1 = (xs) => sortBy((x) => (y) => {
 })(xs);
 var fromFoldable22 = /* @__PURE__ */ foldrArray(Cons)(Nil);
 var fromFoldable42 = /* @__PURE__ */ fromFoldable3(ordHeader)(foldableArray);
-var sequence2 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV)(identity3))();
+var sequence2 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV2)(identity3))();
 var show22 = /* @__PURE__ */ (() => showArrayImpl(showNonEmptyString.show))();
 var fromFoldable5 = /* @__PURE__ */ foldlArray((m) => (a) => insert(ordString)(a)()(m))(Leaf2);
 var map3 = /* @__PURE__ */ map(/* @__PURE__ */ (() => {
@@ -12629,20 +12680,20 @@ var oneOfHeaderExists = (expected) => (csvcontent) => {
       ]
     );
   }
-  return applicativeV.pure($Tuple(intersection[0], csvcontent));
+  return applicativeV2.pure($Tuple(intersection[0], csvcontent));
 };
 var notEmptyCsv = (input) => {
   if (input.headers.length > 0) {
     if (input.columns.length > 0) {
       if (input.headers.length === input.columns.length) {
-        return applicativeV.pure({ headers: input.headers, index: input.index, columns: input.columns });
+        return applicativeV2.pure({ headers: input.headers, index: input.index, columns: input.columns });
       }
       return $Either(
         "Left",
         [$Issue("CodedIssue", E_CSV_HEADER_COLUMN_MISMATCH, emptyContext)]
       );
     }
-    return applicativeV.pure({ headers: input.headers, index: input.index, columns: replicateImpl(max3(1)(input.headers.length), []) });
+    return applicativeV2.pure({ headers: input.headers, index: input.index, columns: replicateImpl(max3(1)(input.headers.length), []) });
   }
   return $Either("Left", [$Issue("CodedIssue", E_CSV_EMPTY, emptyContext)]);
 };
@@ -12660,11 +12711,11 @@ var noIsDomainHeader = (domainName) => (csvcontent) => {
       ]
     );
   }
-  return applicativeV.pure(csvcontent);
+  return applicativeV2.pure(csvcontent);
 };
 var noDupCols = (input) => {
   if (eq1(nubBy(ordHeader.compare)(input.headers))(input.headers)) {
-    return applicativeV.pure(input);
+    return applicativeV2.pure(input);
   }
   return $Either(
     "Left",
@@ -12702,7 +12753,7 @@ var hasCols = (dictFoldable) => (dictOrd) => {
 var hasCols1 = /* @__PURE__ */ hasCols(foldableArray)(ordString)(eqString);
 var headersExists = (expected) => (csvcontent) => {
   if (hasCols1(expected)(arrayMap((x) => x)(fromFoldableImpl(foldrArray, csvcontent.headers)))) {
-    return applicativeV.pure(csvcontent);
+    return applicativeV2.pure(csvcontent);
   }
   return $Either(
     "Left",
@@ -12777,7 +12828,7 @@ var noDuplicatedByKey = (key) => (fileInfo) => (v) => {
   const columnMap = fromFoldable42(zipWithImpl(Tuple, v.headers, v.columns));
   const dups = findDupsForColumns([header])(columnMap);
   if (dups.length === 0) {
-    return applicativeV.pure(v);
+    return applicativeV2.pure(v);
   }
   const fp = fileInfo.filepath;
   return $Either(
@@ -12801,7 +12852,7 @@ var noDuplicatedByKeys = (keys3) => (fileInfo) => (v) => {
   const columnMap = fromFoldable42(zipWithImpl(Tuple, v.headers, v.columns));
   const dups = findDupsForColumns(keyHeaders)(columnMap);
   if (dups.length === 0) {
-    return applicativeV.pure(v);
+    return applicativeV2.pure(v);
   }
   const fp = fileInfo.filepath;
   return $Either(
@@ -12825,7 +12876,7 @@ var colsAreValidIds = (input) => {
   if ($0.tag === "Right") {
     const is_headers = filterImpl((x) => startsWithImpl("is--", x), arrayMap(unsafeCoerce)($0._1));
     if (is_headers.length === 0) {
-      return applicativeV.pure({ ...input, headers: $0._1 });
+      return applicativeV2.pure({ ...input, headers: $0._1 });
     }
     return $Either(
       "Left",
@@ -12846,7 +12897,7 @@ var colsAreValidIds = (input) => {
 var colsAreValidHeaders = (input) => {
   const $0 = sequence2(arrayMap(parseEntityHeader)(input.headers));
   if ($0.tag === "Right") {
-    return applicativeV.pure({ ...input, headers: $0._1 });
+    return applicativeV2.pure({ ...input, headers: $0._1 });
   }
   if ($0.tag === "Left") {
     return $Either("Left", $0._1);
@@ -12948,7 +12999,7 @@ var constrainsAreMet = (fp) => (v) => (v1) => {
     );
   })());
   if (v2.length === 0) {
-    return applicativeV.pure(v1);
+    return applicativeV2.pure(v1);
   }
   return $Either(
     "Left",
@@ -12966,7 +13017,7 @@ var constrainsAreMet = (fp) => (v) => (v1) => {
 var parseCsvFile = (v) => {
   if (v.fileInfo.collectionInfo.tag === "Concepts") {
     return apply4((() => {
-      const $0 = applicativeV.pure(v.fileInfo);
+      const $0 = applicativeV2.pure(v.fileInfo);
       if ($0.tag === "Left") {
         return $Either("Left", $0._1);
       }
@@ -13020,7 +13071,7 @@ var parseCsvFile = (v) => {
   }
   if (v.fileInfo.collectionInfo.tag === "Entities") {
     return apply4((() => {
-      const $0 = applicativeV.pure(v.fileInfo);
+      const $0 = applicativeV2.pure(v.fileInfo);
       if ($0.tag === "Left") {
         return $Either("Left", $0._1);
       }
@@ -13096,7 +13147,7 @@ var parseCsvFile = (v) => {
       listMap(toString3)(v.fileInfo.collectionInfo._1.pkeys._2)
     ));
     return apply4((() => {
-      const $0 = applicativeV.pure(v.fileInfo);
+      const $0 = applicativeV2.pure(v.fileInfo);
       if ($0.tag === "Left") {
         return $Either("Left", $0._1);
       }
@@ -13160,7 +13211,7 @@ var parseCsvFile = (v) => {
   }
   if (v.fileInfo.collectionInfo.tag === "Synonyms") {
     return apply4((() => {
-      const $0 = applicativeV.pure(v.fileInfo);
+      const $0 = applicativeV2.pure(v.fileInfo);
       if ($0.tag === "Left") {
         return $Either("Left", $0._1);
       }
@@ -13234,7 +13285,7 @@ var parseCsvFile = (v) => {
         return $Either("Left", parseCsvFile({ fileInfo: $0._1, csvContent: v.csvContent })._1);
       }
       if (parseCsvFile({ fileInfo: $0._1, csvContent: v.csvContent }).tag === "Right") {
-        return applicativeV.pure({ fileInfo: v.fileInfo, csvContent: parseCsvFile({ fileInfo: $0._1, csvContent: v.csvContent })._1.csvContent });
+        return applicativeV2.pure({ fileInfo: v.fileInfo, csvContent: parseCsvFile({ fileInfo: $0._1, csvContent: v.csvContent })._1.csvContent });
       }
     }
     fail();
@@ -13244,7 +13295,7 @@ var parseCsvFile = (v) => {
 
 // output-es/Data.DDF.Csv.Utils/index.js
 var fromFoldable6 = /* @__PURE__ */ fromFoldable3(ordHeader)(foldableArray);
-var pop3 = /* @__PURE__ */ pop(ordHeader);
+var pop2 = /* @__PURE__ */ pop(ordHeader);
 var show3 = (record) => "{ collectionInfo: " + showCollection.show(record.collectionInfo) + ", filepath: " + showStringImpl(record.filepath) + " }";
 var fromFoldable13 = /* @__PURE__ */ fromFoldable3(ordId)(foldableArray);
 var fromFoldable11 = /* @__PURE__ */ (() => {
@@ -13272,7 +13323,7 @@ var createEntityInput = (v) => {
     return $Either(
       "Right",
       foldrArray((v2) => (acc) => {
-        const $3 = pop3(entityCol)(fromFoldable6(zipWithImpl(Tuple, $2, v2._2)));
+        const $3 = pop2(entityCol)(fromFoldable6(zipWithImpl(Tuple, $2, v2._2)));
         const v3 = (() => {
           if ($3.tag === "Just") {
             return $3._1;
@@ -14722,7 +14773,7 @@ var parseBoolean = (x) => {
 };
 
 // output-es/Data.DDF.Entity/index.js
-var applicativeV2 = /* @__PURE__ */ (() => {
+var applicativeV3 = /* @__PURE__ */ (() => {
   const applyV1 = applyV(semigroupArray);
   return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
 })();
@@ -14730,7 +14781,7 @@ var toUnfoldableUnordered = /* @__PURE__ */ (() => {
   const $0 = unfoldableArray.unfoldr(stepUnfoldrUnordered);
   return (x) => $0($MapIter("IterNode", x, IterLeaf));
 })();
-var traverse = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV2))();
+var traverse2 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV3))();
 var fromFoldable7 = /* @__PURE__ */ fromFoldable3(ordId)(foldableArray);
 var apply5 = /* @__PURE__ */ (() => applyV(semigroupArray).apply)();
 var splitEntAndProps = (props) => {
@@ -14764,7 +14815,7 @@ var splitEntAndProps = (props) => {
 var removeIsDomainProp = (domain) => (xs) => {
   const v = findIndexImpl(Just, Nothing, (v2) => v2 === domain, arrayMap((x) => x._1)(xs));
   if (v.tag === "Nothing") {
-    return applicativeV2.pure(xs);
+    return applicativeV3.pure(xs);
   }
   if (v.tag === "Just") {
     const $0 = _deleteAt(Just, Nothing, v._1, xs);
@@ -14780,7 +14831,7 @@ var removeIsDomainProp = (domain) => (xs) => {
     }
     if ($1.tag === "Right") {
       if ($1._1) {
-        return applicativeV2.pure(xs$p);
+        return applicativeV3.pure(xs$p);
       }
       return $Either(
         "Left",
@@ -14796,17 +14847,18 @@ var removeIsDomainProp = (domain) => (xs) => {
   }
   fail();
 };
+var getId2 = (v) => v.entityId;
 var getEntitySetsFromHeaders = (lst) => {
-  const $0 = traverse((v) => {
+  const $0 = traverse2((v) => {
     const $02 = parseBoolean(v._2);
     if ($02.tag === "Left") {
       return $Either("Left", $02._1);
     }
     if ($02.tag === "Right") {
       if ($02._1) {
-        return applicativeV2.pure($Maybe("Just", v._1));
+        return applicativeV3.pure($Maybe("Just", v._1));
       }
-      return applicativeV2.pure(Nothing);
+      return applicativeV3.pure(Nothing);
     }
     fail();
   })(lst);
@@ -14814,7 +14866,7 @@ var getEntitySetsFromHeaders = (lst) => {
     return $Either("Left", $0._1);
   }
   if ($0.tag === "Right") {
-    return applicativeV2.pure(mapMaybe((x) => x)($0._1));
+    return applicativeV3.pure(mapMaybe((x) => x)($0._1));
   }
   fail();
 };
@@ -14847,7 +14899,7 @@ var parseEntity = (v) => {
       );
     }
     fail();
-  })())(applicativeV2.pure(v.entityDomain)))((() => {
+  })())(applicativeV3.pure(v.entityDomain)))((() => {
     const $02 = removeIsDomainProp(v.entityDomain)(v1._1);
     if ($02.tag === "Left") {
       return $Either("Left", $02._1);
@@ -14859,20 +14911,20 @@ var parseEntity = (v) => {
       }
       if ($1.tag === "Right") {
         if (v.entitySet.tag === "Nothing") {
-          return applicativeV2.pure($1._1);
+          return applicativeV3.pure($1._1);
         }
         if (v.entitySet.tag === "Just") {
-          return applicativeV2.pure(nubBy(ordId.compare)([v.entitySet._1, ...$1._1]));
+          return applicativeV3.pure(nubBy(ordId.compare)([v.entitySet._1, ...$1._1]));
         }
       }
     }
     fail();
-  })()))(applicativeV2.pure(fromFoldable7(v1._2)));
+  })()))(applicativeV3.pure(fromFoldable7(v1._2)));
   if ($0.tag === "Left") {
     return $Either("Left", $0._1);
   }
   if ($0.tag === "Right") {
-    return applicativeV2.pure({ ...$0._1, _info: v._info });
+    return applicativeV3.pure({ ...$0._1, _info: v._info });
   }
   fail();
 };
@@ -14908,23 +14960,23 @@ var monoidHashSet = (dictHashable) => {
 };
 
 // output-es/Data.DDF.DataSet/index.js
-var applicativeV3 = /* @__PURE__ */ (() => {
+var applicativeV4 = /* @__PURE__ */ (() => {
   const applyV1 = applyV(semigroupArray);
   return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
 })();
 var fromArrayBy = /* @__PURE__ */ fromArrayPurs(eqStringImpl, hashString);
 var identity16 = (x) => x;
-var traverse_2 = /* @__PURE__ */ traverse_(applicativeV3)(foldableArray);
+var traverse_2 = /* @__PURE__ */ traverse_(applicativeV4)(foldableArray);
 var append1 = /* @__PURE__ */ (() => semigroupV(semigroupArray)(semigroupUnit).append)();
 var lookup5 = /* @__PURE__ */ lookup4(hashableString);
-var for_2 = /* @__PURE__ */ for_(applicativeV3);
+var for_2 = /* @__PURE__ */ for_(applicativeV4);
 var for_1 = /* @__PURE__ */ for_2(foldableArray);
 var fromArray3 = /* @__PURE__ */ fromArray2(hashableString);
 var fromArray1 = /* @__PURE__ */ fromArray2(hashableId);
-var map22 = /* @__PURE__ */ map2(hashableString);
+var map32 = /* @__PURE__ */ map2(hashableString);
 var unions = /* @__PURE__ */ (() => foldableArray.foldMap(monoidHashSet(hashableId))(identity2))();
 var for_22 = /* @__PURE__ */ for_2(foldableArray);
-var member3 = /* @__PURE__ */ member(hashableString);
+var member3 = /* @__PURE__ */ member(hashableId);
 var compare1 = (x) => (y) => {
   const v = ordString.compare(x._1)(y._1);
   if (v === "LT") {
@@ -14935,9 +14987,9 @@ var compare1 = (x) => (y) => {
   }
   return ordString.compare(x._2)(y._2);
 };
-var sequence3 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV3)(identity3))();
+var sequence3 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV4)(identity3))();
 var fromArray22 = /* @__PURE__ */ fromArrayPurs(eqStringImpl, hashString)(fst)(snd);
-var validScales = ["linear", "log", "time", "ordinal", "point", "svg"];
+var validScales = /* @__PURE__ */ arrayMap(unsafeCreate)(["linear", "log", "time", "ordinal", "point", "svg", "rank"]);
 var unsafeLookupHM = (dictHashable) => {
   const lookup1 = lookup4(dictHashable);
   return (dictShow) => (k) => (m) => {
@@ -14980,7 +15032,7 @@ var parseColumnValues$p = (fp) => (concept) => (parser) => (vals) => (index3) =>
       return $Either("Left", $12._1);
     }
     if ($12.tag === "Right") {
-      return applicativeV3.pure();
+      return applicativeV4.pure();
     }
     fail();
   })());
@@ -15001,7 +15053,7 @@ var parseColumnValues = (parser) => (vals) => (iteminfo) => {
       return $Either("Left", $0._1);
     }
     if ($0.tag === "Right") {
-      return applicativeV3.pure();
+      return applicativeV4.pure();
     }
     fail();
   })()))(filterImpl((t) => t._1 !== "", allValues)))(traverse_2((v) => {
@@ -15022,7 +15074,7 @@ var parseColumnValues = (parser) => (vals) => (iteminfo) => {
         return $Either("Left", $2._1);
       }
       if ($2.tag === "Right") {
-        return applicativeV3.pure();
+        return applicativeV4.pure();
       }
       fail();
     })();
@@ -15104,7 +15156,7 @@ var lookupDomain = (concepts) => (x) => (mbFileContext) => {
   }
   if (v.tag === "Just") {
     if (v._1.conceptType.tag === "EntityDomainC") {
-      return applicativeV3.pure();
+      return applicativeV4.pure();
     }
     const issue = $Issue(
       "CodedIssue",
@@ -15153,8 +15205,7 @@ var lookupSetWithInDomain = (concepts) => ($$set) => (domain) => {
     }
     if (v1.tag === "Just") {
       if (v1._1.conceptType.tag === "EntitySetC") {
-        const v4 = lookup2("domain")(v1._1.props);
-        if (v4.tag === "Nothing") {
+        if (v1._1.domain.tag === "Nothing") {
           return $Either(
             "Left",
             [
@@ -15166,9 +15217,9 @@ var lookupSetWithInDomain = (concepts) => ($$set) => (domain) => {
             ]
           );
         }
-        if (v4.tag === "Just") {
-          if (v4._1 === domain) {
-            return applicativeV3.pure();
+        if (v1._1.domain.tag === "Just") {
+          if (v1._1.domain._1 === domain) {
+            return applicativeV4.pure();
           }
           return $Either(
             "Left",
@@ -15200,7 +15251,7 @@ var lookupSetWithInDomain = (concepts) => ($$set) => (domain) => {
 var getValueParser = (v) => (k) => {
   const v1 = lookup5(k)(v._valueParsers);
   if (v1.tag === "Just") {
-    return applicativeV3.pure(v1._1);
+    return applicativeV4.pure(v1._1);
   }
   if (v1.tag === "Nothing") {
     return $Either(
@@ -15284,7 +15335,10 @@ var getDomainForEntitySet = (dataset) => (k) => {
     if ($0._1.conceptType.tag === "EntityDomainC") {
       return $Maybe("Just", $0._1.conceptId);
     }
-    return lookup2("domain")($0._1.props);
+    if ($0._1.domain.tag === "Just") {
+      return $Maybe("Just", $0._1.domain._1);
+    }
+    return Nothing;
   }
   if ($0.tag === "Nothing") {
     return Nothing;
@@ -15352,13 +15406,7 @@ var genSetMemberships = (v) => mapWithIndexPurs((v$1) => (es) => fromArrayBy((x)
     return x[0].entityId;
   }
   fail();
-})((xs) => map22(value)(unions(arrayMap((x) => fromArray1([x.entityDomain, ...x.entitySets]))(xs))))(groupAllBy((x) => (y) => ordString.compare(x.entityId)(y.entityId))(es)))(v.entities);
-var csvDisplay = (s) => {
-  if (contains('"')(s) || contains(",")(s)) {
-    return '"' + replaceAll('"')('""')(s) + '"';
-  }
-  return s;
-};
+})((xs) => map32(value)(unions(arrayMap((x) => fromArray1([x.entityDomain, ...x.entitySets]))(xs))))(groupAllBy((x) => (y) => ordString.compare(x.entityId)(y.entityId))(es)))(v.entities);
 var checkTagValues = (concepts) => (entities) => {
   const v = lookup5("tag")(entities);
   const tagEntities = (() => {
@@ -15366,19 +15414,19 @@ var checkTagValues = (concepts) => (entities) => {
       return empty2;
     }
     if (v.tag === "Just") {
-      return fromArray3(arrayMap((x) => x.entityId)(v._1));
+      return fromArray1(arrayMap(getId2)(v._1));
     }
     fail();
   })();
+  const specialTags = arrayMap(unsafeCreate)(["_none", "_root"]);
   if (isEmpty2(tagEntities)) {
-    return applicativeV3.pure(entities);
+    return applicativeV4.pure(entities);
   }
   const $0 = for_22(values(concepts))((c) => {
-    const v$1 = lookup2("tags")(c.props);
-    if (v$1.tag === "Nothing") {
-      return applicativeV3.pure();
+    if (c.tags.tag === "Nothing") {
+      return applicativeV4.pure();
     }
-    if (v$1.tag === "Just") {
+    if (c.tags.tag === "Just") {
       const $02 = (() => {
         if (c._info.tag === "Nothing") {
           return $ItemInfo("", -1);
@@ -15389,20 +15437,20 @@ var checkTagValues = (concepts) => (entities) => {
         fail();
       })();
       return withRowInfo($02._1)($02._2)(traverse_2((x) => {
-        if (elem(eqString)(x)(["_none", "_root"]) || member3(x)(tagEntities)) {
-          return applicativeV3.pure();
+        if (elem(eqId)(x)(specialTags) || member3(x)(tagEntities)) {
+          return applicativeV4.pure();
         }
         return $Either(
           "Left",
           [
             $Issue(
               "CodedIssue",
-              E_GENERAL,
-              { ...emptyContext, message: $Maybe("Just", '"' + x + '" is not a valid tag; not found in "tag" entity domain') }
+              E_DATASET_CONCEPT_TAGS_INVALID,
+              { ...emptyContext, message: $Maybe("Just", '"' + x + '"') }
             )
           ]
         );
-      })(filterImpl((a) => a !== "", split(" ")(v$1._1))));
+      })(c.tags._1));
     }
     fail();
   });
@@ -15410,7 +15458,7 @@ var checkTagValues = (concepts) => (entities) => {
     return $Either("Left", $0._1);
   }
   if ($0.tag === "Right") {
-    return applicativeV3.pure(entities);
+    return applicativeV4.pure(entities);
   }
   fail();
 };
@@ -15426,109 +15474,57 @@ var checkListFields = (concepts) => {
       fail();
     })();
     const $1 = applyV(semigroupArray);
-    const $2 = applyV(semigroupArray);
-    const v1 = lookup2("tags")(c.props);
     return $1.apply($1.Functor0().map((v) => identity)((() => {
-      const v1$1 = lookup2("drill_up")(c.props);
-      const v1$2 = lookup2("scales")(c.props);
-      return $2.apply($2.Functor0().map((v) => identity)((() => {
-        if (v1$1.tag === "Nothing") {
-          return applicativeV3.pure();
-        }
-        if (v1$1.tag === "Just") {
-          if (startsWithImpl("[", v1$1._1)) {
-            return withRowInfo($02._1)($02._2)($Either(
-              "Left",
-              [
-                $Issue(
-                  "CodedIssue",
-                  E_VAL_JSON,
-                  {
-                    ...emptyContext,
-                    message: $Maybe("Just", "drill_up " + csvDisplay(v1$1._1) + ": must use space-separated format, not a JSON array"),
-                    suggestion: $Maybe("Just", 'e.g. "foo bar" (space-separated)')
-                  }
-                )
-              ]
-            ));
-          }
-          const v2 = lookup2("domain")(c.props);
-          if (v2.tag === "Nothing") {
-            return applicativeV3.pure();
-          }
-          if (v2.tag === "Just") {
-            const $3 = v2._1;
-            return withRowInfo($02._1)($02._2)(traverse_2((x) => lookupSetWithInDomain(concepts)(x)($3))(filterImpl(
-              (a) => a !== "",
-              split(" ")(v1$1._1)
-            )));
-          }
-        }
-        fail();
-      })()))((() => {
-        if (v1$2.tag === "Nothing") {
-          return applicativeV3.pure();
-        }
-        if (v1$2.tag === "Just") {
-          if (startsWithImpl("[", v1$2._1)) {
-            return withRowInfo($02._1)($02._2)($Either(
-              "Left",
-              [
-                $Issue(
-                  "CodedIssue",
-                  E_VAL_JSON,
-                  {
-                    ...emptyContext,
-                    message: $Maybe("Just", "scales " + csvDisplay(v1$2._1) + ": must use space-separated format, not a JSON array"),
-                    suggestion: $Maybe("Just", 'e.g. "linear log" (space-separated)')
-                  }
-                )
-              ]
-            ));
-          }
-          return withRowInfo($02._1)($02._2)(traverse_2((x) => {
-            if (elem(eqString)(x)(validScales)) {
-              return applicativeV3.pure();
-            }
-            return $Either(
-              "Left",
-              [
-                $Issue(
-                  "CodedIssue",
-                  E_GENERAL,
-                  {
-                    ...emptyContext,
-                    message: $Maybe("Just", '"' + x + '" is not a valid scale; must be one of: linear, log, time, ordinal, point, svg')
-                  }
-                )
-              ]
-            );
-          })(filterImpl((a) => a !== "", split(" ")(v1$2._1))));
-        }
-        fail();
-      })());
-    })()))((() => {
-      if (v1.tag === "Nothing") {
-        return applicativeV3.pure();
+      if (c.drill_up.tag === "Nothing") {
+        return applicativeV4.pure();
       }
-      if (v1.tag === "Just") {
-        if (includesImpl(",", v1._1)) {
-          return withRowInfo($02._1)($02._2)($Either(
+      if (c.drill_up.tag === "Just") {
+        if (c.drill_up._1.length === 0) {
+          return applicativeV4.pure();
+        }
+        if (c.domain.tag === "Nothing") {
+          return $Either(
             "Left",
             [
               $Issue(
                 "CodedIssue",
-                E_GENERAL,
+                E_DATASET_CONCEPT_MISSING_DOMAIN,
                 {
                   ...emptyContext,
-                  message: $Maybe("Just", "tags " + csvDisplay(v1._1) + ": must use space-separated format, not comma-separated"),
-                  suggestion: $Maybe("Just", 'e.g. "foo bar" (space-separated)')
+                  conceptContext: $Maybe("Just", { concept: c.conceptId, field: $Maybe("Just", "domain") }),
+                  fileContext: $Maybe("Just", { filepath: $02._1, lineNo: $02._2 }),
+                  message: $Maybe("Just", "drill_up requires a domain")
                 }
               )
             ]
-          ));
+          );
         }
-        return applicativeV3.pure();
+        if (c.domain.tag === "Just") {
+          const $2 = c.domain._1;
+          return withRowInfo($02._1)($02._2)(traverse_2((x) => lookupSetWithInDomain(concepts)(x)($2))(c.drill_up._1));
+        }
+      }
+      fail();
+    })()))((() => {
+      if (c.scales.tag === "Nothing") {
+        return applicativeV4.pure();
+      }
+      if (c.scales.tag === "Just") {
+        return withRowInfo($02._1)($02._2)(traverse_2((x) => {
+          if (elem(eqId)(x)(validScales)) {
+            return applicativeV4.pure();
+          }
+          return $Either(
+            "Left",
+            [
+              $Issue(
+                "CodedIssue",
+                E_DATASET_CONCEPT_SCALES_INVALID,
+                { ...emptyContext, message: $Maybe("Just", '"' + x + '"') }
+              )
+            ]
+          );
+        })(c.scales._1));
       }
       fail();
     })());
@@ -15537,7 +15533,7 @@ var checkListFields = (concepts) => {
     return $Either("Left", $0._1);
   }
   if ($0.tag === "Right") {
-    return applicativeV3.pure(concepts);
+    return applicativeV4.pure(concepts);
   }
   fail();
 };
@@ -15588,7 +15584,7 @@ var checkDuplicatedEntities = (input) => {
     })()
   )))(input));
   if (dups.length === 0) {
-    return applicativeV3.pure(input);
+    return applicativeV4.pure(input);
   }
   return $Either("Left", arrayMap(makeIssue$p)(dups));
 };
@@ -15598,7 +15594,7 @@ var parseEntityDomains = (conceptdb) => (input) => {
     return $Either("Left", $0._1);
   }
   if ($0.tag === "Right") {
-    return applicativeV3.pure(fromArrayBy((x) => {
+    return applicativeV4.pure(fromArrayBy((x) => {
       if (0 < x.length) {
         return x[0].entityDomain;
       }
@@ -15610,7 +15606,7 @@ var parseEntityDomains = (conceptdb) => (input) => {
 var checkDuplicatedConcepts = (input) => {
   const dups = findDups((x) => (y) => ordString.compare(x.conceptId)(y.conceptId))(sortBy((x) => (y) => ordString.compare(x.conceptId)(y.conceptId))(input));
   if (dups.length === 0) {
-    return applicativeV3.pure(input);
+    return applicativeV4.pure(input);
   }
   return $Either("Left", arrayMap(makeIssue)(dups));
 };
@@ -15637,6 +15633,7 @@ var checkDomainAndSetExists = (concepts) => (entities) => {
       }
       if ($03.tag === "Right") {
         return for_22(ents)((e) => {
+          const domainId = domain === "" ? "undefined_id" : domain;
           const $1 = (() => {
             if (e._info.tag === "Nothing") {
               return $ItemInfo("", -1);
@@ -15648,7 +15645,7 @@ var checkDomainAndSetExists = (concepts) => (entities) => {
           })();
           const $2 = $1._1;
           const $3 = $1._2;
-          return traverse_2((x) => withRowInfo($2)($3)(lookupSetWithInDomain(concepts)(x)(domain)))(arrayMap(value)(e.entitySets));
+          return traverse_2((x) => withRowInfo($2)($3)(lookupSetWithInDomain(concepts)(x)(domainId)))(e.entitySets);
         });
       }
       fail();
@@ -15659,6 +15656,7 @@ var checkDomainAndSetExists = (concepts) => (entities) => {
     }
     if ($02.tag === "Right") {
       return for_22(ents)((e) => {
+        const domainId = domain === "" ? "undefined_id" : domain;
         const $1 = (() => {
           if (e._info.tag === "Nothing") {
             return $ItemInfo("", -1);
@@ -15670,7 +15668,7 @@ var checkDomainAndSetExists = (concepts) => (entities) => {
         })();
         const $2 = $1._1;
         const $3 = $1._2;
-        return traverse_2((x) => withRowInfo($2)($3)(lookupSetWithInDomain(concepts)(x)(domain)))(arrayMap(value)(e.entitySets));
+        return traverse_2((x) => withRowInfo($2)($3)(lookupSetWithInDomain(concepts)(x)(domainId)))(e.entitySets);
       });
     }
     fail();
@@ -15679,12 +15677,12 @@ var checkDomainAndSetExists = (concepts) => (entities) => {
     return $Either("Left", $0._1);
   }
   if ($0.tag === "Right") {
-    return applicativeV3.pure(entities);
+    return applicativeV4.pure(entities);
   }
   fail();
 };
 var checkConceptDomain = (input) => {
-  const domainNames = arrayMap((x) => x.conceptId)(filterImpl(isEntityDomain, input));
+  const domainNames = arrayMap(getId)(filterImpl(isEntityDomain, input));
   const $0 = traverse_2((c) => {
     const $02 = (() => {
       if (c._info.tag === "Nothing") {
@@ -15695,10 +15693,9 @@ var checkConceptDomain = (input) => {
       }
       fail();
     })();
-    const v1 = lookup2("domain")(c.props);
-    if (v1.tag === "Just") {
-      if (elem(eqString)(v1._1)(domainNames)) {
-        return applicativeV3.pure();
+    if (c.domain.tag === "Just") {
+      if (elem(eqId)(c.domain._1)(domainNames)) {
+        return applicativeV4.pure();
       }
       return $Either(
         "Left",
@@ -15715,7 +15712,7 @@ var checkConceptDomain = (input) => {
         ]
       );
     }
-    if (v1.tag === "Nothing") {
+    if (c.domain.tag === "Nothing") {
       return $Either(
         "Left",
         [
@@ -15737,7 +15734,7 @@ var checkConceptDomain = (input) => {
     return $Either("Left", $0._1);
   }
   if ($0.tag === "Right") {
-    return applicativeV3.pure(input);
+    return applicativeV4.pure(input);
   }
   fail();
 };
@@ -15746,11 +15743,11 @@ var parseConcepts = (input) => {
     return $Either("Left", [$Issue("CodedIssue", E_DATASET_NO_CONCEPT, emptyContext)]);
   }
   const $0 = (() => {
-    if (applicativeV3.pure(input).tag === "Left") {
-      return $Either("Left", applicativeV3.pure(input)._1);
+    if (applicativeV4.pure(input).tag === "Left") {
+      return $Either("Left", applicativeV4.pure(input)._1);
     }
-    if (applicativeV3.pure(input).tag === "Right") {
-      return checkDuplicatedConcepts(applicativeV3.pure(input)._1);
+    if (applicativeV4.pure(input).tag === "Right") {
+      return checkDuplicatedConcepts(applicativeV4.pure(input)._1);
     }
     fail();
   })();
@@ -15767,10 +15764,18 @@ var parseConcepts = (input) => {
     return $Either("Left", $1._1);
   }
   if ($1.tag === "Right") {
-    return applicativeV3.pure(fromArrayBy((x) => x.conceptId)(identity16)($1._1));
+    return applicativeV4.pure(fromArrayBy((x) => x.conceptId)(identity16)($1._1));
   }
   fail();
 };
+var buildValueParsers = (v) => applicativeV4.pure({
+  ...v,
+  _valueParsers: fromArray22([
+    ...arrayMap((x) => $Tuple(x, makeValueParser(v)(x)))(keys2(v.concepts)),
+    $Tuple("concept", parseConceptVal(fromArray3(keys2(v.concepts)))),
+    $Tuple("concept_type", parseStrVal)
+  ])
+});
 var parseBaseDataSet = (conceptsInput) => (entitiesInput) => {
   const $0 = parseConcepts(conceptsInput);
   const $1 = (() => {
@@ -15778,48 +15783,48 @@ var parseBaseDataSet = (conceptsInput) => (entitiesInput) => {
       return $Either("Left", $0._1);
     }
     if ($0.tag === "Right") {
-      return checkListFields($0._1);
-    }
-    fail();
-  })();
-  const $2 = (() => {
-    if ($1.tag === "Left") {
-      return $Either("Left", $1._1);
-    }
-    if ($1.tag === "Right") {
-      const $22 = parseEntityDomains($1._1)(entitiesInput);
-      const $3 = (() => {
-        if ($22.tag === "Left") {
-          return $Either("Left", $22._1);
+      const $12 = parseEntityDomains($0._1)(entitiesInput);
+      const $2 = (() => {
+        if ($12.tag === "Left") {
+          return $Either("Left", $12._1);
         }
-        if ($22.tag === "Right") {
-          const $32 = applyV(semigroupArray);
-          return $32.apply($32.Functor0().map((v) => identity)(checkDomainAndSetExists($1._1)($22._1)))(checkTagValues($1._1)($22._1));
+        if ($12.tag === "Right") {
+          return checkDomainAndSetExists($0._1)($12._1);
         }
         fail();
       })();
+      if ($2.tag === "Left") {
+        return $Either("Left", $2._1);
+      }
+      if ($2.tag === "Right") {
+        return applicativeV4.pure({ cdb: $0._1, edb: $2._1 });
+      }
+    }
+    fail();
+  })();
+  if ($1.tag === "Left") {
+    return $Either("Left", $1._1);
+  }
+  if ($1.tag === "Right") {
+    const $2 = checkListFields($1._1.cdb);
+    if ($2.tag === "Left") {
+      return $Either("Left", $2._1);
+    }
+    if ($2.tag === "Right") {
+      const $3 = checkTagValues($1._1.cdb)($1._1.edb);
       if ($3.tag === "Left") {
         return $Either("Left", $3._1);
       }
       if ($3.tag === "Right") {
-        return applicativeV3.pure({ concepts: $1._1, entities: $3._1, datapoints: empty2, _valueParsers: empty2 });
+        const $4 = applicativeV4.pure({ concepts: $1._1.cdb, entities: $1._1.edb, datapoints: empty2, _valueParsers: empty2 });
+        if ($4.tag === "Left") {
+          return $Either("Left", $4._1);
+        }
+        if ($4.tag === "Right") {
+          return buildValueParsers($4._1);
+        }
       }
     }
-    fail();
-  })();
-  if ($2.tag === "Left") {
-    return $Either("Left", $2._1);
-  }
-  if ($2.tag === "Right") {
-    const $3 = $2._1;
-    return applicativeV3.pure({
-      ...$3,
-      _valueParsers: fromArray22([
-        ...arrayMap((x) => $Tuple(x, makeValueParser($3)(x)))(keys2($3.concepts)),
-        $Tuple("concept", parseConceptVal(fromArray3(keys2($3.concepts)))),
-        $Tuple("concept_type", parseStrVal)
-      ])
-    });
   }
   fail();
 };
@@ -15958,7 +15963,7 @@ import {
 } from "node:fs";
 
 // output-es/App.Validation.Common/index.js
-var applicativeV4 = /* @__PURE__ */ (() => {
+var applicativeV5 = /* @__PURE__ */ (() => {
   const applyV1 = applyV(semigroupArray);
   return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
 })();
@@ -15971,7 +15976,7 @@ var applicativeVT = /* @__PURE__ */ applicativeExceptT({
   Applicative0: () => applicativeStateT(monadAff),
   Bind1: () => bindStateT(monadAff)
 });
-var sequence4 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV4)(identity3))();
+var sequence4 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV5)(identity3))();
 var joinWith2 = (splice) => (xs) => foldlArray((v) => (v1) => {
   if (v.init) {
     return { init: false, acc: v1 };
@@ -16092,8 +16097,8 @@ var validateFileExists = (v) => {
   });
 };
 var emitErrorsAndStop = (dictMonad) => {
-  const vError2 = vError(dictMonad);
-  return (issues) => vError2(arrayMap((x) => ({ ...messageFromIssue(x), isWarning: false }))(issues));
+  const vError3 = vError(dictMonad);
+  return (issues) => vError3(arrayMap((x) => ({ ...messageFromIssue(x), isWarning: false }))(issues));
 };
 var validateBaseDataSet = (conceptsInput) => (entitiesInput) => (dictMonad) => {
   const $0 = parseBaseDataSet(conceptsInput)(entitiesInput);
@@ -16510,7 +16515,7 @@ var readForeignArray2 = /* @__PURE__ */ readForeignArray(/* @__PURE__ */ (() => 
     }
   };
 })());
-var applicativeV5 = /* @__PURE__ */ (() => {
+var applicativeV6 = /* @__PURE__ */ (() => {
   const applyV1 = applyV(semigroupArray);
   return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
 })();
@@ -16523,7 +16528,7 @@ var lookup6 = /* @__PURE__ */ lookup4(hashableString);
 var insert5 = /* @__PURE__ */ insertPurs(eqStringImpl, hashString);
 var eqArray = { eq: /* @__PURE__ */ eqArrayImpl(eqStringImpl) };
 var difference1 = /* @__PURE__ */ foldrArray(/* @__PURE__ */ $$delete(eqString));
-var sequence_ = /* @__PURE__ */ traverse_(applicativeV5)(foldableArray)(identity2);
+var sequence_ = /* @__PURE__ */ traverse_(applicativeV6)(foldableArray)(identity2);
 var writeResource = (res) => ({ name: res.name, path: res.path, schema: { fields: write3(res.schema.fields), primaryKey: arrayMap(unsafeCoerce)(res.schema.primaryKey) } });
 var writeDdfSchema = (schema) => ({
   primaryKey: arrayMap(unsafeCoerce)(schema.primaryKey),
@@ -16650,7 +16655,7 @@ var parseDataPackageResources = (content) => {
     );
   }
   if ($0.tag === "Right") {
-    return applicativeV5.pure($0._1);
+    return applicativeV6.pure($0._1);
   }
   fail();
 };
@@ -16659,7 +16664,7 @@ var datapackageExists = (path2) => {
   return () => {
     const dpExists = existsSync(datapackagePath);
     if (dpExists) {
-      return applicativeV5.pure(datapackagePath);
+      return applicativeV6.pure(datapackagePath);
     }
     return $Either("Left", [$Issue("CodedIssue", E_DATAPACKAGE_NOT_FOUND, emptyContext)]);
   };
@@ -16747,7 +16752,7 @@ var compareOneResource = (x) => (y) => {
       ]
     );
   }
-  return applicativeV5.pure();
+  return applicativeV6.pure();
 };
 var compareResources = (expected) => (actual) => {
   const expectedSorted = sortBy((x) => (y) => ordString.compare(x.path)(y.path))(expected);
@@ -16797,7 +16802,7 @@ var fromArrayBy2 = /* @__PURE__ */ (() => fromArrayPurs(eqCollectionConstant.eq,
 var identity18 = (x) => x;
 var lookup7 = /* @__PURE__ */ lookup4(hashableCollectionConstant);
 var emitErrorsAndStop2 = /* @__PURE__ */ emitErrorsAndStop(monadAff);
-var traverse2 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeVT2))();
+var traverse3 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeVT2))();
 var $$for = /* @__PURE__ */ (() => {
   const traverse22 = traversableArray.traverse(applicativeVT2);
   return (x) => (f) => traverse22(f)(x);
@@ -16914,7 +16919,7 @@ var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(l
       return applicativeVT2.pure(v._1);
     }
     fail();
-  })())((conceptFileInfos) => bindVT2.bind(traverse2(validateFileExists)(conceptFileInfos))((conceptFileInfos$p) => bindVT2.bind(readAndParseCsvFiles(false)(mapMaybe((x) => x)(conceptFileInfos$p)))((conceptCsvFiles) => bindVT2.bind($$for(conceptCsvFiles)((x) => validateConcepts(x)(monadAff)))((concepts) => {
+  })())((conceptFileInfos) => bindVT2.bind(traverse3(validateFileExists)(conceptFileInfos))((conceptFileInfos$p) => bindVT2.bind(readAndParseCsvFiles(false)(mapMaybe((x) => x)(conceptFileInfos$p)))((conceptCsvFiles) => bindVT2.bind($$for(conceptCsvFiles)((x) => validateConcepts(x)(monadAff)))((concepts) => {
     const conceptResources = createResources(path2)(conceptCsvFiles);
     return bindVT2.bind((() => {
       const v = lookup7(ENTITIES)(fileMap);
@@ -16925,7 +16930,7 @@ var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(l
         return applicativeVT2.pure(v._1);
       }
       fail();
-    })())((entityFileInfos) => bindVT2.bind(traverse2(validateFileExists)(entityFileInfos))((entityFileInfos$p) => bindVT2.bind(readAndParseCsvFiles(false)(mapMaybe((x) => x)(entityFileInfos$p)))((entityCsvFiles) => bindVT2.bind($$for(entityCsvFiles)((x) => validateEntities(x)(monadAff)))((entities) => {
+    })())((entityFileInfos) => bindVT2.bind(traverse3(validateFileExists)(entityFileInfos))((entityFileInfos$p) => bindVT2.bind(readAndParseCsvFiles(false)(mapMaybe((x) => x)(entityFileInfos$p)))((entityCsvFiles) => bindVT2.bind($$for(entityCsvFiles)((x) => validateEntities(x)(monadAff)))((entities) => {
       const entityResources = createResources(path2)(entityCsvFiles);
       return bindVT2.bind(validateBaseDataSet(concat(concepts))(concat(entities))(monadAff))((ds) => bindVT2.bind(traverse_3((c) => validateCsvHeaders(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT2.bind(traverse_3((c) => validateCsvHeaders(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT2.bind(getState2)((msgs) => {
         if (hasError(msgs)) {
@@ -17034,8 +17039,9 @@ var $$for2 = /* @__PURE__ */ (() => {
   const traverse22 = traversableArray.traverse(applicativeVT3);
   return (x) => (f) => traverse22(f)(x);
 })();
-var traverse_4 = /* @__PURE__ */ traverse_(applicativeVT3)(foldableArray);
 var getState3 = /* @__PURE__ */ getState(monadAff)(monoidArray);
+var vError2 = /* @__PURE__ */ vError(monadAff);
+var traverse_4 = /* @__PURE__ */ traverse_(applicativeVT3)(foldableArray);
 var compare13 = /* @__PURE__ */ (() => {
   const $0 = ordNonEmpty2(ordString);
   return (x) => (y) => {
@@ -17168,8 +17174,14 @@ var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(mon
       fail();
     })())((entityFileInfos) => bindVT3.bind(readAndParseCsvFiles(fixFormat)(entityFileInfos))((entityCsvFiles) => bindVT3.bind($$for2(entityCsvFiles)((x) => validateEntities(x)(monadAff)))((entities) => {
       const entityResources = createResources(path2)(entityCsvFiles);
-      return bindVT3.bind(liftEffect3(progress("cross-validating concepts and entities...")))(() => bindVT3.bind(validateBaseDataSet(concat(concepts))(concat(entities))(monadAff))((ds) => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(getState3)((msgs) => {
+      return bindVT3.bind(getState3)((msgs) => bindVT3.bind((() => {
+        const $0 = vError2([]);
         if (hasError(msgs)) {
+          return $0;
+        }
+        return applicativeVT3.pure();
+      })())(() => bindVT3.bind(liftEffect3(progress("cross-validating concepts and entities...")))(() => bindVT3.bind(validateBaseDataSet(concat(concepts))(concat(entities))(monadAff))((ds) => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(getState3)((msgs1) => {
+        if (hasError(msgs1)) {
           return applicativeVT3.pure($Tuple(ds, []));
         }
         return bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind((() => {
@@ -17241,7 +17253,7 @@ var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(mon
             })));
           }));
         })));
-      })))));
+      })))))));
     })));
   })));
 }))))));
@@ -17604,7 +17616,7 @@ var runMain = (opts2) => {
     (() => {
       const gendp = opts2.generateDP;
       const fixFormat = opts2.fixFormat;
-      return _bind(_liftEffect(log2("v2.4.0")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v2.4.1")))(() => _bind((() => {
         if (mode === "FileNameBased") {
           return runValidationT(validate2(path2)(gendp)(fixFormat));
         }
