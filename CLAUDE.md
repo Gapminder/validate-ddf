@@ -213,6 +213,8 @@ Convert `Issue → Message` via `messageFromIssue` **only at presentation bounda
 - `E_CSV_*` / `W_CSV_FORMAT_*` — CSV structure and byte-format errors
 - `E_GENERAL` / `W_GENERAL` — catch-all
 
+NOTE: when working on a new type of error/warning, please prefer creating a new error code over using the catch-all ones.
+
 ---
 
 ## Testing
@@ -307,6 +309,7 @@ UTF-8 required; BOM not recommended (warning); CRLF not recommended (warning); m
 
 - Avoid long lines — use `let ... in` to break up expressions
 - Prefer `$` over nested parentheses
+- Prefer pattern matching over `if .. then .. else`
 - After completing a task, format the file: `npx purs-tidy format-in-place "src/Foo.purs"`
 - Check the [Pursuit docs](https://pursuit.purescript.org) for library APIs
 

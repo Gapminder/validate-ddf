@@ -155,6 +155,9 @@ data ErrorCode
   | E_CONCEPT_TIME_INVALID
   | E_CONCEPT_FIELD_EMPTY
   | E_CONCEPT_FIELD_MISSING
+  | E_CONCEPT_DRILLUP_FORMAT
+  | E_CONCEPT_SCALES_FORMAT
+  | E_CONCEPT_TAGS_FORMAT
   -- Entity Errors
   | E_ENTITY_INCONSISTENT_DOMAIN
   | E_ENTITY_ID_EMPTY
@@ -170,6 +173,8 @@ data ErrorCode
   | E_DATASET_ENTITY_DRILLUP_INVALID
   | E_DATASET_ENTITYDOMAIN_INVAILD
   | E_DATASET_ENTITY_DUPLICATED
+  | E_DATASET_CONCEPT_SCALES_INVALID
+  | E_DATASET_CONCEPT_TAGS_INVALID
   -- Datapackage Errors
   | E_DATAPACKAGE_NOT_FOUND
   | E_DATAPACKAGE_PARSE_ERROR
@@ -222,6 +227,9 @@ errorCodeToString = case _ of
   E_CONCEPT_TIME_INVALID -> "E_CONCEPT_TIME_INVALID"
   E_CONCEPT_FIELD_EMPTY -> "E_CONCEPT_FIELD_EMPTY"
   E_CONCEPT_FIELD_MISSING -> "E_CONCEPT_FIELD_MISSING"
+  E_CONCEPT_DRILLUP_FORMAT -> "E_CONCEPT_DRILLUP_FORMAT"
+  E_CONCEPT_SCALES_FORMAT -> "E_CONCEPT_SCALES_FORMAT"
+  E_CONCEPT_TAGS_FORMAT -> "E_CONCEPT_TAGS_FORMAT"
   E_ENTITY_INCONSISTENT_DOMAIN -> "E_ENTITY_INCONSISTENT_DOMAIN"
   E_ENTITY_ID_EMPTY -> "E_ENTITY_ID_EMPTY"
   E_DATASET_NO_CONCEPT -> "E_DATASET_NO_CONCEPT"
@@ -233,6 +241,8 @@ errorCodeToString = case _ of
   E_DATASET_ENTITY_DRILLUP_INVALID -> "E_DATASET_ENTITY_DRILLUP_INVALID"
   E_DATASET_ENTITYDOMAIN_INVAILD -> "E_DATASET_ENTITYDOMAIN_INVAILD"
   E_DATASET_ENTITY_DUPLICATED -> "E_DATASET_ENTITY_DUPLICATED"
+  E_DATASET_CONCEPT_SCALES_INVALID -> "E_DATASET_CONCEPT_SCALES_INVALID"
+  E_DATASET_CONCEPT_TAGS_INVALID -> "E_DATASET_CONCEPT_TAGS_INVALID"
   E_DATAPACKAGE_NOT_FOUND -> "E_DATAPACKAGE_NOT_FOUND"
   E_DATAPACKAGE_PARSE_ERROR -> "E_DATAPACKAGE_PARSE_ERROR"
   E_DATAPACKAGE_RESOURCE_MISSING -> "E_DATAPACKAGE_RESOURCE_MISSING"
@@ -275,6 +285,9 @@ errorMessageTemplate = case _ of
   E_CONCEPT_TIME_INVALID -> "time concept must be one of: year, month, day, week, quarter, time"
   E_CONCEPT_FIELD_EMPTY -> "concept field is empty"
   E_CONCEPT_FIELD_MISSING -> "required concept field is missing"
+  E_CONCEPT_DRILLUP_FORMAT -> "drill_up must be a space-separated list of identifiers"
+  E_CONCEPT_SCALES_FORMAT -> "scales must be a space-separated list of identifiers"
+  E_CONCEPT_TAGS_FORMAT -> "tags must be a space-separated list of identifiers"
   E_ENTITY_INCONSISTENT_DOMAIN -> "entity has inconsistent domain"
   E_ENTITY_ID_EMPTY -> "entity ID is empty"
   E_DATASET_NO_CONCEPT -> "dataset has no concepts file"
@@ -282,6 +295,8 @@ errorMessageTemplate = case _ of
   E_DATASET_CONCEPT_NOT_FOUND -> "concept not found in dataset"
   E_DATASET_CONCEPT_INVALID_DOMAIN -> "concept has invalid domain"
   E_DATASET_CONCEPT_MISSING_DOMAIN -> "concept is missing domain field"
+  E_DATASET_CONCEPT_SCALES_INVALID -> "invalid scale value"
+  E_DATASET_CONCEPT_TAGS_INVALID -> "tag value not found in \"tag\" entity domain"
   E_DATASET_ENTITYSET_UNDEFINED -> "entity set is not defined"
   E_DATASET_ENTITY_DRILLUP_INVALID -> "entity drill_up is invalid"
   E_DATASET_ENTITYDOMAIN_INVAILD -> "entity domain is invalid"
@@ -410,6 +425,11 @@ errorSuggestion = case _ of
   E_CONCEPT_TIME_INVALID -> ""
   E_CONCEPT_FIELD_EMPTY -> ""
   E_CONCEPT_FIELD_MISSING -> ""
+  E_CONCEPT_DRILLUP_FORMAT -> "e.g. \"set_a set_b\" (space-separated)"
+  E_CONCEPT_SCALES_FORMAT -> "e.g. \"linear log\" (space-separated)"
+  E_CONCEPT_TAGS_FORMAT -> "e.g. \"poverty health\" (space-separated)"
+  E_DATASET_CONCEPT_SCALES_INVALID -> "valid scales: linear, log, time, ordinal, point, svg, rank"
+  E_DATASET_CONCEPT_TAGS_INVALID -> "check that the tag value exists in the \"tag\" entity domain"
   E_ENTITY_INCONSISTENT_DOMAIN -> ""
   E_ENTITY_ID_EMPTY -> ""
   E_DATASET_NO_CONCEPT -> ""

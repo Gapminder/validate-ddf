@@ -1,0 +1,9 @@
+concept,concept_type,domain,name,drill_up
+geo,entity_domain,,Geography,
+region,entity_set,geo,Region,
+country,entity_set,geo,Country,region
+indicator,measure,,Indicator,region
+name,string,,Name,
+domain,string,,Domain,
+year,time,,Year,
+drill_up,string,,Drill Up,

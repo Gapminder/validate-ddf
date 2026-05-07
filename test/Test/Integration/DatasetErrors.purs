@@ -35,18 +35,21 @@ spec =
       it "error-dataset-entitydomain-invalid: should detect E_DATASET_ENTITYDOMAIN_INVAILD" do
         expectError E_DATASET_ENTITYDOMAIN_INVAILD "test/datasets/error-dataset-entitydomain-invalid"
 
-      it "error-dataset-drillup-json-format: should detect E_VAL_JSON for JSON-array drill_up" do
-        expectError E_VAL_JSON "test/datasets/error-drillup-json-format"
+      it "error-dataset-drillup-json-format: should detect E_CONCEPT_DRILLUP_FORMAT for JSON-array drill_up" do
+        expectError E_CONCEPT_DRILLUP_FORMAT "test/datasets/error-drillup-json-format"
 
     describe "List Field Errors" do
-      it "error-scales-json-format: should detect E_VAL_JSON for JSON-array scales" do
-        expectError E_VAL_JSON "test/datasets/error-scales-json-format"
+      it "error-scales-json-format: should detect E_CONCEPT_SCALES_FORMAT for JSON-array scales" do
+        expectError E_CONCEPT_SCALES_FORMAT "test/datasets/error-scales-json-format"
 
-      it "error-scales-invalid-value: should detect E_GENERAL for unknown scale value" do
-        expectError E_GENERAL "test/datasets/error-scales-invalid-value"
+      it "error-scales-invalid-value: should detect E_DATASET_CONCEPT_SCALES_INVALID for unknown scale value" do
+        expectError E_DATASET_CONCEPT_SCALES_INVALID "test/datasets/error-scales-invalid-value"
 
-      it "error-tags-comma-format: should detect E_GENERAL for comma-separated tags" do
-        expectError E_GENERAL "test/datasets/error-tags-comma-format"
+      it "error-tags-comma-format: should detect E_CONCEPT_TAGS_FORMAT for comma-separated tags" do
+        expectError E_CONCEPT_TAGS_FORMAT "test/datasets/error-tags-comma-format"
 
-      it "error-tags-unknown-value: should detect E_GENERAL for tag not in entity domain" do
-        expectError E_GENERAL "test/datasets/error-tags-unknown-value"
+      it "error-drillup-missing-domain: should detect E_DATASET_CONCEPT_MISSING_DOMAIN when drill_up present but domain missing" do
+        expectError E_DATASET_CONCEPT_MISSING_DOMAIN "test/datasets/error-drillup-missing-domain"
+
+      it "error-tags-unknown-value: should detect E_DATASET_CONCEPT_TAGS_INVALID for tag not in entity domain" do
+        expectError E_DATASET_CONCEPT_TAGS_INVALID "test/datasets/error-tags-unknown-value"

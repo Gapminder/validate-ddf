@@ -5,10 +5,11 @@ module Data.DDF.Concept where
 
 import Prelude
 
+import Data.Array as Arr
 import Data.DDF.Atoms.Header (Header(..))
+import Data.Either (Either(..))
 import Data.DDF.Atoms.Identifier (Identifier)
 import Data.DDF.Atoms.Identifier as Id
-import Data.DDF.Atoms.Value (Value, ValueParser, isEmpty, parseStrVal')
 import Data.DDF.Internal (ItemInfo, iteminfo)
 import Data.List (elem)
 import Data.Map (Map)
@@ -16,18 +17,27 @@ import Data.Map as M
 import Data.Map.Extra (mapKeys)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap)
+import Data.String (Pattern(..), Replacement(..))
 import Data.String as Str
-import Data.String.NonEmpty (NonEmptyString, toString)
-import Data.Tuple (Tuple(..))
-import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, withConcept, withConceptField)
+import Data.Traversable (traverse, traverse_)
+import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, withConcept, withConceptField, withMessage)
 import Data.Validation.Registry (ErrorCode(..))
-import Data.Validation.Semigroup (V, andThen, invalid)
+import Data.Validation.Semigroup (V, andThen, invalid, toEither)
+import Data.String.NonEmpty (toString)
 import Safe.Coerce (coerce)
 
 -- | Each Concept MUST have an Id and concept type.
+-- | Fixed fields (domain, drill_up, scales, tags) are pre-parsed from CSV
+-- | and stored explicitly. Custom properties go into the props map.
 newtype Concept = Concept
   { conceptId :: Identifier
   , conceptType :: ConceptType
+  , domain :: Maybe Identifier
+  , drill_up :: Maybe (Array Identifier)
+  -- scales and tags are fixed properties that required by open numbers datasets.
+  -- they are not part of DDF spec, and are likely be updated/removed in the future.
+  , scales :: Maybe (Array Identifier)
+  , tags :: Maybe (Array Identifier)
   , props :: Props
   , _info :: Maybe ItemInfo -- additional information to use in the app, not in DDF data model
   }
@@ -40,10 +50,9 @@ instance eqConcept :: Eq Concept where
 instance showConcept :: Show Concept where
   show (Concept a) = show a
 
--- | Properties type
--- the Key MUST be valid identifier
--- We will validate values in the properties (such as domain)
--- while we parse entire dataset, so just use String here
+-- | Properties type for custom / user-defined concept properties.
+-- | Fixed fields (domain, drill_up, scales, tags) are stored in dedicated
+-- | fields above and removed from props during parsing.
 type Props = Map Identifier String
 
 -- | Types of concept
@@ -96,11 +105,19 @@ parseConceptType x = ado
 reservedConcepts :: Array Identifier
 reservedConcepts = map Id.unsafeCreate [ "concept", "concept_type" ]
 
--- | create concept
+-- | create concept with default empty fixed fields
 concept :: Identifier -> ConceptType -> Props -> Concept
-concept conceptId conceptType props = Concept { conceptId, conceptType, props, _info }
-  where
-  _info = Nothing
+concept conceptId conceptType props =
+  Concept
+    { conceptId
+    , conceptType
+    , domain: Nothing
+    , drill_up: Nothing
+    , scales: Nothing
+    , tags: Nothing
+    , props
+    , _info: Nothing
+    }
 
 -- | set additional infos
 setInfo :: (Maybe ItemInfo) -> Concept -> Concept
@@ -135,6 +152,19 @@ getProp :: Concept -> String -> Maybe String
 getProp (Concept c) p =
   M.lookup (Id.unsafeCreate p) c.props
 
+-- | Fixed field accessors
+getDomain :: Concept -> Maybe Identifier
+getDomain (Concept c) = c.domain
+
+getDrillUp :: Concept -> Maybe (Array Identifier)
+getDrillUp (Concept c) = c.drill_up
+
+getScales :: Concept -> Maybe (Array Identifier)
+getScales (Concept c) = c.scales
+
+getTags :: Concept -> Maybe (Array Identifier)
+getTags (Concept c) = c.tags
+
 -- | The unvalidated concept record, which comes from reading csvfile.
 type ConceptInput =
   { conceptId :: String
@@ -142,55 +172,90 @@ type ConceptInput =
   , _info :: Maybe ItemInfo
   }
 
--- | ConceptInput with props converted to Map Identifier String
-type ConceptInput' =
-  { conceptId :: String
-  , props :: Map Identifier String
-  , _info :: Maybe ItemInfo
-  }
+-- | Look up and parse the concept_type field (required).
+parseConceptTypeFromProps :: Maybe String -> String -> V Issues ConceptType
+parseConceptTypeFromProps Nothing conceptId =
+  invalid [ mkIssue E_CONCEPT_FIELD_MISSING # withConceptField conceptId "concept_type" ]
+parseConceptTypeFromProps (Just v) _ = parseConceptType v
 
--- | convert a ConceptInput into valid Concept or errors
+-- | Look up and parse the domain field (optional).
+-- | Returns Nothing if absent or empty, Just the parsed identifier otherwise.
+parseDomainField :: Maybe String -> String -> V Issues (Maybe Identifier)
+parseDomainField Nothing _ = pure Nothing
+parseDomainField (Just val) _ | Str.null val = pure Nothing
+parseDomainField (Just val) _ = Id.parseId val <#> Just
+
+-- | Look up and parse a list field (optional): drill_up, scales, tags.
+-- | Each whitespace-separated token is validated as an identifier.
+-- | Returns Nothing if absent.
+parseListField :: String -> ErrorCode -> Maybe String -> String -> V Issues (Maybe (Array Identifier))
+parseListField _ _ Nothing _ = pure Nothing
+parseListField fieldName errorCode (Just val) conceptId =
+  let
+    parts = Arr.filter (not Str.null) $ Str.split (Pattern " ") val
+    parsed = traverse Id.parseId parts
+  in
+    case toEither parsed of
+      Right ids -> pure (Just ids)
+      Left _ ->
+        invalid
+          [ mkIssue errorCode
+              # withConceptField conceptId fieldName
+              # withMessage ("value: " <> csvDisplay val)
+          ]
+
+-- | convert a ConceptInput into valid Concept or errors.
+-- | Fixed fields are looked up from props and parsed; fixed keys are
+-- | removed to leave custom properties; independent checks become
+-- | applicative to accumulate all errors.
 parseConcept :: ConceptInput -> V Issues Concept
 parseConcept input =
   let
-    -- coerce Header to Identifier because they are both string
-    -- FIXME: double check the Header -> Identifier convertion.
     props = mapKeys coerce input.props :: Map Identifier String
-    input' = { conceptId: input.conceptId, props: props, _info: input._info }
+    fixedKeys = map Id.unsafeCreate [ "concept_type", "domain", "drill_up", "scales", "tags" ]
+    lookup_ key = M.lookup (Id.unsafeCreate key) props
+    remainingProps = Arr.foldl (flip M.delete) props fixedKeys
+
+    parsed = ado
+      parsedId <- notReserved input.conceptId `andThen` Id.parseId
+      parsedType <- parseConceptTypeFromProps (lookup_ "concept_type") input.conceptId
+      domain <- parseDomainField (lookup_ "domain") input.conceptId
+      drill_up <- parseListField "drill_up" E_CONCEPT_DRILLUP_FORMAT (lookup_ "drill_up") input.conceptId
+      scales <- parseListField "scales" E_CONCEPT_SCALES_FORMAT (lookup_ "scales") input.conceptId
+      tags <- parseListField "tags" E_CONCEPT_TAGS_FORMAT (lookup_ "tags") input.conceptId
+      let
+        c = Concept
+          { conceptId: parsedId
+          , conceptType: parsedType
+          , domain
+          , drill_up
+          , scales
+          , tags
+          , props: remainingProps
+          , _info: Nothing
+          }
+      in c
   in
-    hasFieldAndPopValue input' "concept_type"
-      `andThen`
-        ( \(Tuple conceptTypeStr input'') ->
-            concept
-              <$>
-                ( notReserved input.conceptId
-                    `andThen` Id.parseId
-                )
-              <*> parseConceptType conceptTypeStr
-              <*> pure input''.props
-        )
-      `andThen`
-        checkMandatoryField
-      `andThen`
-        checkRestrictedConecptIds
-      `andThen`
-        (\c -> pure $ setInfo input._info c)
+    parsed
+      `andThen` \c -> ado
+        _ <- checkMandatoryField c
+        _ <- checkRestrictedConecptIds c
+        in setInfo input._info c
 
 -- | some concept type require a column exists
 -- | for example if concept type is entity_set, then it
 -- | must have non empty domain.
 checkMandatoryField :: Concept -> V Issues Concept
 checkMandatoryField input@(Concept c) =
-  let
-    input' = { conceptId: Id.value c.conceptId, props: c.props, _info: c._info }
-  in
-    case c.conceptType of
-      EntitySetC -> ado
-        hasFieldAndGetValue input' "domain"
-          `andThen`
-            nonEmptyField input' "domain"
-        in input
-      _ -> pure input
+  case c.conceptType of
+    EntitySetC -> case c.domain of
+      Nothing ->
+        invalid
+          [ mkIssue E_CONCEPT_FIELD_MISSING
+              # withConceptField (Id.value c.conceptId) "domain"
+          ]
+      Just _ -> pure input
+    _ -> pure input
 
 -- | some concept type has restricted possible concept ID values
 -- | for example if concept type is time, then concept ID must
@@ -209,24 +274,14 @@ checkRestrictedConecptIds input@(Concept c) = case c.conceptType of
           ]
   _ -> pure input
 
-hasFieldAndGetValue :: ConceptInput' -> String -> V Issues String
-hasFieldAndGetValue input field =
-  case M.lookup (Id.unsafeCreate field) input.props of
-    Nothing -> invalid [ mkIssue E_CONCEPT_FIELD_MISSING # withConceptField input.conceptId field ]
-    Just v -> pure v
-
-hasFieldAndPopValue :: ConceptInput' -> String -> V Issues (Tuple String ConceptInput')
-hasFieldAndPopValue input field =
-  case M.pop (Id.unsafeCreate field) input.props of
-    Nothing -> invalid [ mkIssue E_CONCEPT_FIELD_MISSING # withConceptField input.conceptId field ]
-    Just (Tuple v props') -> pure $ Tuple v (input { props = props' })
-
-nonEmptyField :: ConceptInput' -> String -> String -> V Issues String
-nonEmptyField input field value =
-  if Str.null value then
-    invalid [ mkIssue E_CONCEPT_FIELD_EMPTY # withConceptField input.conceptId field ]
+-- | Re-encode a parsed CSV field value for display in error messages,
+-- | so users can search for it in the raw CSV file.
+csvDisplay :: String -> String
+csvDisplay s =
+  if Str.contains (Pattern "\"") s || Str.contains (Pattern ",") s then
+    "\"" <> Str.replaceAll (Pattern "\"") (Replacement "\"\"") s <> "\""
   else
-    pure value
+    s
 
 hasProp :: String -> Props -> Boolean
 hasProp f props = M.member (Id.unsafeCreate f) props
@@ -258,6 +313,10 @@ unsafeCreate concept_id concept_type props_ info =
   Concept
     { conceptId: conceptId
     , conceptType: conceptType
+    , domain: Nothing
+    , drill_up: Nothing
+    , scales: Nothing
+    , tags: Nothing
     , props: props
     , _info: Just info
     }

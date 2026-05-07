@@ -57,16 +57,16 @@ import Data.List.NonEmpty as NEL
 import Data.Map (Map)
 import Data.Map as M
 import Data.Maybe (Maybe(..))
+import Data.String.NonEmpty as NES
 import Data.Newtype (class Newtype)
 import Data.Set (Set)
-import Data.String (Pattern(..), Replacement(..), contains, replaceAll) as S
 import Data.String.NonEmpty (toString)
 import Data.String.NonEmpty as NES
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.String.Utils as Str
 import Data.Traversable (for, for_, sequence, sequence_, traverse, traverse_)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Validation.Issue (Issue(..), Issues, mkIssue, mkIssueWithMessage, toInvaildItem, updateMessage, withConceptField, withEntity, withFileLocation, withMessage, withRowInfo, withSuggestion)
+import Data.Validation.Issue (Issue(..), Issues, mkIssue, toInvaildItem, updateMessage, withConceptField, withEntity, withFileLocation, withMessage, withRowInfo)
 import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither, validation)
 import Debug (trace)
@@ -125,7 +125,7 @@ getDomainForEntitySet dataset k = do
   if Conc.getType theConcept == Conc.EntityDomainC then
     pure $ Conc.getId >>> Id.value $ theConcept
   else
-    Conc.getProp theConcept "domain"
+    map Id.value $ Conc.getDomain theConcept
 
 -- | given a concept and a value, return which domain/set the value belongs to
 -- | if the concept is string/time type, then it will return the concept name itself
@@ -221,14 +221,14 @@ checkConceptDomain input =
   let
     allDomainConcepts = Arr.filter Conc.isEntityDomain input
     allSetConcepts = Arr.filter Conc.isEntitySet input
-    domainNames = map (Conc.getId >>> Id.value) allDomainConcepts
+    domainNames = map Conc.getId allDomainConcepts
 
     check c =
       let
         Tuple fp i = pathAndRow $ Conc.getInfo c
         conceptId = Id.value $ Conc.getId c
       in
-        case Conc.getProp c "domain" of
+        case Conc.getDomain c of
           Just domain ->
             if domain `Arr.elem` domainNames then
               pure unit
@@ -289,22 +289,12 @@ basedataset cdb edb = DataSet
   , _valueParsers: HM.empty
   }
 
-validScales :: Array String
-validScales = [ "linear", "log", "time", "ordinal", "point", "svg" ]
+validScales :: Array Identifier
+validScales = map Id.unsafeCreate [ "linear", "log", "time", "ordinal", "point", "svg", "rank" ]
 
--- | Re-encode a parsed CSV field value for display in error messages,
--- | so users can search for it in the raw CSV file.
-csvDisplay :: String -> String
-csvDisplay s =
-  if S.contains (S.Pattern "\"") s || S.contains (S.Pattern ",") s then
-    "\"" <> S.replaceAll (S.Pattern "\"") (S.Replacement "\"\"") s <> "\""
-  else
-    s
-
--- | Check format and element validity for concept list fields:
--- | - drill_up: space-separated entity set IDs in the same domain
--- | - scales: space-separated values from a fixed list
--- | - tags: format check only (element validation against entity domain done later in checkTagValues)
+-- | Check element validity for concept list fields (format checked in Concept.purs):
+-- | - drill_up: entity set IDs must exist in the same domain
+-- | - scales: values must be from a fixed list
 checkListFields :: ConceptDB -> V Issues ConceptDB
 checkListFields concepts =
   for_ (HM.values concepts)
@@ -312,75 +302,44 @@ checkListFields concepts =
         let
           Tuple fp i = pathAndRow $ Conc.getInfo c
           checkDrillUp =
-            case Conc.getProp c "drill_up" of
+            case Conc.getDrillUp c of
               Nothing -> pure unit
-              Just val ->
-                if Str.startsWith "[" val then
-                  withRowInfo fp i
-                    $ invalid
-                        [ withSuggestion "e.g. \"foo bar\" (space-separated)"
-                            $ mkIssueWithMessage E_VAL_JSON
-                                ( "drill_up " <> csvDisplay val <> ": must use space-separated format, not a JSON array"
-                                )
-                        ]
-                else
-                  case Conc.getProp c "domain" of
-                    Nothing -> pure unit
-                    Just domain ->
-                      withRowInfo fp i
-                        $ parseListVal val
-                            `andThen`
-                              ( \lst ->
-                                  traverse_
-                                    (\x -> lookupSetWithInDomain concepts x domain)
-                                    (Value.getListValues lst)
-                              )
+              Just vals
+                | Arr.null vals -> pure unit
+                | otherwise ->
+                    case Conc.getDomain c of
+                      Nothing ->
+                        invalid
+                          [ mkIssue E_DATASET_CONCEPT_MISSING_DOMAIN
+                              # withConceptField (Id.value $ Conc.getId c) "domain"
+                              # withFileLocation fp i
+                              # withMessage "drill_up requires a domain"
+                          ]
+                      Just domain ->
+                        withRowInfo fp i
+                          $ traverse_
+                              (\x -> lookupSetWithInDomain concepts x domain)
+                              vals
+
           checkScales =
-            case Conc.getProp c "scales" of
+            case Conc.getScales c of
               Nothing -> pure unit
-              Just val ->
-                if Str.startsWith "[" val then
-                  withRowInfo fp i
-                    $ invalid
-                        [ withSuggestion "e.g. \"linear log\" (space-separated)"
-                            $ mkIssueWithMessage E_VAL_JSON
-                                ( "scales " <> csvDisplay val <> ": must use space-separated format, not a JSON array"
-                                )
-                        ]
-                else
-                  withRowInfo fp i
-                    $ parseListVal val
-                        `andThen`
-                          ( \lst ->
-                              traverse_
-                                ( \x ->
-                                    if x `Arr.elem` validScales then
-                                      pure unit
-                                    else
-                                      invalid
-                                        [ mkIssueWithMessage E_GENERAL
-                                            ( "\"" <> x <> "\" is not a valid scale; must be one of: linear, log, time, ordinal, point, svg"
-                                            )
-                                        ]
-                                )
-                                (Value.getListValues lst)
-                          )
-          checkTagsFormat =
-            case Conc.getProp c "tags" of
-              Nothing -> pure unit
-              Just val ->
-                if Str.includes "," val then
-                  withRowInfo fp i
-                    $ invalid
-                        [ withSuggestion "e.g. \"foo bar\" (space-separated)"
-                            $ mkIssueWithMessage E_GENERAL
-                                ( "tags " <> csvDisplay val <> ": must use space-separated format, not comma-separated"
-                                )
-                        ]
-                else
-                  pure unit
+              Just vals ->
+                withRowInfo fp i
+                  $ traverse_
+                      ( \x ->
+                          if x `Arr.elem` validScales then
+                            pure unit
+                          else
+                            invalid
+                              [ mkIssue E_DATASET_CONCEPT_SCALES_INVALID
+                                  # withMessage ("\"" <> Id.value x <> "\"")
+                              ]
+                      )
+                      vals
+
         in
-          checkDrillUp *> checkScales *> checkTagsFormat
+          checkDrillUp *> checkScales
     )
     `andThen` (\_ -> pure concepts)
 
@@ -389,39 +348,33 @@ checkListFields concepts =
 checkTagValues :: ConceptDB -> EntityDB -> V Issues EntityDB
 checkTagValues concepts entities =
   let
+    specialTags = map Id.unsafeCreate [ "_none", "_root" ]
     tagEntities =
       case HM.lookup "tag" entities of
         Nothing -> HS.empty
-        Just es -> HS.fromArray $ map (Ent.getId >>> Id.value) es
+        Just es -> HS.fromArray $ map Ent.getId es
   in
     if HS.isEmpty tagEntities then
       pure entities
     else
       for_ (HM.values concepts)
         ( \c ->
-            case Conc.getProp c "tags" of
+            case Conc.getTags c of
               Nothing -> pure unit
-              Just val ->
+              Just vals ->
                 let
                   Tuple fp i = pathAndRow $ Conc.getInfo c
+                  checkItem x =
+                    if x `Arr.elem` specialTags || HS.member x tagEntities then
+                      pure unit
+                    else
+                      invalid
+                        [ mkIssue E_DATASET_CONCEPT_TAGS_INVALID
+                            # withMessage ("\"" <> Id.value x <> "\"")
+                        ]
                 in
                   withRowInfo fp i
-                    $ parseListVal val
-                        `andThen`
-                          ( \lst ->
-                              traverse_
-                                ( \x ->
-                                    if x `Arr.elem` [ "_none", "_root" ] || HS.member x tagEntities then
-                                      pure unit
-                                    else
-                                      invalid
-                                        [ mkIssueWithMessage E_GENERAL
-                                            ( "\"" <> x <> "\" is not a valid tag; not found in \"tag\" entity domain"
-                                            )
-                                        ]
-                                )
-                                (Value.getListValues lst)
-                          )
+                    $ traverse_ checkItem vals
         )
         `andThen` (\_ -> pure entities)
 
@@ -447,10 +400,10 @@ checkDomainAndSetExists concepts entities =
           `andThen`
             ( \_ -> for_ ents \e ->
                 let
-                  sets = Id.value <$> Ent.getEntitySets e
+                  domainId = Id.unsafeCreate domain
                   Tuple fp i = pathAndRow $ Ent.getItemInfo e
                 in
-                  traverse_ (\x -> withRowInfo fp i $ lookupSetWithInDomain concepts x domain) sets
+                  traverse_ (\x -> withRowInfo fp i $ lookupSetWithInDomain concepts x domainId) (Ent.getEntitySets e)
             )
   in
     (sequence $ HM.toArrayBy run entities)
@@ -484,61 +437,75 @@ lookupDomain concepts x mbFileContext = case HM.lookup x concepts of
 --     Conc.EntitySetC -> pure unit
 --     _ -> invalid [ Issue $ "concept " <> x <> " is not an entity set in dataset." ]
 
-lookupSetWithInDomain :: ConceptDB -> String -> String -> V Issues Unit
+lookupSetWithInDomain :: ConceptDB -> Identifier -> Identifier -> V Issues Unit
 lookupSetWithInDomain concepts set domain =
-  lookupDomain concepts domain Nothing
-    `andThen`
-      ( \_ -> case HM.lookup set concepts of
-          Nothing -> invalid [ mkIssue E_DATASET_ENTITYSET_UNDEFINED # withConceptField set "entity_set" ]
-          Just v -> case Conc.getType v of
-            Conc.EntitySetC -> case Conc.getProp v "domain" of
-              Nothing -> invalid [ mkIssue E_DATASET_CONCEPT_MISSING_DOMAIN # withConceptField set "domain" ]
-              Just d ->
-                if d == domain then
-                  pure unit
-                else
-                  invalid [ mkIssue E_DATASET_CONCEPT_INVALID_DOMAIN # withConceptField set "domain" ]
-            _ -> invalid [ mkIssue E_DATASET_CONCEPT_INVALID_DOMAIN # withConceptField set "concept_type" ]
+  let
+    setStr = Id.value set
+    domainStr = Id.value domain
+  in
+    lookupDomain concepts domainStr Nothing
+      `andThen`
+        ( \_ -> case HM.lookup setStr concepts of
+            Nothing -> invalid [ mkIssue E_DATASET_ENTITYSET_UNDEFINED # withConceptField setStr "entity_set" ]
+            Just v -> case Conc.getType v of
+              Conc.EntitySetC -> case Conc.getDomain v of
+                Nothing -> invalid [ mkIssue E_DATASET_CONCEPT_MISSING_DOMAIN # withConceptField setStr "domain" ]
+                Just d ->
+                  if d == domain then
+                    pure unit
+                  else
+                    invalid [ mkIssue E_DATASET_CONCEPT_INVALID_DOMAIN # withConceptField setStr "domain" ]
+              _ -> invalid [ mkIssue E_DATASET_CONCEPT_INVALID_DOMAIN # withConceptField setStr "concept_type" ]
 
-      )
+        )
 
--- | parse a base dataset
+-- | Parse a base dataset from concepts and entities input.
+-- | The validation follows these steps:
+-- |   1. Parse concepts independently (non-empty, no duplicates, entity sets have valid domains)
+-- |   2. Parse entity domains and validate them against concepts
+-- |   3. Validate concept fields that may reference entities (tags, scales, drill_up)
+-- |   4. Build value parsers for datapoint validation
 parseBaseDataSet :: ConceptsInput -> EntitiesInput -> V Issues DataSet
--- FIXME: How should I use types to make the requirements more clear?
 parseBaseDataSet conceptsInput entitiesInput =
-  parseConcepts conceptsInput
-    `andThen`
-      checkListFields
-    `andThen`
-      ( \cdb ->
-          parseEntityDomains cdb entitiesInput
-            `andThen`
-              (\edb -> checkDomainAndSetExists cdb edb *> checkTagValues cdb edb)
-            `andThen`
-              (\edb -> pure $ basedataset cdb edb)
-      )
-    `andThen`
-      ( \dataset@(DataSet ds) ->
-          let
-            -- create value parsers for each concept, depending on their concept types.
-            ps = map (\x -> Tuple x (makeValueParser dataset x))
-              (HM.keys $ getConcepts dataset)
-            -- append concept and concept_type parser.
-            -- because they are reversed concepts they won't be in
-            -- concept table, we need to add them manually.
-            ps' = ps <>
-              -- values in `concept` column MUST be one of the dataset concepts.
-              [ Tuple "concept"
-                  ( Value.parseConceptVal
-                      $ HS.fromArray
-                      $ HM.keys ds.concepts
-                  )
-              -- concept type checking happened in concept parsing, so we don't need to re-check them.
-              , Tuple "concept_type" Value.parseStrVal
-              ]
-          in
-            pure $ DataSet (ds { _valueParsers = HM.fromArray ps' })
-      )
+  let
+    parseEntities :: ConceptDB -> V Issues { cdb :: ConceptDB, edb :: EntityDB }
+    parseEntities cdb =
+      parseEntityDomains cdb entitiesInput
+        `andThen` checkDomainAndSetExists cdb
+        `andThen` \edb -> pure { cdb, edb }
+
+    validateFields :: { cdb :: ConceptDB, edb :: EntityDB } -> V Issues DataSet
+    validateFields { cdb, edb } =
+      checkListFields cdb
+        `andThen` \_ ->
+          checkTagValues cdb edb
+            `andThen` \_ ->
+              pure (basedataset cdb edb)
+                `andThen` buildValueParsers
+  in
+    parseConcepts conceptsInput
+      `andThen` parseEntities
+      `andThen` validateFields
+
+-- | Build value parsers for each concept in the dataset.
+-- | These parsers are used to validate datapoint values and CSV file columns.
+-- | The "concept" and "concept_type" reserved columns are added manually.
+buildValueParsers :: DataSet -> V Issues DataSet
+buildValueParsers dataset@(DataSet ds) =
+  let
+    ps = map (\x -> Tuple x (makeValueParser dataset x))
+      $ HM.keys
+      $ getConcepts dataset
+    ps' = ps <>
+      [ Tuple "concept"
+          ( Value.parseConceptVal
+              $ HS.fromArray
+              $ HM.keys ds.concepts
+          )
+      , Tuple "concept_type" Value.parseStrVal
+      ]
+  in
+    pure $ DataSet (ds { _valueParsers = HM.fromArray ps' })
 
 unsafeLookupHM :: forall k v. Hashable k => Show k => k -> HashMap k v -> v
 unsafeLookupHM k m = case HM.lookup k m of
