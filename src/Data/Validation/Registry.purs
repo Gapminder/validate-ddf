@@ -428,7 +428,7 @@ errorSuggestion = case _ of
   E_CONCEPT_DRILLUP_FORMAT -> "e.g. \"set_a set_b\" (space-separated)"
   E_CONCEPT_SCALES_FORMAT -> "e.g. \"linear log\" (space-separated)"
   E_CONCEPT_TAGS_FORMAT -> "e.g. \"poverty health\" (space-separated)"
-  E_DATASET_CONCEPT_SCALES_INVALID -> "valid scales: linear, log, time, ordinal, point, svg"
+  E_DATASET_CONCEPT_SCALES_INVALID -> "valid scales: linear, log, time, ordinal, point, svg, rank"
   E_DATASET_CONCEPT_TAGS_INVALID -> "check that the tag value exists in the \"tag\" entity domain"
   E_ENTITY_INCONSISTENT_DOMAIN -> ""
   E_ENTITY_ID_EMPTY -> ""

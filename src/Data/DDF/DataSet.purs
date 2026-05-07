@@ -290,7 +290,7 @@ basedataset cdb edb = DataSet
   }
 
 validScales :: Array Identifier
-validScales = map Id.unsafeCreate [ "linear", "log", "time", "ordinal", "point", "svg" ]
+validScales = map Id.unsafeCreate [ "linear", "log", "time", "ordinal", "point", "svg", "rank" ]
 
 -- | Check element validity for concept list fields (format checked in Concept.purs):
 -- | - drill_up: entity set IDs must exist in the same domain
