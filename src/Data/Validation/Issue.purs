@@ -7,28 +7,7 @@ import Data.List (List)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import Data.Validation.Registry
-  ( ConceptContext
-  , CsvContext
-  , DatapointContext
-  , DatasetContext
-  , EntityContext
-  , ErrorCode
-  , ErrorContext
-  , FileContext
-  , ValueContext
-  , emptyContext
-  , formatError
-  , mkConceptContext
-  , mkConceptContextWithField
-  , mkCsvContext
-  , mkDatapointContext
-  , mkDatasetContext
-  , mkEntityContext
-  , mkEntityContextWithSet
-  , mkFileContext
-  , mkValueContext
-  )
+import Data.Validation.Registry (ConceptContext, CsvContext, DatapointContext, DatasetContext, EntityContext, ErrorCode, ErrorContext, FileContext, ValueContext, emptyContext, formatError, mkConceptContext, mkConceptContextWithField, mkCsvContext, mkDatapointContext, mkDatasetContext, mkEntityContext, mkEntityContextWithSet, mkFileContext, mkValueContext)
 import Data.Validation.Registry as Registry
 import Data.Validation.Semigroup (V, invalid, validation)
 import Node.Path (FilePath)
@@ -65,6 +44,15 @@ formatIssue code ctx =
 
 type Issues = Array Issue
 
+-- getters
+
+getContextValue :: Issue -> Maybe String
+getContextValue NotImplemented = Nothing
+getContextValue (CodedIssue _ ctx) =
+  case ctx.valueContext of
+    Nothing -> Nothing
+    Just { value } -> Just value
+
 -- Helper functions for creating issues with common patterns
 
 -- | Create a simple issue with just an error code
@@ -75,7 +63,10 @@ mkIssue code = CodedIssue code emptyContext
 mkIssueWithValue :: ErrorCode -> String -> Issue
 mkIssueWithValue code val =
   CodedIssue code $
-    emptyContext { valueContext = Just $ mkValueContext val }
+    emptyContext
+      { valueContext = Just $ mkValueContext val
+      , message = Just $ show val
+      }
 
 -- | Create an issue with a custom message (for E_GENERAL/W_GENERAL)
 mkIssueWithMessage :: ErrorCode -> String -> Issue

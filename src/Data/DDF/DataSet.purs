@@ -57,16 +57,16 @@ import Data.List.NonEmpty as NEL
 import Data.Map (Map)
 import Data.Map as M
 import Data.Maybe (Maybe(..))
-import Data.String.NonEmpty as NES
 import Data.Newtype (class Newtype)
 import Data.Set (Set)
 import Data.String.NonEmpty (toString)
+import Data.String.NonEmpty as NES
 import Data.String.NonEmpty as NES
 import Data.String.NonEmpty.Internal (NonEmptyString(..))
 import Data.String.Utils as Str
 import Data.Traversable (for, for_, sequence, sequence_, traverse, traverse_)
 import Data.Tuple (Tuple(..), fst, snd)
-import Data.Validation.Issue (Issue(..), Issues, mkIssue, toInvaildItem, updateMessage, withConceptField, withEntity, withFileLocation, withMessage, withRowInfo)
+import Data.Validation.Issue (Issue(..), Issues, getContextValue, mkIssue, toInvaildItem, updateMessage, withConceptField, withEntity, withFileLocation, withMessage, withRowInfo)
 import Data.Validation.Registry (ErrorCode(..))
 import Data.Validation.Semigroup (V, andThen, invalid, isValid, toEither, validation)
 import Debug (trace)
@@ -584,35 +584,32 @@ conceptExists (DataSet { concepts }) concept =
 
 parseColumnValues :: ValueParser -> Array String -> Array ItemInfo -> V Issues Unit
 parseColumnValues parser vals iteminfo =
-  traverse_ run nonEmptyValues <> traverse_ runEmpty emptyValues
+  traverse_ run uniqueValues
   where
-  -- deduplicate: one representative row per unique value
-  allValues = HM.values $ HM.fromArrayBy fst identity $ Arr.zip vals iteminfo
-  nonEmptyValues = Arr.filter (\t -> fst t /= "") allValues
-  emptyValues = Arr.filter (\t -> fst t == "") allValues
-  -- count in the original (non-deduplicated) array for the summary message
-  emptyCount = Arr.length $ Arr.filter (_ == "") vals
+  uniqueValues = HM.values $ HM.fromArrayBy fst identity $ Arr.zip vals iteminfo
 
   run (Tuple v it) =
     let
       (Tuple fp i) = pathAndRow it
+      res = withRowInfo fp i (parser v `andThen` (\_ -> pure unit))
+      func =
+        map
+          ( \issue ->
+              case getContextValue issue of
+                Nothing -> issue -- impossible path because value parser should always have value in context.
+                Just contextVal ->
+                  let
+                    count = Arr.length $ Arr.filter (_ == contextVal) vals
+                    countMsg = if count > 1 then "( with " <> show (count - 1) <> " similar situations)" else ""
+                  in
+                    updateMessage issue (\m -> m <> countMsg)
+          )
     in
-      withRowInfo fp i (parser v `andThen` (\_ -> pure unit))
+      lmap func res
 
-  -- For empty strings: if the parser rejects them, report one aggregated error
-  -- with the row count instead of a single misleading line number.
-  -- lineNo = -1 suppresses the line number in the output.
-  runEmpty (Tuple _ it) =
-    let
-      (Tuple fp _) = pathAndRow it
-      countMsg = "empty value found in " <> show emptyCount <> " rows"
-    in
-      lmap (map (withFileLocation fp (-1) >>> withMessage countMsg))
-        (parser "" `andThen` (\_ -> pure unit))
-
--- | For Synonyms and Translations, we only need to parse all values in the columns.
-parseCsvFileValues :: DataSet -> CsvFile -> V Issues Unit
-parseCsvFileValues ds { fileInfo, csvContent } =
+-- | Parse CSV column values with column value parsers from DataSet.
+parseCsvFileValues :: DataSet -> Boolean -> CsvFile -> V Issues Unit
+parseCsvFileValues ds allowEmpty { fileInfo, csvContent } =
   let
     { index, headers, columns } = csvContent
     fp = FI.filepath fileInfo
@@ -620,7 +617,7 @@ parseCsvFileValues ds { fileInfo, csvContent } =
     run (Tuple concept vals) =
       getValueParser ds (toString concept)
         `andThen`
-          (\vp -> parseColumnValues' fp concept vp vals index)
+          (\vp -> parseColumnValues' fp concept vp allowEmpty vals index)
 
     -- filter out is-- headers
     targetHeaders (Tuple h _) =
@@ -634,20 +631,37 @@ parseCsvFileValues ds { fileInfo, csvContent } =
   in
     traverse_ run filtered
 
-parseColumnValues' :: FilePath -> NonEmptyString -> ValueParser -> Array String -> Array Int -> V Issues Unit
-parseColumnValues' fp concept parser vals index = traverse_ run allValues
+parseColumnValues' :: FilePath -> NonEmptyString -> ValueParser -> Boolean -> Array String -> Array Int -> V Issues Unit
+parseColumnValues' fp concept parser allowEmpty vals index =
+  traverse_ run uniqueValues
   where
-  allValues = HM.values $ HM.fromArrayBy fst identity $ Arr.zip vals index
+  uniqueValues = HM.values $ HM.fromArrayBy fst identity $ Arr.zip vals index
 
   run (Tuple v i) =
-    let
-      res = withRowInfo fp i (parser v `andThen` (\_ -> pure unit))
-      -- function to update the error message with column names.
-      func = map
-        ( \issue -> updateMessage issue
-            ( \m ->
-                "in column " <> (NES.toString concept) <> ": " <> m
+    if v == "" && allowEmpty then
+      pure unit
+    else
+      let
+        res = withRowInfo fp i (parser v `andThen` (\_ -> pure unit))
+        func =
+          map
+            ( \issue ->
+                case getContextValue issue of
+                  Nothing -> issue
+                  Just contextVal ->
+                    let
+                      count = Arr.length $ Arr.filter (_ == contextVal) vals
+                      colName = NES.toString concept
+                      extra =
+                        if count > 1 then
+                          "with " <> show (count - 1) <> " similar situations in column \"" <> colName <> "\""
+                        else
+                          "in column \"" <> colName <> "\""
+                    in
+                      updateMessage issue
+                        ( \m ->
+                            m <> " (" <> extra <> ") "
+                        )
             )
-        )
-    in
-      lmap func res
+      in
+        lmap func res
