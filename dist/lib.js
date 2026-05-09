@@ -3734,8 +3734,6 @@ var concatArray = function(xs) {
 };
 
 // output-es/Data.Semigroup/index.js
-var semigroupUnit = { append: (v) => (v1) => {
-} };
 var semigroupArray = { append: concatArray };
 
 // output-es/Data.Monoid/index.js
@@ -10749,15 +10747,6 @@ var applyV = (dictSemigroup) => ({
   },
   Functor0: () => functorEither
 });
-var semigroupV = (dictSemigroup) => {
-  const $0 = applyV(dictSemigroup);
-  return (dictSemigroup1) => ({
-    append: (() => {
-      const $1 = dictSemigroup1.append;
-      return (a) => (b) => $0.apply($0.Functor0().map($1)(a))(b);
-    })()
-  });
-};
 
 // output-es/Data.DDF.Concept/index.js
 var $ConceptType = (tag, _1) => ({ tag, _1 });
@@ -14690,7 +14679,11 @@ var parseTimeVal = (input) => {
       $Issue(
         "CodedIssue",
         E_VAL_TIME,
-        { ...emptyContext, valueContext: $Maybe("Just", { value: input }) }
+        {
+          ...emptyContext,
+          valueContext: $Maybe("Just", { value: input }),
+          message: $Maybe("Just", showStringImpl(input))
+        }
       )
     ]
   );
@@ -14705,7 +14698,11 @@ var parseNumVal = (input) => {
         $Issue(
           "CodedIssue",
           E_VAL_NUM,
-          { ...emptyContext, valueContext: $Maybe("Just", { value: input }) }
+          {
+            ...emptyContext,
+            valueContext: $Maybe("Just", { value: input }),
+            message: $Maybe("Just", showStringImpl(input))
+          }
         )
       ]
     );
@@ -14799,7 +14796,7 @@ var parseBoolVal = (v) => {
       $Issue(
         "CodedIssue",
         E_VAL_BOOL,
-        { ...emptyContext, valueContext: $Maybe("Just", { value: v }) }
+        { ...emptyContext, valueContext: $Maybe("Just", { value: v }), message: $Maybe("Just", showStringImpl(v)) }
       )
     ]
   );
@@ -14825,7 +14822,7 @@ var parseBoolean = (x) => {
       $Issue(
         "CodedIssue",
         E_VAL_BOOL,
-        { ...emptyContext, valueContext: $Maybe("Just", { value: x }) }
+        { ...emptyContext, valueContext: $Maybe("Just", { value: x }), message: $Maybe("Just", showStringImpl(x)) }
       )
     ]
   );
@@ -15019,14 +15016,13 @@ var monoidHashSet = (dictHashable) => {
 };
 
 // output-es/Data.DDF.DataSet/index.js
+var fromArrayBy = /* @__PURE__ */ fromArrayPurs(eqStringImpl, hashString);
+var identity16 = (x) => x;
 var applicativeV4 = /* @__PURE__ */ (() => {
   const applyV1 = applyV(semigroupArray);
   return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
 })();
-var fromArrayBy = /* @__PURE__ */ fromArrayPurs(eqStringImpl, hashString);
-var identity16 = (x) => x;
 var traverse_2 = /* @__PURE__ */ traverse_(applicativeV4)(foldableArray);
-var append1 = /* @__PURE__ */ (() => semigroupV(semigroupArray)(semigroupUnit).append)();
 var lookup5 = /* @__PURE__ */ lookup4(hashableString);
 var for_2 = /* @__PURE__ */ for_(applicativeV4);
 var for_1 = /* @__PURE__ */ for_2(foldableArray);
@@ -15063,27 +15059,44 @@ var unsafeLookupHM = (dictHashable) => {
   };
 };
 var unsafeLookupHM1 = /* @__PURE__ */ unsafeLookupHM(hashableString)(showString);
-var parseColumnValues$p = (fp) => (concept) => (parser) => (vals) => (index3) => traverse_2((v) => {
+var parseColumnValues$p = (fp) => (concept) => (parser) => (allowEmpty) => (vals) => (index3) => traverse_2((v) => {
+  if (v._1 === "" && allowEmpty) {
+    return applicativeV4.pure();
+  }
   const $0 = arrayMap((issue) => {
-    if (issue.tag === "CodedIssue") {
-      return $Issue(
-        "CodedIssue",
-        issue._1,
-        {
-          ...issue._2,
-          message: (() => {
-            if (issue._2.message.tag === "Just") {
-              return $Maybe("Just", "in column " + concept + ": " + issue._2.message._1);
-            }
-            if (issue._2.message.tag === "Nothing") {
-              return $Maybe("Just", "in column " + concept + ": ");
-            }
-            fail();
-          })()
-        }
-      );
+    if (issue.tag === "NotImplemented") {
+      return issue;
     }
-    return issue;
+    if (issue.tag === "CodedIssue") {
+      if (issue._2.valueContext.tag === "Nothing") {
+        return issue;
+      }
+      if (issue._2.valueContext.tag === "Just") {
+        const $02 = issue._2.valueContext._1.value;
+        const count = filterImpl((v3) => v3 === $02, vals).length;
+        const extra = count > 1 ? "with " + showIntImpl(count - 1 | 0) + ' similar situations in column "' + concept + '"' : 'in column "' + concept + '"';
+        if (issue.tag === "CodedIssue") {
+          return $Issue(
+            "CodedIssue",
+            issue._1,
+            {
+              ...issue._2,
+              message: (() => {
+                if (issue._2.message.tag === "Just") {
+                  return $Maybe("Just", issue._2.message._1 + " (" + extra + ") ");
+                }
+                if (issue._2.message.tag === "Nothing") {
+                  return $Maybe("Just", " (" + extra + ") ");
+                }
+                fail();
+              })()
+            }
+          );
+        }
+        return issue;
+      }
+    }
+    fail();
   });
   const $1 = withRowInfo(fp)(v._2)((() => {
     const $12 = parser(v._1);
@@ -15103,49 +15116,60 @@ var parseColumnValues$p = (fp) => (concept) => (parser) => (vals) => (index3) =>
   }
   fail();
 })(values(fromArrayBy(fst)(identity16)(zipWithImpl(Tuple, vals, index3))));
-var parseColumnValues = (parser) => (vals) => (iteminfo) => {
-  const emptyCount = filterImpl((v) => v === "", vals).length;
-  const allValues = values(fromArrayBy(fst)(identity16)(zipWithImpl(Tuple, vals, iteminfo)));
-  return append1(traverse_2((v) => withRowInfo(v._2._1)(v._2._2)((() => {
-    const $0 = parser(v._1);
-    if ($0.tag === "Left") {
-      return $Either("Left", $0._1);
+var parseColumnValues = (parser) => (vals) => (iteminfo) => traverse_2((v) => {
+  const $0 = arrayMap((issue) => {
+    if (issue.tag === "NotImplemented") {
+      return issue;
     }
-    if ($0.tag === "Right") {
+    if (issue.tag === "CodedIssue") {
+      if (issue._2.valueContext.tag === "Nothing") {
+        return issue;
+      }
+      if (issue._2.valueContext.tag === "Just") {
+        const $02 = issue._2.valueContext._1.value;
+        const count = filterImpl((v4) => v4 === $02, vals).length;
+        const countMsg = count > 1 ? "( with " + showIntImpl(count - 1 | 0) + " similar situations)" : "";
+        if (issue.tag === "CodedIssue") {
+          return $Issue(
+            "CodedIssue",
+            issue._1,
+            {
+              ...issue._2,
+              message: (() => {
+                if (issue._2.message.tag === "Just") {
+                  return $Maybe("Just", issue._2.message._1 + countMsg);
+                }
+                if (issue._2.message.tag === "Nothing") {
+                  return $Maybe("Just", "" + countMsg);
+                }
+                fail();
+              })()
+            }
+          );
+        }
+        return issue;
+      }
+    }
+    fail();
+  });
+  const $1 = withRowInfo(v._2._1)(v._2._2)((() => {
+    const $12 = parser(v._1);
+    if ($12.tag === "Left") {
+      return $Either("Left", $12._1);
+    }
+    if ($12.tag === "Right") {
       return applicativeV4.pure();
     }
     fail();
-  })()))(filterImpl((t) => t._1 !== "", allValues)))(traverse_2((v) => {
-    const $0 = v._2._1;
-    const $1 = arrayMap((() => {
-      const $12 = "empty value found in " + showIntImpl(emptyCount) + " rows";
-      return (x) => {
-        const $22 = x.tag === "CodedIssue" ? $Issue("CodedIssue", x._1, { ...x._2, fileContext: $Maybe("Just", { filepath: $0, lineNo: -1 }) }) : x;
-        if ($22.tag === "CodedIssue") {
-          return $Issue("CodedIssue", $22._1, { ...$22._2, message: $Maybe("Just", $12) });
-        }
-        return $22;
-      };
-    })());
-    const $2 = parser("");
-    const $3 = (() => {
-      if ($2.tag === "Left") {
-        return $Either("Left", $2._1);
-      }
-      if ($2.tag === "Right") {
-        return applicativeV4.pure();
-      }
-      fail();
-    })();
-    if ($3.tag === "Left") {
-      return $Either("Left", $1($3._1));
-    }
-    if ($3.tag === "Right") {
-      return $Either("Right", $3._1);
-    }
-    fail();
-  })(filterImpl((t) => t._1 === "", allValues)));
-};
+  })());
+  if ($1.tag === "Left") {
+    return $Either("Left", $0($1._1));
+  }
+  if ($1.tag === "Right") {
+    return $Either("Right", $1._1);
+  }
+  fail();
+})(values(fromArrayBy(fst)(identity16)(zipWithImpl(Tuple, vals, iteminfo))));
 var makeIssue$p = (e) => {
   const $0 = (() => {
     if (e._info.tag === "Nothing") {
@@ -15326,7 +15350,7 @@ var getValueParser = (v) => (k) => {
   }
   fail();
 };
-var parseCsvFileValues = (ds) => (v) => {
+var parseCsvFileValues = (ds) => (allowEmpty) => (v) => {
   const $0 = v.csvContent.index;
   const fp = v.fileInfo.filepath;
   return traverse_2((v1) => {
@@ -15335,7 +15359,7 @@ var parseCsvFileValues = (ds) => (v) => {
       return $Either("Left", $1._1);
     }
     if ($1.tag === "Right") {
-      return parseColumnValues$p(fp)(v1._1)($1._1)(v1._2)($0);
+      return parseColumnValues$p(fp)(v1._1)($1._1)(allowEmpty)(v1._2)($0);
     }
     fail();
   })(filterImpl(
@@ -16069,7 +16093,12 @@ var validateCsvHeaders = (v) => (v1) => (dictMonad) => {
               ...messageFromIssue($Issue(
                 "CodedIssue",
                 E_DATASET_CONCEPT_NOT_FOUND,
-                { ...emptyContext, fileContext: $Maybe("Just", { filepath, lineNo: 1 }), valueContext: $Maybe("Just", { value: h }) }
+                {
+                  ...emptyContext,
+                  fileContext: $Maybe("Just", { filepath, lineNo: 1 }),
+                  message: $Maybe("Just", showStringImpl(h)),
+                  valueContext: $Maybe("Just", { value: h })
+                }
               )),
               isWarning: false
             }
@@ -16105,7 +16134,12 @@ var validateCsvHeaders = (v) => (v1) => (dictMonad) => {
         ...messageFromIssue($Issue(
           "CodedIssue",
           E_DATASET_CONCEPT_NOT_FOUND,
-          { ...emptyContext, fileContext: $Maybe("Just", { filepath, lineNo: 1 }), valueContext: $Maybe("Just", { value: h }) }
+          {
+            ...emptyContext,
+            fileContext: $Maybe("Just", { filepath, lineNo: 1 }),
+            message: $Maybe("Just", showStringImpl(h)),
+            valueContext: $Maybe("Just", { value: h })
+          }
         )),
         isWarning: false
       }
@@ -16128,7 +16162,7 @@ var emitWarningsAndContinue = (dictMonad) => {
 };
 var emitWarningsAndContinue1 = /* @__PURE__ */ emitWarningsAndContinue(monadAff);
 var validateCsvFileWithDataSet = (ds) => (csvfile) => (dictMonad) => {
-  const $0 = parseCsvFileValues(ds)(csvfile);
+  const $0 = parseCsvFileValues(ds)(false)(csvfile);
   if ($0.tag === "Left") {
     return emitWarningsAndContinue(dictMonad)($0._1);
   }
@@ -17476,7 +17510,7 @@ var member4 = /* @__PURE__ */ member(hashableList2);
 var insert6 = /* @__PURE__ */ insert4(hashableList2);
 var hashableArray2 = /* @__PURE__ */ hashableArray(hashableString);
 var fromArray4 = /* @__PURE__ */ fromArray2(hashableArray2);
-var append12 = /* @__PURE__ */ (() => {
+var append1 = /* @__PURE__ */ (() => {
   const unionWith2 = unionWith(hashableArray2);
   return (v) => (v1) => unionWith2($$const)(v)(v1);
 })();
@@ -17614,7 +17648,7 @@ var generateDataPackage = (root) => (dataset) => (resources) => {
           }
           return $Tuple(
             insert6(values2)(acc._1),
-            append12(acc._2)(fromArray4(permutations((() => {
+            append1(acc._2)(fromArray4(permutations((() => {
               const go$1 = (m$p, z$p) => {
                 if (m$p.tag === "Leaf") {
                   return z$p;
@@ -17685,7 +17719,6 @@ var write4 = /* @__PURE__ */ (() => {
   })(writeForeignString)(writeForeignFieldsNilRowR)()()())()()())()()();
   return (rec) => $0.writeImplFields($$Proxy)(rec)({});
 })();
-var validatorVersion = "v2.4.1";
 var validate$p = (opts2) => fromAff((() => {
   const path2 = opts2.targetPath;
   const onlyErrors = opts2.onlyErrors;
@@ -17718,7 +17751,7 @@ var validate$p = (opts2) => fromAff((() => {
         return $1;
       }
       return _pure();
-    })())(() => _pure(write4({ success: !hasError($0), errors: msgsToShow, validatorVersion: "v2.4.1" })));
+    })())(() => _pure(write4({ success: !hasError($0), errors: msgsToShow, validatorVersion: "v2.4.2" })));
   });
 })());
 var setProgressCallback = setProgressHandler;
@@ -17731,7 +17764,7 @@ var runMain = (opts2) => {
     (() => {
       const gendp = opts2.generateDP;
       const fixFormat = opts2.fixFormat;
-      return _bind(_liftEffect(log2("v2.4.1")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v2.4.2")))(() => _bind((() => {
         if (mode === "FileNameBased") {
           return runValidationT(validate2(path2)(gendp)(fixFormat));
         }
@@ -17784,6 +17817,5 @@ export {
   runValidationT,
   setProgressCallback,
   validate$p,
-  validatorVersion,
   write4 as write
 };

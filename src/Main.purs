@@ -1,4 +1,12 @@
-module Main where
+module Main
+  ( ValidateOptions
+  , main
+  , resetProgressCallback
+  , runMain
+  , setProgressCallback
+  , validate'
+  )
+  where
 
 import Prelude
 
@@ -36,7 +44,7 @@ import Yoga.JSON as JSON
 type ValidateOptions = { onlyErrors :: Boolean, generateDP :: Boolean, targetPath :: FilePath }
 
 validatorVersion :: String
-validatorVersion = "v2.4.1"
+validatorVersion = "v2.4.2"
 
 -- | Set a custom progress callback for use by the JS API.
 -- | The callback receives a progress message string (e.g. "validating datapoints: 3/30 indicator groups").
