@@ -44,7 +44,7 @@ import Data.DDF.Csv.FileInfo as FI
 import Data.DDF.DataPoint (DataPoints(..))
 import Data.DDF.Entity (Entity(..), getEntitySets)
 import Data.DDF.Entity as Ent
-import Data.DDF.Internal (ItemInfo, pathAndRow)
+import Data.DDF.Internal (pathAndRow)
 import Data.Either (Either(..))
 import Data.Function (on)
 import Data.HashMap (HashMap)
@@ -550,7 +550,6 @@ getValueParser (DataSet ds) k =
     Nothing -> invalid [ mkIssue E_DATASET_CONCEPT_NOT_FOUND # withConceptField k "concept" ]
 
 -- | parseDataPoints based on the concepts and entities in the dataset.
--- | I thik it's not very necessary to store it into DataSet for validation
 parseDataPoints :: DataSet -> DataPoints -> V Issues Unit
 parseDataPoints ds (DataPoints dp) =
   let
@@ -563,6 +562,7 @@ parseDataPoints ds (DataPoints dp) =
         in
           Just $ Tuple fp 1 -- Line 1 because concepts come from filename/header
       Nothing -> Nothing
+    rowInfo = map pathAndRow dp.itemInfo
   in
     for_ conceptsInDp \c ->
       let
@@ -573,7 +573,7 @@ parseDataPoints ds (DataPoints dp) =
           Nothing -> getValueParser ds (Id.value c)
       in
         parserResult `andThen`
-          (\vp -> parseColumnValues vp (unsafeLookup c dp.values) (dp.itemInfo))
+          (\vp -> parseColumnValues (Id.value1 c) vp false (unsafeLookup c dp.values) rowInfo)
 
 -- | check if concept exists in the dataset
 conceptExists :: DataSet -> Identifier -> V Issues Identifier
@@ -582,30 +582,43 @@ conceptExists (DataSet { concepts }) concept =
     Nothing -> invalid [ mkIssue E_DATASET_CONCEPT_NOT_FOUND # withConceptField (Id.value concept) "concept" ]
     Just _ -> pure concept
 
-parseColumnValues :: ValueParser -> Array String -> Array ItemInfo -> V Issues Unit
-parseColumnValues parser vals iteminfo =
+-- | Parse column values using the provided value parser.
+-- | Deduplicates by value before validating, so each unique value is only checked once.
+-- | Error messages include column name and count of rows with the same invalid value.
+parseColumnValues :: NonEmptyString -> ValueParser -> Boolean -> Array String -> Array (Tuple FilePath Int) -> V Issues Unit
+parseColumnValues colName parser allowEmpty vals rowInfo =
   traverse_ run uniqueValues
   where
-  uniqueValues = HM.values $ HM.fromArrayBy fst identity $ Arr.zip vals iteminfo
+  uniqueValues = HM.values $ HM.fromArrayBy fst identity $ Arr.zip vals rowInfo
 
-  run (Tuple v it) =
-    let
-      (Tuple fp i) = pathAndRow it
-      res = withRowInfo fp i (parser v `andThen` (\_ -> pure unit))
-      func =
-        map
-          ( \issue ->
-              case getContextValue issue of
-                Nothing -> issue -- impossible path because value parser should always have value in context.
-                Just contextVal ->
-                  let
-                    count = Arr.length $ Arr.filter (_ == contextVal) vals
-                    countMsg = if count > 1 then "( with " <> show (count - 1) <> " similar situations)" else ""
-                  in
-                    updateMessage issue (\m -> m <> countMsg)
-          )
-    in
-      lmap func res
+  run (Tuple v (Tuple fp i)) =
+    if v == "" && allowEmpty then
+      pure unit
+    else
+      let
+        res = withRowInfo fp i (parser v `andThen` (\_ -> pure unit))
+        func =
+          map
+            ( \issue ->
+                case getContextValue issue of
+                  Nothing -> issue -- impossible path because value parser should always have value in context.
+                  Just contextVal ->
+                    let
+                      count = Arr.length $ Arr.filter (_ == contextVal) vals
+                      colNameStr = NES.toString colName
+                      extra =
+                        if count > 1 then
+                          "with " <> show (count - 1) <> " similar situations in column \"" <> colNameStr <> "\""
+                        else
+                          "in column \"" <> colNameStr <> "\""
+                    in
+                      updateMessage issue
+                        ( \m ->
+                            m <> " (" <> extra <> ") "
+                        )
+            )
+      in
+        lmap func res
 
 -- | Parse CSV column values with column value parsers from DataSet.
 parseCsvFileValues :: DataSet -> Boolean -> CsvFile -> V Issues Unit
@@ -617,7 +630,7 @@ parseCsvFileValues ds allowEmpty { fileInfo, csvContent } =
     run (Tuple concept vals) =
       getValueParser ds (toString concept)
         `andThen`
-          (\vp -> parseColumnValues' fp concept vp allowEmpty vals index)
+          (\vp -> parseColumnValues concept vp allowEmpty vals (map (\i -> Tuple fp i) index))
 
     -- filter out is-- headers
     targetHeaders (Tuple h _) =
@@ -630,38 +643,3 @@ parseCsvFileValues ds allowEmpty { fileInfo, csvContent } =
     filtered = NEA.filter targetHeaders $ NEA.zip (map headerVal headers) columns
   in
     traverse_ run filtered
-
-parseColumnValues' :: FilePath -> NonEmptyString -> ValueParser -> Boolean -> Array String -> Array Int -> V Issues Unit
-parseColumnValues' fp concept parser allowEmpty vals index =
-  traverse_ run uniqueValues
-  where
-  uniqueValues = HM.values $ HM.fromArrayBy fst identity $ Arr.zip vals index
-
-  run (Tuple v i) =
-    if v == "" && allowEmpty then
-      pure unit
-    else
-      let
-        res = withRowInfo fp i (parser v `andThen` (\_ -> pure unit))
-        func =
-          map
-            ( \issue ->
-                case getContextValue issue of
-                  Nothing -> issue
-                  Just contextVal ->
-                    let
-                      count = Arr.length $ Arr.filter (_ == contextVal) vals
-                      colName = NES.toString concept
-                      extra =
-                        if count > 1 then
-                          "with " <> show (count - 1) <> " similar situations in column \"" <> colName <> "\""
-                        else
-                          "in column \"" <> colName <> "\""
-                    in
-                      updateMessage issue
-                        ( \m ->
-                            m <> " (" <> extra <> ") "
-                        )
-            )
-      in
-        lmap func res
