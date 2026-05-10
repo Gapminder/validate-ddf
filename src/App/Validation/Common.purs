@@ -277,7 +277,7 @@ validateDataPointsWithDataSet ds dps =
 validateCsvFileWithDataSet :: DataSet -> CsvFile -> Validation Messages Unit
 validateCsvFileWithDataSet ds csvfile =
   let
-    res = DataSet.parseCsvFileValues ds false csvfile
+    res = DataSet.parseCsvFileValues ds DataSet.SkipEmpty csvfile
   in
     case toEither res of
       Left errs ->

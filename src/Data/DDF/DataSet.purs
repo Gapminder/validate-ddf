@@ -7,6 +7,7 @@ module Data.DDF.DataSet
   ( ConceptDB
   , DataPointsDB
   , DataSet(..)
+  , EmptyPolicy(..)
   , EntityDB
   , ValueParser
   , ValueParserDB
@@ -573,7 +574,7 @@ parseDataPoints ds (DataPoints dp) =
           Nothing -> getValueParser ds (Id.value c)
       in
         parserResult `andThen`
-          (\vp -> parseColumnValues (Id.value1 c) vp false (unsafeLookup c dp.values) rowInfo)
+          (\vp -> parseColumnValues (Id.value1 c) vp ValidateEmpty (unsafeLookup c dp.values) rowInfo)
 
 -- | check if concept exists in the dataset
 conceptExists :: DataSet -> Identifier -> V Issues Identifier
@@ -582,17 +583,24 @@ conceptExists (DataSet { concepts }) concept =
     Nothing -> invalid [ mkIssue E_DATASET_CONCEPT_NOT_FOUND # withConceptField (Id.value concept) "concept" ]
     Just _ -> pure concept
 
+-- | Whether to silently skip empty values ("") during validation.
+-- | | `SkipEmpty`    — skip empty values without running the parser (used for concepts, entities, synonyms, translations)
+-- | | `ValidateEmpty` — pass empty values through the parser (used for datapoints, where empty = missing data)
+data EmptyPolicy = SkipEmpty | ValidateEmpty
+
+derive instance eqEmptyPolicy :: Eq EmptyPolicy
+
 -- | Parse column values using the provided value parser.
 -- | Deduplicates by value before validating, so each unique value is only checked once.
 -- | Error messages include column name and count of rows with the same invalid value.
-parseColumnValues :: NonEmptyString -> ValueParser -> Boolean -> Array String -> Array (Tuple FilePath Int) -> V Issues Unit
-parseColumnValues colName parser allowEmpty vals rowInfo =
+parseColumnValues :: NonEmptyString -> ValueParser -> EmptyPolicy -> Array String -> Array (Tuple FilePath Int) -> V Issues Unit
+parseColumnValues colName parser emptyPolicy vals rowInfo =
   traverse_ run uniqueValues
   where
   uniqueValues = HM.values $ HM.fromArrayBy fst identity $ Arr.zip vals rowInfo
 
   run (Tuple v (Tuple fp i)) =
-    if v == "" && allowEmpty then
+    if v == "" && emptyPolicy == SkipEmpty then
       pure unit
     else
       let
@@ -621,8 +629,11 @@ parseColumnValues colName parser allowEmpty vals rowInfo =
         lmap func res
 
 -- | Parse CSV column values with column value parsers from DataSet.
-parseCsvFileValues :: DataSet -> Boolean -> CsvFile -> V Issues Unit
-parseCsvFileValues ds allowEmpty { fileInfo, csvContent } =
+-- | The `EmptyPolicy` controls how empty values are handled:
+-- | | `SkipEmpty`    — skip empty values (used for concepts, entities, synonyms, translations)
+-- | | `ValidateEmpty` — pass empty values through the parser (used for datapoints)
+parseCsvFileValues :: DataSet -> EmptyPolicy -> CsvFile -> V Issues Unit
+parseCsvFileValues ds emptyPolicy { fileInfo, csvContent } =
   let
     { index, headers, columns } = csvContent
     fp = FI.filepath fileInfo
@@ -630,7 +641,7 @@ parseCsvFileValues ds allowEmpty { fileInfo, csvContent } =
     run (Tuple concept vals) =
       getValueParser ds (toString concept)
         `andThen`
-          (\vp -> parseColumnValues concept vp allowEmpty vals (map (\i -> Tuple fp i) index))
+          (\vp -> parseColumnValues concept vp emptyPolicy vals (map (\i -> Tuple fp i) index))
 
     -- filter out is-- headers
     targetHeaders (Tuple h _) =
