@@ -44,7 +44,7 @@ import Yoga.JSON as JSON
 type ValidateOptions = { onlyErrors :: Boolean, generateDP :: Boolean, targetPath :: FilePath }
 
 validatorVersion :: String
-validatorVersion = "v2.4.2"
+validatorVersion = "v2.4.3"
 
 -- | Set a custom progress callback for use by the JS API.
 -- | The callback receives a progress message string (e.g. "validating datapoints: 3/30 indicator groups").

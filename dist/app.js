@@ -10624,6 +10624,7 @@ var parseId = (x) => {
 
 // output-es/Data.DDF.Internal/index.js
 var $ItemInfo = (_1, _2) => ({ tag: "ItemInfo", _1, _2 });
+var pathAndRow = (v) => $Tuple(v._1, v._2);
 
 // output-es/Data.Map.Extra/index.js
 var toUnfoldable2 = (x) => {
@@ -14957,20 +14958,21 @@ var monoidHashSet = (dictHashable) => {
 };
 
 // output-es/Data.DDF.DataSet/index.js
-var fromArrayBy = /* @__PURE__ */ fromArrayPurs(eqStringImpl, hashString);
-var identity16 = (x) => x;
+var $EmptyPolicy = (tag) => tag;
+var lookup5 = /* @__PURE__ */ lookup4(hashableString);
 var applicativeV4 = /* @__PURE__ */ (() => {
   const applyV1 = applyV(semigroupArray);
   return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
 })();
-var traverse_2 = /* @__PURE__ */ traverse_(applicativeV4)(foldableArray);
-var lookup5 = /* @__PURE__ */ lookup4(hashableString);
-var for_2 = /* @__PURE__ */ for_(applicativeV4);
-var for_1 = /* @__PURE__ */ for_2(foldableArray);
 var fromArray3 = /* @__PURE__ */ fromArray2(hashableString);
 var fromArray1 = /* @__PURE__ */ fromArray2(hashableId);
 var map32 = /* @__PURE__ */ map2(hashableString);
 var unions = /* @__PURE__ */ (() => foldableArray.foldMap(monoidHashSet(hashableId))(identity2))();
+var fromArrayBy = /* @__PURE__ */ fromArrayPurs(eqStringImpl, hashString);
+var identity16 = (x) => x;
+var traverse_2 = /* @__PURE__ */ traverse_(applicativeV4)(foldableArray);
+var for_2 = /* @__PURE__ */ for_(applicativeV4);
+var for_1 = /* @__PURE__ */ for_2(foldableArray);
 var for_22 = /* @__PURE__ */ for_2(foldableArray);
 var member3 = /* @__PURE__ */ member(hashableId);
 var compare1 = (x) => (y) => {
@@ -14985,6 +14987,8 @@ var compare1 = (x) => (y) => {
 };
 var sequence3 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV4)(identity3))();
 var fromArray22 = /* @__PURE__ */ fromArrayPurs(eqStringImpl, hashString)(fst)(snd);
+var SkipEmpty = /* @__PURE__ */ $EmptyPolicy("SkipEmpty");
+var ValidateEmpty = /* @__PURE__ */ $EmptyPolicy("ValidateEmpty");
 var validScales = /* @__PURE__ */ arrayMap(unsafeCreate)(["linear", "log", "time", "ordinal", "point", "svg", "rank"]);
 var unsafeLookupHM = (dictHashable) => {
   const lookup1 = lookup4(dictHashable);
@@ -15000,117 +15004,6 @@ var unsafeLookupHM = (dictHashable) => {
   };
 };
 var unsafeLookupHM1 = /* @__PURE__ */ unsafeLookupHM(hashableString)(showString);
-var parseColumnValues$p = (fp) => (concept) => (parser) => (allowEmpty) => (vals) => (index3) => traverse_2((v) => {
-  if (v._1 === "" && allowEmpty) {
-    return applicativeV4.pure();
-  }
-  const $0 = arrayMap((issue) => {
-    if (issue.tag === "NotImplemented") {
-      return issue;
-    }
-    if (issue.tag === "CodedIssue") {
-      if (issue._2.valueContext.tag === "Nothing") {
-        return issue;
-      }
-      if (issue._2.valueContext.tag === "Just") {
-        const $02 = issue._2.valueContext._1.value;
-        const count = filterImpl((v3) => v3 === $02, vals).length;
-        const extra = count > 1 ? "with " + showIntImpl(count - 1 | 0) + ' similar situations in column "' + concept + '"' : 'in column "' + concept + '"';
-        if (issue.tag === "CodedIssue") {
-          return $Issue(
-            "CodedIssue",
-            issue._1,
-            {
-              ...issue._2,
-              message: (() => {
-                if (issue._2.message.tag === "Just") {
-                  return $Maybe("Just", issue._2.message._1 + " (" + extra + ") ");
-                }
-                if (issue._2.message.tag === "Nothing") {
-                  return $Maybe("Just", " (" + extra + ") ");
-                }
-                fail();
-              })()
-            }
-          );
-        }
-        return issue;
-      }
-    }
-    fail();
-  });
-  const $1 = withRowInfo(fp)(v._2)((() => {
-    const $12 = parser(v._1);
-    if ($12.tag === "Left") {
-      return $Either("Left", $12._1);
-    }
-    if ($12.tag === "Right") {
-      return applicativeV4.pure();
-    }
-    fail();
-  })());
-  if ($1.tag === "Left") {
-    return $Either("Left", $0($1._1));
-  }
-  if ($1.tag === "Right") {
-    return $Either("Right", $1._1);
-  }
-  fail();
-})(values(fromArrayBy(fst)(identity16)(zipWithImpl(Tuple, vals, index3))));
-var parseColumnValues = (parser) => (vals) => (iteminfo) => traverse_2((v) => {
-  const $0 = arrayMap((issue) => {
-    if (issue.tag === "NotImplemented") {
-      return issue;
-    }
-    if (issue.tag === "CodedIssue") {
-      if (issue._2.valueContext.tag === "Nothing") {
-        return issue;
-      }
-      if (issue._2.valueContext.tag === "Just") {
-        const $02 = issue._2.valueContext._1.value;
-        const count = filterImpl((v4) => v4 === $02, vals).length;
-        const countMsg = count > 1 ? "( with " + showIntImpl(count - 1 | 0) + " similar situations)" : "";
-        if (issue.tag === "CodedIssue") {
-          return $Issue(
-            "CodedIssue",
-            issue._1,
-            {
-              ...issue._2,
-              message: (() => {
-                if (issue._2.message.tag === "Just") {
-                  return $Maybe("Just", issue._2.message._1 + countMsg);
-                }
-                if (issue._2.message.tag === "Nothing") {
-                  return $Maybe("Just", "" + countMsg);
-                }
-                fail();
-              })()
-            }
-          );
-        }
-        return issue;
-      }
-    }
-    fail();
-  });
-  const $1 = withRowInfo(v._2._1)(v._2._2)((() => {
-    const $12 = parser(v._1);
-    if ($12.tag === "Left") {
-      return $Either("Left", $12._1);
-    }
-    if ($12.tag === "Right") {
-      return applicativeV4.pure();
-    }
-    fail();
-  })());
-  if ($1.tag === "Left") {
-    return $Either("Left", $0($1._1));
-  }
-  if ($1.tag === "Right") {
-    return $Either("Right", $1._1);
-  }
-  fail();
-})(values(fromArrayBy(fst)(identity16)(zipWithImpl(Tuple, vals, iteminfo))));
 var makeIssue$p = (e) => {
   const $0 = (() => {
     if (e._info.tag === "Nothing") {
@@ -15291,47 +15184,6 @@ var getValueParser = (v) => (k) => {
   }
   fail();
 };
-var parseCsvFileValues = (ds) => (allowEmpty) => (v) => {
-  const $0 = v.csvContent.index;
-  const fp = v.fileInfo.filepath;
-  return traverse_2((v1) => {
-    const $1 = getValueParser(ds)(v1._1);
-    if ($1.tag === "Left") {
-      return $Either("Left", $1._1);
-    }
-    if ($1.tag === "Right") {
-      return parseColumnValues$p(fp)(v1._1)($1._1)(allowEmpty)(v1._2)($0);
-    }
-    fail();
-  })(filterImpl(
-    (v1) => !startsWithImpl("is--", v1._1),
-    zipWithImpl(Tuple, arrayMap(unsafeCoerce)(v.csvContent.headers), v.csvContent.columns)
-  ));
-};
-var parseDataPoints2 = (ds) => (v) => {
-  if (0 < v.itemInfo.length) {
-    return for_1(snoc(v.by)(v.indicatorId))((c) => {
-      const $0 = withRowInfo(v.itemInfo[0]._1)(1)(getValueParser(ds)(c));
-      if ($0.tag === "Left") {
-        return $Either("Left", $0._1);
-      }
-      if ($0.tag === "Right") {
-        return parseColumnValues($0._1)(unsafeLookup(showId)(ordId)(c)(v.values))(v.itemInfo);
-      }
-      fail();
-    });
-  }
-  return for_1(snoc(v.by)(v.indicatorId))((c) => {
-    const $0 = getValueParser(ds)(c);
-    if ($0.tag === "Left") {
-      return $Either("Left", $0._1);
-    }
-    if ($0.tag === "Right") {
-      return parseColumnValues($0._1)(unsafeLookup(showId)(ordId)(c)(v.values))(v.itemInfo);
-    }
-    fail();
-  });
-};
 var getEntities = (v) => (v1) => (v2) => {
   if (v2.tag === "Nothing") {
     return lookup5(v1)(v.entities);
@@ -15431,6 +15283,105 @@ var genSetMemberships = (v) => mapWithIndexPurs((v$1) => (es) => fromArrayBy((x)
   }
   fail();
 })((xs) => map32(value)(unions(arrayMap((x) => fromArray1([x.entityDomain, ...x.entitySets]))(xs))))(groupAllBy((x) => (y) => ordString.compare(x.entityId)(y.entityId))(es)))(v.entities);
+var parseColumnValues = (colName) => (parser) => (emptyPolicy) => (vals) => (rowInfo) => traverse_2((v) => {
+  if (v._1 === "" && emptyPolicy === "SkipEmpty") {
+    return applicativeV4.pure();
+  }
+  const $0 = arrayMap((issue) => {
+    if (issue.tag === "NotImplemented") {
+      return issue;
+    }
+    if (issue.tag === "CodedIssue") {
+      if (issue._2.valueContext.tag === "Nothing") {
+        return issue;
+      }
+      if (issue._2.valueContext.tag === "Just") {
+        const $02 = issue._2.valueContext._1.value;
+        const count = filterImpl((v3) => v3 === $02, vals).length;
+        const extra = count > 1 ? "with " + showIntImpl(count - 1 | 0) + ' similar situations in column "' + colName + '"' : 'in column "' + colName + '"';
+        if (issue.tag === "CodedIssue") {
+          return $Issue(
+            "CodedIssue",
+            issue._1,
+            {
+              ...issue._2,
+              message: (() => {
+                if (issue._2.message.tag === "Just") {
+                  return $Maybe("Just", issue._2.message._1 + " (" + extra + ") ");
+                }
+                if (issue._2.message.tag === "Nothing") {
+                  return $Maybe("Just", " (" + extra + ") ");
+                }
+                fail();
+              })()
+            }
+          );
+        }
+        return issue;
+      }
+    }
+    fail();
+  });
+  const $1 = withRowInfo(v._2._1)(v._2._2)((() => {
+    const $12 = parser(v._1);
+    if ($12.tag === "Left") {
+      return $Either("Left", $12._1);
+    }
+    if ($12.tag === "Right") {
+      return applicativeV4.pure();
+    }
+    fail();
+  })());
+  if ($1.tag === "Left") {
+    return $Either("Left", $0($1._1));
+  }
+  if ($1.tag === "Right") {
+    return $Either("Right", $1._1);
+  }
+  fail();
+})(values(fromArrayBy(fst)(identity16)(zipWithImpl(Tuple, vals, rowInfo))));
+var parseCsvFileValues = (ds) => (emptyPolicy) => (v) => {
+  const $0 = v.csvContent.index;
+  const fp = v.fileInfo.filepath;
+  return traverse_2((v1) => {
+    const $1 = getValueParser(ds)(v1._1);
+    if ($1.tag === "Left") {
+      return $Either("Left", $1._1);
+    }
+    if ($1.tag === "Right") {
+      return parseColumnValues(v1._1)($1._1)(emptyPolicy)(v1._2)(arrayMap((i) => $Tuple(fp, i))($0));
+    }
+    fail();
+  })(filterImpl(
+    (v1) => !startsWithImpl("is--", v1._1),
+    zipWithImpl(Tuple, arrayMap(unsafeCoerce)(v.csvContent.headers), v.csvContent.columns)
+  ));
+};
+var parseDataPoints2 = (ds) => (v) => {
+  const rowInfo = arrayMap(pathAndRow)(v.itemInfo);
+  if (0 < v.itemInfo.length) {
+    return for_1(snoc(v.by)(v.indicatorId))((c) => {
+      const $0 = withRowInfo(v.itemInfo[0]._1)(1)(getValueParser(ds)(c));
+      if ($0.tag === "Left") {
+        return $Either("Left", $0._1);
+      }
+      if ($0.tag === "Right") {
+        return parseColumnValues(c)($0._1)(ValidateEmpty)(unsafeLookup(showId)(ordId)(c)(v.values))(rowInfo);
+      }
+      fail();
+    });
+  }
+  return for_1(snoc(v.by)(v.indicatorId))((c) => {
+    const $0 = getValueParser(ds)(c);
+    if ($0.tag === "Left") {
+      return $Either("Left", $0._1);
+    }
+    if ($0.tag === "Right") {
+      return parseColumnValues(c)($0._1)(ValidateEmpty)(unsafeLookup(showId)(ordId)(c)(v.values))(rowInfo);
+    }
+    fail();
+  });
+};
 var checkTagValues = (concepts) => (entities) => {
   const v = lookup5("tag")(entities);
   const tagEntities = (() => {
@@ -16103,7 +16054,7 @@ var emitWarningsAndContinue = (dictMonad) => {
 };
 var emitWarningsAndContinue1 = /* @__PURE__ */ emitWarningsAndContinue(monadAff);
 var validateCsvFileWithDataSet = (ds) => (csvfile) => (dictMonad) => {
-  const $0 = parseCsvFileValues(ds)(false)(csvfile);
+  const $0 = parseCsvFileValues(ds)(SkipEmpty)(csvfile);
   if ($0.tag === "Left") {
     return emitWarningsAndContinue(dictMonad)($0._1);
   }
@@ -17650,7 +17601,7 @@ var runMain = (opts2) => {
     (() => {
       const gendp = opts2.generateDP;
       const fixFormat = opts2.fixFormat;
-      return _bind(_liftEffect(log2("v2.4.2")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v2.4.3")))(() => _bind((() => {
         if (mode === "FileNameBased") {
           return runValidationT(validate2(path2)(gendp)(fixFormat));
         }
