@@ -6258,7 +6258,7 @@ var cliOptions = /* @__PURE__ */ (() => $Parser(
     $Parser(
       "AltP",
       flag$p(true)((() => {
-        const $0 = optionMod((p) => ({ ...p, propHelp: paragraph("auto-fix format issues (BOM, CRLF) in CSV files") }));
+        const $0 = optionMod((p) => ({ ...p, propHelp: paragraph("auto-fix CSV format issues (BOM, CRLF) and datapackage path separators") }));
         const $1 = $0._2._1.tag === "Nothing" ? Nothing : $0._2._1;
         const $2 = $0._2._2.tag === "Nothing" ? Nothing : $0._2._2;
         return $Mod(
@@ -9380,6 +9380,7 @@ var E_DATASET_CONCEPT_SCALES_INVALID = /* @__PURE__ */ $ErrorCode("E_DATASET_CON
 var E_DATASET_CONCEPT_TAGS_INVALID = /* @__PURE__ */ $ErrorCode("E_DATASET_CONCEPT_TAGS_INVALID");
 var E_DATAPACKAGE_NOT_FOUND = /* @__PURE__ */ $ErrorCode("E_DATAPACKAGE_NOT_FOUND");
 var E_DATAPACKAGE_PARSE_ERROR = /* @__PURE__ */ $ErrorCode("E_DATAPACKAGE_PARSE_ERROR");
+var E_DATAPACKAGE_PATH_SEPARATOR = /* @__PURE__ */ $ErrorCode("E_DATAPACKAGE_PATH_SEPARATOR");
 var E_DATAPACKAGE_RESOURCE_MISSING = /* @__PURE__ */ $ErrorCode("E_DATAPACKAGE_RESOURCE_MISSING");
 var E_DATAPACKAGE_SCHEMA_MISMATCH = /* @__PURE__ */ $ErrorCode("E_DATAPACKAGE_SCHEMA_MISMATCH");
 var E_CSV_EMPTY = /* @__PURE__ */ $ErrorCode("E_CSV_EMPTY");
@@ -9503,6 +9504,9 @@ var errorSuggestion = (v) => {
   }
   if (v === "E_DATAPACKAGE_PARSE_ERROR") {
     return "";
+  }
+  if (v === "E_DATAPACKAGE_PATH_SEPARATOR") {
+    return "run validate-ddf --fix to auto-replace backslash separators with forward slashes";
   }
   if (v === "E_DATAPACKAGE_RESOURCE_MISSING") {
     return "";
@@ -9668,6 +9672,9 @@ var errorMessageTemplate = (v) => {
   }
   if (v === "E_DATAPACKAGE_PARSE_ERROR") {
     return "failed to parse datapackage.json or its resources";
+  }
+  if (v === "E_DATAPACKAGE_PATH_SEPARATOR") {
+    return "backslash separators in datapackage.json resource paths";
   }
   if (v === "E_DATAPACKAGE_RESOURCE_MISSING") {
     return "resource file missing from datapackage";
@@ -9931,6 +9938,9 @@ var errorCodeToString = (v) => {
   }
   if (v === "E_DATAPACKAGE_PARSE_ERROR") {
     return "E_DATAPACKAGE_PARSE_ERROR";
+  }
+  if (v === "E_DATAPACKAGE_PATH_SEPARATOR") {
+    return "E_DATAPACKAGE_PATH_SEPARATOR";
   }
   if (v === "E_DATAPACKAGE_RESOURCE_MISSING") {
     return "E_DATAPACKAGE_RESOURCE_MISSING";
@@ -15804,6 +15814,426 @@ var parseBaseDataSet = (conceptsInput) => (entitiesInput) => {
   fail();
 };
 
+// output-es/Node.FS.Sync/foreign.js
+import {
+  accessSync,
+  copyFileSync,
+  mkdtempSync,
+  renameSync,
+  truncateSync,
+  chownSync,
+  chmodSync,
+  statSync,
+  lstatSync,
+  linkSync,
+  symlinkSync,
+  readlinkSync,
+  realpathSync,
+  unlinkSync,
+  rmdirSync,
+  rmSync,
+  mkdirSync,
+  readdirSync,
+  utimesSync,
+  readFileSync as readFileSync2,
+  writeFileSync as writeFileSync2,
+  appendFileSync,
+  existsSync,
+  openSync,
+  readSync,
+  writeSync,
+  fsyncSync,
+  closeSync
+} from "node:fs";
+
+// output-es/Data.JSON.DataPackage/foreign.js
+var normalizeResourcePaths = (content) => {
+  const datapackage = JSON.parse(content);
+  let backslashes = 0;
+  let affectedPaths = 0;
+  for (const resource of datapackage.resources) {
+    let changed = false;
+    resource.path = resource.path.replace(/\\/g, () => {
+      backslashes++;
+      changed = true;
+      return "/";
+    });
+    if (changed) affectedPaths++;
+  }
+  return {
+    backslashes,
+    affectedPaths,
+    content: affectedPaths === 0 ? content : JSON.stringify(datapackage, null, 4) + "\n"
+  };
+};
+
+// output-es/Data.JSON.DataPackage/index.js
+var constraintsIsSymbol = { reflectSymbol: () => "constraints" };
+var enumIsSymbol = { reflectSymbol: () => "enum" };
+var nameIsSymbol = { reflectSymbol: () => "name" };
+var write3 = /* @__PURE__ */ (() => {
+  const $0 = writeForeignFieldsCons(constraintsIsSymbol)((() => {
+    const $02 = writeForeignFieldsCons(enumIsSymbol)({ writeImpl: (xs) => arrayMap(unsafeCoerce)(xs) })(writeForeignFieldsNilRowR)()()();
+    return {
+      writeImpl: (v2) => {
+        if (v2.tag === "Nothing") {
+          return _undefined;
+        }
+        if (v2.tag === "Just") {
+          return $02.writeImplFields($$Proxy)(v2._1)({});
+        }
+        fail();
+      }
+    };
+  })())(writeForeignFieldsCons(nameIsSymbol)(writeForeignNonEmptyStrin)(writeForeignFieldsNilRowR)()()())()()();
+  return (xs) => arrayMap((rec) => $0.writeImplFields($$Proxy)(rec)({}))(xs);
+})();
+var write32 = /* @__PURE__ */ (() => writeForeignNullable(writeForeignString).writeImpl)();
+var writeForeignMaybe = {
+  writeImpl: (v2) => {
+    if (v2.tag === "Nothing") {
+      return _undefined;
+    }
+    if (v2.tag === "Just") {
+      return v2._1;
+    }
+    fail();
+  }
+};
+var idIsSymbol = { reflectSymbol: () => "id" };
+var writeForeignRecord1 = /* @__PURE__ */ (() => {
+  const $0 = writeForeignFieldsCons(idIsSymbol)(writeForeignString)(writeForeignFieldsCons(nameIsSymbol)(writeForeignMaybe)(writeForeignFieldsNilRowR)()()())()()();
+  return { writeImpl: (rec) => $0.writeImplFields($$Proxy)(rec)({}) };
+})();
+var bind3 = /* @__PURE__ */ (() => bindExceptT(monadIdentity).bind)();
+var readProp2 = /* @__PURE__ */ unsafeReadProp(monadIdentity);
+var readForeignFieldsCons1 = /* @__PURE__ */ readForeignFieldsCons(nameIsSymbol)(readForeignNonEmptyString);
+var fieldsIsSymbol = { reflectSymbol: () => "fields" };
+var primaryKeyIsSymbol = { reflectSymbol: () => "primaryKey" };
+var readForeignArray2 = /* @__PURE__ */ readForeignArray(/* @__PURE__ */ (() => {
+  const $0 = readForeignFieldsCons1(readForeignFieldsCons({ reflectSymbol: () => "path" })(readForeignNonEmptyString)(readForeignFieldsCons({
+    reflectSymbol: () => "schema"
+  })((() => {
+    const $02 = readForeignFieldsCons(fieldsIsSymbol)(readForeignArray((() => {
+      const $03 = readForeignFieldsCons(constraintsIsSymbol)(readForeignMaybe((() => {
+        const $04 = readForeignFieldsCons(enumIsSymbol)(readForeignArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()();
+        return {
+          readImpl: (o) => {
+            const $1 = $04.getFields($$Proxy)(o);
+            if ($1.tag === "Left") {
+              return $Either("Left", $1._1);
+            }
+            if ($1.tag === "Right") {
+              return $Either("Right", $1._1({}));
+            }
+            fail();
+          }
+        };
+      })()))(readForeignFieldsCons1(readForeignFieldsNilRowRo)()())()();
+      return {
+        readImpl: (o) => {
+          const $1 = $03.getFields($$Proxy)(o);
+          if ($1.tag === "Left") {
+            return $Either("Left", $1._1);
+          }
+          if ($1.tag === "Right") {
+            return $Either("Right", $1._1({}));
+          }
+          fail();
+        }
+      };
+    })()))(readForeignFieldsCons(primaryKeyIsSymbol)(readForeignNonEmptyArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()())()();
+    return {
+      readImpl: (o) => {
+        const $1 = $02.getFields($$Proxy)(o);
+        if ($1.tag === "Left") {
+          return $Either("Left", $1._1);
+        }
+        if ($1.tag === "Right") {
+          return $Either("Right", $1._1({}));
+        }
+        fail();
+      }
+    };
+  })())(readForeignFieldsNilRowRo)()())()())()();
+  return {
+    readImpl: (o) => {
+      const $1 = $0.getFields($$Proxy)(o);
+      if ($1.tag === "Left") {
+        return $Either("Left", $1._1);
+      }
+      if ($1.tag === "Right") {
+        return $Either("Right", $1._1({}));
+      }
+      fail();
+    }
+  };
+})());
+var applicativeV5 = /* @__PURE__ */ (() => {
+  const applyV1 = applyV(semigroupArray);
+  return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
+})();
+var difference2 = /* @__PURE__ */ foldrArray(/* @__PURE__ */ $$delete(eqString));
+var fromFoldable14 = /* @__PURE__ */ (() => {
+  const $0 = foldable1NonEmptyList.Foldable0().foldr;
+  return (x) => fromFoldableImpl($0, x);
+})();
+var lookup6 = /* @__PURE__ */ lookup4(hashableString);
+var insert5 = /* @__PURE__ */ insertPurs(eqStringImpl, hashString);
+var eqArray = { eq: /* @__PURE__ */ eqArrayImpl(eqStringImpl) };
+var difference1 = /* @__PURE__ */ foldrArray(/* @__PURE__ */ $$delete(eqString));
+var sequence_ = /* @__PURE__ */ traverse_(applicativeV5)(foldableArray)(identity2);
+var writeResource = (res) => ({ name: res.name, path: res.path, schema: { fields: write3(res.schema.fields), primaryKey: arrayMap(unsafeCoerce)(res.schema.primaryKey) } });
+var writeDdfSchema = (schema) => ({
+  primaryKey: arrayMap(unsafeCoerce)(schema.primaryKey),
+  value: write32(schema.value),
+  resources: arrayMap(unsafeCoerce)(schema.resources)
+});
+var writeDataPackage = (dp) => ({
+  name: (() => {
+    if (dp.name.tag === "Nothing") {
+      return _undefined;
+    }
+    if (dp.name.tag === "Just") {
+      return dp.name._1;
+    }
+    fail();
+  })(),
+  title: (() => {
+    if (dp.title.tag === "Nothing") {
+      return _undefined;
+    }
+    if (dp.title.tag === "Just") {
+      return dp.title._1;
+    }
+    fail();
+  })(),
+  description: (() => {
+    if (dp.description.tag === "Nothing") {
+      return _undefined;
+    }
+    if (dp.description.tag === "Just") {
+      return dp.description._1;
+    }
+    fail();
+  })(),
+  author: (() => {
+    if (dp.author.tag === "Nothing") {
+      return _undefined;
+    }
+    if (dp.author.tag === "Just") {
+      return dp.author._1;
+    }
+    fail();
+  })(),
+  license: (() => {
+    if (dp.license.tag === "Nothing") {
+      return _undefined;
+    }
+    if (dp.license.tag === "Just") {
+      return dp.license._1;
+    }
+    fail();
+  })(),
+  language: (() => {
+    if (dp.language.tag === "Nothing") {
+      return _undefined;
+    }
+    if (dp.language.tag === "Just") {
+      return writeForeignRecord1.writeImpl(dp.language._1);
+    }
+    fail();
+  })(),
+  created: (() => {
+    if (dp.created.tag === "Nothing") {
+      return _undefined;
+    }
+    if (dp.created.tag === "Just") {
+      return dp.created._1;
+    }
+    fail();
+  })(),
+  translations: (() => {
+    if (dp.translations.tag === "Nothing") {
+      return _undefined;
+    }
+    if (dp.translations.tag === "Just") {
+      return arrayMap(writeForeignRecord1.writeImpl)(dp.translations._1);
+    }
+    fail();
+  })(),
+  version: (() => {
+    if (dp.version.tag === "Nothing") {
+      return _undefined;
+    }
+    if (dp.version.tag === "Just") {
+      return dp.version._1;
+    }
+    fail();
+  })(),
+  resources: arrayMap(writeResource)(dp.resources),
+  ddfSchema: {
+    concepts: arrayMap(writeDdfSchema)(dp.ddfSchema.concepts),
+    entities: arrayMap(writeDdfSchema)(dp.ddfSchema.entities),
+    datapoints: arrayMap(writeDdfSchema)(dp.ddfSchema.datapoints),
+    synonyms: arrayMap(writeDdfSchema)(dp.ddfSchema.synonyms)
+  }
+});
+var parseDataPackageResources = (content) => {
+  const $0 = bind3(parseJSON(content))((json) => bind3(readProp2("resources")(json))((prop) => readForeignArray2.readImpl(prop)));
+  if ($0.tag === "Left") {
+    return $Either(
+      "Left",
+      [
+        $Issue(
+          "CodedIssue",
+          E_DATAPACKAGE_PARSE_ERROR,
+          {
+            ...emptyContext,
+            message: $Maybe(
+              "Just",
+              joinWith("\n")(fromFoldableImpl(
+                foldableNonEmptyList.foldr,
+                $NonEmpty(
+                  (() => {
+                    const $1 = errorToJSON($0._1._1);
+                    return $1.message + " at " + $1.path;
+                  })(),
+                  listMap(renderHumanError)($0._1._2)
+                )
+              ))
+            )
+          }
+        )
+      ]
+    );
+  }
+  if ($0.tag === "Right") {
+    return applicativeV5.pure($0._1);
+  }
+  fail();
+};
+var datapackageExists = (path2) => {
+  const datapackagePath = concat3([path2, "datapackage.json"]);
+  return () => {
+    const dpExists = existsSync(datapackagePath);
+    if (dpExists) {
+      return applicativeV5.pure(datapackagePath);
+    }
+    return $Either("Left", [$Issue("CodedIssue", E_DATAPACKAGE_NOT_FOUND, emptyContext)]);
+  };
+};
+var createResources = (root) => (xs) => foldlArray((v) => (v1) => {
+  const headers$p = arrayMap(unsafeCoerce)(v1.csvContent.headers);
+  const fp = joinWith("/")(split(sep)(relative(root)(v1.fileInfo.filepath)));
+  const basename2 = basenameWithoutExt(fp)(".csv");
+  const v2 = lookup6(basename2)(v._1);
+  const resCount = (() => {
+    if (v2.tag === "Nothing") {
+      return 0;
+    }
+    if (v2.tag === "Just") {
+      return v2._1 + 1 | 0;
+    }
+    fail();
+  })();
+  const resName = resCount === 0 ? basename2 : basename2 + "-" + showIntImpl(resCount);
+  return $Tuple(
+    insert5(basename2)(resCount)(v._1),
+    snoc(v._2)({
+      name: (() => {
+        if (resName === "") {
+          fail();
+        }
+        return resName;
+      })(),
+      path: (() => {
+        if (fp === "") {
+          fail();
+        }
+        return fp;
+      })(),
+      schema: {
+        fields: (() => {
+          if (v1.fileInfo.collectionInfo.tag === "DataPoints") {
+            const part1 = arrayMap((v3) => ({
+              name: v3._1,
+              constraints: (() => {
+                if (v3._2.tag === "Nothing") {
+                  return Nothing;
+                }
+                if (v3._2.tag === "Just") {
+                  return $Maybe("Just", { enum: [v3._2._1] });
+                }
+                fail();
+              })()
+            }))(fromFoldable14(zipWith3(Tuple)(v1.fileInfo.collectionInfo._1.pkeys)(v1.fileInfo.collectionInfo._1.constraints)));
+            const $0 = arrayMap((h) => ({ name: h, constraints: Nothing }))(difference2(headers$p)(fromFoldable14(v1.fileInfo.collectionInfo._1.pkeys)));
+            if ($0.length > 0) {
+              return [...part1, ...$0];
+            }
+            return part1;
+          }
+          return arrayMap((h) => ({ name: h, constraints: Nothing }))(headers$p);
+        })(),
+        primaryKey: getPrimaryKey(v1)
+      }
+    })
+  );
+})($Tuple(empty2, []))(xs)._2;
+var compareOneResource = (x) => (y) => {
+  if (x.path !== y.path) {
+    return $Either(
+      "Left",
+      [
+        $Issue(
+          "CodedIssue",
+          E_GENERAL,
+          { ...emptyContext, message: $Maybe("Just", "tried to compare resources with different path: " + x.path + " and " + y.path) }
+        )
+      ]
+    );
+  }
+  if (!(eqArrayImpl((ra) => (rb) => (ra.constraints.tag === "Nothing" ? rb.constraints.tag === "Nothing" : ra.constraints.tag === "Just" && rb.constraints.tag === "Just" && eqArray.eq(ra.constraints._1.enum)(rb.constraints._1.enum)) && ra.name === rb.name)(x.schema.fields)(y.schema.fields) && eqArrayImpl(eqStringImpl)(x.schema.primaryKey)(y.schema.primaryKey))) {
+    return $Either(
+      "Left",
+      [
+        $Issue(
+          "CodedIssue",
+          E_DATAPACKAGE_SCHEMA_MISMATCH,
+          { ...emptyContext, message: $Maybe("Just", "resource: " + x.path) }
+        )
+      ]
+    );
+  }
+  return applicativeV5.pure();
+};
+var compareResources = (expected) => (actual) => {
+  const expectedSorted = sortBy((x) => (y) => ordString.compare(x.path)(y.path))(expected);
+  const expectedPaths = arrayMap((v) => v.path)(expectedSorted);
+  const actualSorted = sortBy((x) => (y) => ordString.compare(x.path)(y.path))(actual);
+  const actualPaths = arrayMap((v) => v.path)(actualSorted);
+  if (!eqArray.eq(expectedPaths)(actualPaths)) {
+    return $Either(
+      "Left",
+      [
+        $Issue(
+          "CodedIssue",
+          E_DATAPACKAGE_RESOURCE_MISSING,
+          {
+            ...emptyContext,
+            message: $Maybe(
+              "Just",
+              "Expected following resources exist: " + joinWith(", ")(arrayMap(toString3)(difference1(expectedPaths)(actualPaths)))
+            )
+          }
+        )
+      ]
+    );
+  }
+  return sequence_(zipWithImpl(compareOneResource, expectedSorted, actualSorted));
+};
+
 // output-es/Data.Validation.Result/index.js
 var showMessage = (v) => {
   const statstr = v.isWarning ? "[WARN] " : "[ERR] ";
@@ -15905,40 +16335,8 @@ var getState = (dictMonad) => {
   )));
 };
 
-// output-es/Node.FS.Sync/foreign.js
-import {
-  accessSync,
-  copyFileSync,
-  mkdtempSync,
-  renameSync,
-  truncateSync,
-  chownSync,
-  chmodSync,
-  statSync,
-  lstatSync,
-  linkSync,
-  symlinkSync,
-  readlinkSync,
-  realpathSync,
-  unlinkSync,
-  rmdirSync,
-  rmSync,
-  mkdirSync,
-  readdirSync,
-  utimesSync,
-  readFileSync as readFileSync2,
-  writeFileSync as writeFileSync2,
-  appendFileSync,
-  existsSync,
-  openSync,
-  readSync,
-  writeSync,
-  fsyncSync,
-  closeSync
-} from "node:fs";
-
 // output-es/App.Validation.Common/index.js
-var applicativeV5 = /* @__PURE__ */ (() => {
+var applicativeV6 = /* @__PURE__ */ (() => {
   const applyV1 = applyV(semigroupArray);
   return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
 })();
@@ -15951,7 +16349,7 @@ var applicativeVT = /* @__PURE__ */ applicativeExceptT({
   Applicative0: () => applicativeStateT(monadAff),
   Bind1: () => bindStateT(monadAff)
 });
-var sequence4 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV5)(identity3))();
+var sequence4 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeV6)(identity3))();
 var joinWith2 = (splice) => (xs) => foldlArray((v) => (v1) => {
   if (v.init) {
     return { init: false, acc: v1 };
@@ -16085,6 +16483,7 @@ var emitErrorsAndStop = (dictMonad) => {
   const vError3 = vError(dictMonad);
   return (issues) => vError3(arrayMap((x) => ({ ...messageFromIssue(x), isWarning: false }))(issues));
 };
+var emitErrorsAndStop1 = /* @__PURE__ */ emitErrorsAndStop(monadAff);
 var validateBaseDataSet = (conceptsInput) => (entitiesInput) => (dictMonad) => {
   const $0 = parseBaseDataSet(conceptsInput)(entitiesInput);
   if ($0.tag === "Right") {
@@ -16214,16 +16613,17 @@ var emitErrorsAndContinue = (dictMonad) => {
     Bind1: () => bindStateT(dictMonad)
   }).pure());
 };
+var emitErrorsAndContinue1 = /* @__PURE__ */ emitErrorsAndContinue(monadAff);
 var emitFormatIssues = (dictMonad) => {
   const for_12 = for_(applicativeExceptT({
     Applicative0: () => applicativeStateT(dictMonad),
     Bind1: () => bindStateT(dictMonad)
   }))(foldableArray);
-  const emitErrorsAndContinue1 = emitErrorsAndContinue(dictMonad);
+  const emitErrorsAndContinue22 = emitErrorsAndContinue(dictMonad);
   const emitWarningsAndContinue22 = emitWarningsAndContinue(dictMonad);
   return (fp) => (formatIssues) => for_12(formatIssues)((issue) => {
     if (issue === "ENCODING") {
-      return emitErrorsAndContinue1([
+      return emitErrorsAndContinue22([
         $Issue(
           "CodedIssue",
           E_CSV_FORMAT_ENCODING,
@@ -16253,6 +16653,51 @@ var emitFormatIssues = (dictMonad) => {
   });
 };
 var emitFormatIssues1 = /* @__PURE__ */ emitFormatIssues(monadAff);
+var readDataPackageResources = (fixFormat) => (path2) => bindVT.bind(liftEffect(datapackageExists(path2)))((datapackage) => {
+  if (datapackage.tag === "Left") {
+    return bindVT.bind(emitErrorsAndContinue1(datapackage._1))(() => applicativeVT.pure([]));
+  }
+  if (datapackage.tag === "Right") {
+    const $0 = datapackage._1;
+    return bindVT.bind(monadtransVT.lift(monadAff)(toAff2(readTextFile)(UTF8)($0)))((content) => {
+      const $1 = parseDataPackageResources(content);
+      if ($1.tag === "Left") {
+        return bindVT.bind(emitErrorsAndContinue1($1._1))(() => applicativeVT.pure([]));
+      }
+      if ($1.tag === "Right") {
+        const normalized = normalizeResourcePaths(content);
+        if (normalized.affectedPaths === 0) {
+          return applicativeVT.pure($1._1);
+        }
+        return bindVT.bind(fixFormat ? monadtransVT.lift(monadAff)(toAff3(writeTextFile)(UTF8)($0)(normalized.content)) : emitErrorsAndContinue1([
+          $Issue(
+            "CodedIssue",
+            E_DATAPACKAGE_PATH_SEPARATOR,
+            {
+              ...emptyContext,
+              fileContext: $Maybe("Just", { filepath: $0, lineNo: -1 }),
+              message: $Maybe(
+                "Just",
+                "found " + showIntImpl(normalized.backslashes) + " backslashes in " + showIntImpl(normalized.affectedPaths) + " resource paths; expected Linux/macOS-style paths with forward slashes (/); run `validate-ddf --fix` to auto-replace"
+              )
+            }
+          )
+        ]))(() => {
+          const $2 = parseDataPackageResources(normalized.content);
+          if ($2.tag === "Left") {
+            return emitErrorsAndStop1($2._1);
+          }
+          if ($2.tag === "Right") {
+            return applicativeVT.pure($2._1);
+          }
+          fail();
+        });
+      }
+      fail();
+    });
+  }
+  fail();
+});
 var validateDataPoints = (csvfiles) => (dictMonad) => {
   const $0 = applicativeExceptT({
     Applicative0: () => applicativeStateT(dictMonad),
@@ -16398,373 +16843,6 @@ var readAndParseCsvFiles = (fixFormat) => (files) => bindVT.bind(monadtransVT.li
   rawContents
 ))((v) => emitFormatIssues1(v._1.filepath)(parseFormatIssues(v._2.formatIssues))))(() => validateCsvFiles1(zipWithImpl(Tuple, files, rawContents))(monadAff)));
 
-// output-es/Data.JSON.DataPackage/index.js
-var constraintsIsSymbol = { reflectSymbol: () => "constraints" };
-var enumIsSymbol = { reflectSymbol: () => "enum" };
-var nameIsSymbol = { reflectSymbol: () => "name" };
-var write3 = /* @__PURE__ */ (() => {
-  const $0 = writeForeignFieldsCons(constraintsIsSymbol)((() => {
-    const $02 = writeForeignFieldsCons(enumIsSymbol)({ writeImpl: (xs) => arrayMap(unsafeCoerce)(xs) })(writeForeignFieldsNilRowR)()()();
-    return {
-      writeImpl: (v2) => {
-        if (v2.tag === "Nothing") {
-          return _undefined;
-        }
-        if (v2.tag === "Just") {
-          return $02.writeImplFields($$Proxy)(v2._1)({});
-        }
-        fail();
-      }
-    };
-  })())(writeForeignFieldsCons(nameIsSymbol)(writeForeignNonEmptyStrin)(writeForeignFieldsNilRowR)()()())()()();
-  return (xs) => arrayMap((rec) => $0.writeImplFields($$Proxy)(rec)({}))(xs);
-})();
-var write32 = /* @__PURE__ */ (() => writeForeignNullable(writeForeignString).writeImpl)();
-var writeForeignMaybe = {
-  writeImpl: (v2) => {
-    if (v2.tag === "Nothing") {
-      return _undefined;
-    }
-    if (v2.tag === "Just") {
-      return v2._1;
-    }
-    fail();
-  }
-};
-var idIsSymbol = { reflectSymbol: () => "id" };
-var writeForeignRecord1 = /* @__PURE__ */ (() => {
-  const $0 = writeForeignFieldsCons(idIsSymbol)(writeForeignString)(writeForeignFieldsCons(nameIsSymbol)(writeForeignMaybe)(writeForeignFieldsNilRowR)()()())()()();
-  return { writeImpl: (rec) => $0.writeImplFields($$Proxy)(rec)({}) };
-})();
-var bind3 = /* @__PURE__ */ (() => bindExceptT(monadIdentity).bind)();
-var readProp2 = /* @__PURE__ */ unsafeReadProp(monadIdentity);
-var readForeignFieldsCons1 = /* @__PURE__ */ readForeignFieldsCons(nameIsSymbol)(readForeignNonEmptyString);
-var fieldsIsSymbol = { reflectSymbol: () => "fields" };
-var primaryKeyIsSymbol = { reflectSymbol: () => "primaryKey" };
-var readForeignArray2 = /* @__PURE__ */ readForeignArray(/* @__PURE__ */ (() => {
-  const $0 = readForeignFieldsCons1(readForeignFieldsCons({ reflectSymbol: () => "path" })(readForeignNonEmptyString)(readForeignFieldsCons({
-    reflectSymbol: () => "schema"
-  })((() => {
-    const $02 = readForeignFieldsCons(fieldsIsSymbol)(readForeignArray((() => {
-      const $03 = readForeignFieldsCons(constraintsIsSymbol)(readForeignMaybe((() => {
-        const $04 = readForeignFieldsCons(enumIsSymbol)(readForeignArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()();
-        return {
-          readImpl: (o) => {
-            const $1 = $04.getFields($$Proxy)(o);
-            if ($1.tag === "Left") {
-              return $Either("Left", $1._1);
-            }
-            if ($1.tag === "Right") {
-              return $Either("Right", $1._1({}));
-            }
-            fail();
-          }
-        };
-      })()))(readForeignFieldsCons1(readForeignFieldsNilRowRo)()())()();
-      return {
-        readImpl: (o) => {
-          const $1 = $03.getFields($$Proxy)(o);
-          if ($1.tag === "Left") {
-            return $Either("Left", $1._1);
-          }
-          if ($1.tag === "Right") {
-            return $Either("Right", $1._1({}));
-          }
-          fail();
-        }
-      };
-    })()))(readForeignFieldsCons(primaryKeyIsSymbol)(readForeignNonEmptyArray(readForeignNonEmptyString))(readForeignFieldsNilRowRo)()())()();
-    return {
-      readImpl: (o) => {
-        const $1 = $02.getFields($$Proxy)(o);
-        if ($1.tag === "Left") {
-          return $Either("Left", $1._1);
-        }
-        if ($1.tag === "Right") {
-          return $Either("Right", $1._1({}));
-        }
-        fail();
-      }
-    };
-  })())(readForeignFieldsNilRowRo)()())()())()();
-  return {
-    readImpl: (o) => {
-      const $1 = $0.getFields($$Proxy)(o);
-      if ($1.tag === "Left") {
-        return $Either("Left", $1._1);
-      }
-      if ($1.tag === "Right") {
-        return $Either("Right", $1._1({}));
-      }
-      fail();
-    }
-  };
-})());
-var applicativeV6 = /* @__PURE__ */ (() => {
-  const applyV1 = applyV(semigroupArray);
-  return { pure: (x) => $Either("Right", x), Apply0: () => applyV1 };
-})();
-var difference2 = /* @__PURE__ */ foldrArray(/* @__PURE__ */ $$delete(eqString));
-var fromFoldable14 = /* @__PURE__ */ (() => {
-  const $0 = foldable1NonEmptyList.Foldable0().foldr;
-  return (x) => fromFoldableImpl($0, x);
-})();
-var lookup6 = /* @__PURE__ */ lookup4(hashableString);
-var insert5 = /* @__PURE__ */ insertPurs(eqStringImpl, hashString);
-var eqArray = { eq: /* @__PURE__ */ eqArrayImpl(eqStringImpl) };
-var difference1 = /* @__PURE__ */ foldrArray(/* @__PURE__ */ $$delete(eqString));
-var sequence_ = /* @__PURE__ */ traverse_(applicativeV6)(foldableArray)(identity2);
-var writeResource = (res) => ({ name: res.name, path: res.path, schema: { fields: write3(res.schema.fields), primaryKey: arrayMap(unsafeCoerce)(res.schema.primaryKey) } });
-var writeDdfSchema = (schema) => ({
-  primaryKey: arrayMap(unsafeCoerce)(schema.primaryKey),
-  value: write32(schema.value),
-  resources: arrayMap(unsafeCoerce)(schema.resources)
-});
-var writeDataPackage = (dp) => ({
-  name: (() => {
-    if (dp.name.tag === "Nothing") {
-      return _undefined;
-    }
-    if (dp.name.tag === "Just") {
-      return dp.name._1;
-    }
-    fail();
-  })(),
-  title: (() => {
-    if (dp.title.tag === "Nothing") {
-      return _undefined;
-    }
-    if (dp.title.tag === "Just") {
-      return dp.title._1;
-    }
-    fail();
-  })(),
-  description: (() => {
-    if (dp.description.tag === "Nothing") {
-      return _undefined;
-    }
-    if (dp.description.tag === "Just") {
-      return dp.description._1;
-    }
-    fail();
-  })(),
-  author: (() => {
-    if (dp.author.tag === "Nothing") {
-      return _undefined;
-    }
-    if (dp.author.tag === "Just") {
-      return dp.author._1;
-    }
-    fail();
-  })(),
-  license: (() => {
-    if (dp.license.tag === "Nothing") {
-      return _undefined;
-    }
-    if (dp.license.tag === "Just") {
-      return dp.license._1;
-    }
-    fail();
-  })(),
-  language: (() => {
-    if (dp.language.tag === "Nothing") {
-      return _undefined;
-    }
-    if (dp.language.tag === "Just") {
-      return writeForeignRecord1.writeImpl(dp.language._1);
-    }
-    fail();
-  })(),
-  created: (() => {
-    if (dp.created.tag === "Nothing") {
-      return _undefined;
-    }
-    if (dp.created.tag === "Just") {
-      return dp.created._1;
-    }
-    fail();
-  })(),
-  translations: (() => {
-    if (dp.translations.tag === "Nothing") {
-      return _undefined;
-    }
-    if (dp.translations.tag === "Just") {
-      return arrayMap(writeForeignRecord1.writeImpl)(dp.translations._1);
-    }
-    fail();
-  })(),
-  version: (() => {
-    if (dp.version.tag === "Nothing") {
-      return _undefined;
-    }
-    if (dp.version.tag === "Just") {
-      return dp.version._1;
-    }
-    fail();
-  })(),
-  resources: arrayMap(writeResource)(dp.resources),
-  ddfSchema: {
-    concepts: arrayMap(writeDdfSchema)(dp.ddfSchema.concepts),
-    entities: arrayMap(writeDdfSchema)(dp.ddfSchema.entities),
-    datapoints: arrayMap(writeDdfSchema)(dp.ddfSchema.datapoints),
-    synonyms: arrayMap(writeDdfSchema)(dp.ddfSchema.synonyms)
-  }
-});
-var parseDataPackageResources = (content) => {
-  const $0 = bind3(parseJSON(content))((json) => bind3(readProp2("resources")(json))((prop) => readForeignArray2.readImpl(prop)));
-  if ($0.tag === "Left") {
-    return $Either(
-      "Left",
-      [
-        $Issue(
-          "CodedIssue",
-          E_DATAPACKAGE_PARSE_ERROR,
-          {
-            ...emptyContext,
-            message: $Maybe(
-              "Just",
-              joinWith("\n")(fromFoldableImpl(
-                foldableNonEmptyList.foldr,
-                $NonEmpty(
-                  (() => {
-                    const $1 = errorToJSON($0._1._1);
-                    return $1.message + " at " + $1.path;
-                  })(),
-                  listMap(renderHumanError)($0._1._2)
-                )
-              ))
-            )
-          }
-        )
-      ]
-    );
-  }
-  if ($0.tag === "Right") {
-    return applicativeV6.pure($0._1);
-  }
-  fail();
-};
-var datapackageExists = (path2) => {
-  const datapackagePath = concat3([path2, "datapackage.json"]);
-  return () => {
-    const dpExists = existsSync(datapackagePath);
-    if (dpExists) {
-      return applicativeV6.pure(datapackagePath);
-    }
-    return $Either("Left", [$Issue("CodedIssue", E_DATAPACKAGE_NOT_FOUND, emptyContext)]);
-  };
-};
-var createResources = (root) => (xs) => foldlArray((v) => (v1) => {
-  const headers$p = arrayMap(unsafeCoerce)(v1.csvContent.headers);
-  const fp = relative(root)(v1.fileInfo.filepath);
-  const basename2 = basenameWithoutExt(fp)(".csv");
-  const v2 = lookup6(basename2)(v._1);
-  const resCount = (() => {
-    if (v2.tag === "Nothing") {
-      return 0;
-    }
-    if (v2.tag === "Just") {
-      return v2._1 + 1 | 0;
-    }
-    fail();
-  })();
-  const resName = resCount === 0 ? basename2 : basename2 + "-" + showIntImpl(resCount);
-  return $Tuple(
-    insert5(basename2)(resCount)(v._1),
-    snoc(v._2)({
-      name: (() => {
-        if (resName === "") {
-          fail();
-        }
-        return resName;
-      })(),
-      path: (() => {
-        if (fp === "") {
-          fail();
-        }
-        return fp;
-      })(),
-      schema: {
-        fields: (() => {
-          if (v1.fileInfo.collectionInfo.tag === "DataPoints") {
-            const part1 = arrayMap((v3) => ({
-              name: v3._1,
-              constraints: (() => {
-                if (v3._2.tag === "Nothing") {
-                  return Nothing;
-                }
-                if (v3._2.tag === "Just") {
-                  return $Maybe("Just", { enum: [v3._2._1] });
-                }
-                fail();
-              })()
-            }))(fromFoldable14(zipWith3(Tuple)(v1.fileInfo.collectionInfo._1.pkeys)(v1.fileInfo.collectionInfo._1.constraints)));
-            const $0 = arrayMap((h) => ({ name: h, constraints: Nothing }))(difference2(headers$p)(fromFoldable14(v1.fileInfo.collectionInfo._1.pkeys)));
-            if ($0.length > 0) {
-              return [...part1, ...$0];
-            }
-            return part1;
-          }
-          return arrayMap((h) => ({ name: h, constraints: Nothing }))(headers$p);
-        })(),
-        primaryKey: getPrimaryKey(v1)
-      }
-    })
-  );
-})($Tuple(empty2, []))(xs)._2;
-var compareOneResource = (x) => (y) => {
-  if (x.path !== y.path) {
-    return $Either(
-      "Left",
-      [
-        $Issue(
-          "CodedIssue",
-          E_GENERAL,
-          { ...emptyContext, message: $Maybe("Just", "tried to compare resources with different path: " + x.path + " and " + y.path) }
-        )
-      ]
-    );
-  }
-  if (!(eqArrayImpl((ra) => (rb) => (ra.constraints.tag === "Nothing" ? rb.constraints.tag === "Nothing" : ra.constraints.tag === "Just" && rb.constraints.tag === "Just" && eqArray.eq(ra.constraints._1.enum)(rb.constraints._1.enum)) && ra.name === rb.name)(x.schema.fields)(y.schema.fields) && eqArrayImpl(eqStringImpl)(x.schema.primaryKey)(y.schema.primaryKey))) {
-    return $Either(
-      "Left",
-      [
-        $Issue(
-          "CodedIssue",
-          E_DATAPACKAGE_SCHEMA_MISMATCH,
-          { ...emptyContext, message: $Maybe("Just", "resource: " + x.path) }
-        )
-      ]
-    );
-  }
-  return applicativeV6.pure();
-};
-var compareResources = (expected) => (actual) => {
-  const expectedSorted = sortBy((x) => (y) => ordString.compare(x.path)(y.path))(expected);
-  const expectedPaths = arrayMap((v) => v.path)(expectedSorted);
-  const actualSorted = sortBy((x) => (y) => ordString.compare(x.path)(y.path))(actual);
-  const actualPaths = arrayMap((v) => v.path)(actualSorted);
-  if (!eqArray.eq(expectedPaths)(actualPaths)) {
-    return $Either(
-      "Left",
-      [
-        $Issue(
-          "CodedIssue",
-          E_DATAPACKAGE_RESOURCE_MISSING,
-          {
-            ...emptyContext,
-            message: $Maybe(
-              "Just",
-              "Expected following resources exist: " + joinWith(", ")(arrayMap(toString3)(difference1(expectedPaths)(actualPaths)))
-            )
-          }
-        )
-      ]
-    );
-  }
-  return sequence_(zipWithImpl(compareOneResource, expectedSorted, actualSorted));
-};
-
 // output-es/Effect.Console/foreign.js
 var log2 = function(s) {
   return function() {
@@ -16777,16 +16855,14 @@ var bindVT2 = /* @__PURE__ */ bindExceptT({
   Applicative0: () => applicativeStateT(monadAff),
   Bind1: () => bindStateT(monadAff)
 });
-var liftEffect2 = /* @__PURE__ */ (() => monadEffectExceptT(monadEffectState(monadEffectAff)).liftEffect)();
-var emitErrorsAndContinue2 = /* @__PURE__ */ emitErrorsAndContinue(monadAff);
-var applicativeVT2 = /* @__PURE__ */ applicativeExceptT({
-  Applicative0: () => applicativeStateT(monadAff),
-  Bind1: () => bindStateT(monadAff)
-});
 var fromArrayBy2 = /* @__PURE__ */ (() => fromArrayPurs(eqCollectionConstant.eq, hashableCollectionConstant.hash))();
 var identity18 = (x) => x;
 var lookup7 = /* @__PURE__ */ lookup4(hashableCollectionConstant);
 var emitErrorsAndStop2 = /* @__PURE__ */ emitErrorsAndStop(monadAff);
+var applicativeVT2 = /* @__PURE__ */ applicativeExceptT({
+  Applicative0: () => applicativeStateT(monadAff),
+  Bind1: () => bindStateT(monadAff)
+});
 var traverse3 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeVT2))();
 var $$for = /* @__PURE__ */ (() => {
   const traverse22 = traversableArray.traverse(applicativeVT2);
@@ -16820,24 +16896,7 @@ var compare12 = /* @__PURE__ */ (() => {
   };
 })();
 var traverse1 = /* @__PURE__ */ (() => traversableArray.traverse(applicativeVT2))();
-var readDataPackageResources = (path2) => bindVT2.bind(liftEffect2(datapackageExists(path2)))((datapackage) => {
-  if (datapackage.tag === "Left") {
-    return bindVT2.bind(emitErrorsAndContinue2(datapackage._1))(() => applicativeVT2.pure([]));
-  }
-  if (datapackage.tag === "Right") {
-    return bindVT2.bind(monadtransVT.lift(monadAff)(toAff2(readTextFile)(UTF8)(datapackage._1)))((content) => {
-      const $0 = parseDataPackageResources(content);
-      if ($0.tag === "Left") {
-        return bindVT2.bind(emitErrorsAndContinue2($0._1))(() => applicativeVT2.pure([]));
-      }
-      if ($0.tag === "Right") {
-        return applicativeVT2.pure($0._1);
-      }
-      fail();
-    });
-  }
-  fail();
-});
+var emitErrorsAndContinue2 = /* @__PURE__ */ emitErrorsAndContinue(monadAff);
 var readAllFileInfoForValidation = (root) => (rs) => (dictMonad) => {
   const applicativeVT1 = applicativeExceptT({
     Applicative0: () => applicativeStateT(dictMonad),
@@ -16867,7 +16926,7 @@ var readAllFileInfoForValidation = (root) => (rs) => (dictMonad) => {
     }
   ]))(() => applicativeVT1.pure(ddfFiles));
 };
-var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("reading file list..."))))(() => bindVT2.bind(readDataPackageResources(path2))((resources) => bindVT2.bind(readAllFileInfoForValidation(path2)(resources)(monadAff))((ddfFiles) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
+var validate = (path2) => (fixFormat) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("reading file list..."))))(() => bindVT2.bind(readDataPackageResources(fixFormat)(path2))((resources) => bindVT2.bind(readAllFileInfoForValidation(path2)(resources)(monadAff))((ddfFiles) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
   const fileMap = fromArrayBy2((x) => {
     const $0 = (() => {
       if (0 < x.length) {
@@ -16904,7 +16963,7 @@ var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(l
       return applicativeVT2.pure(v._1);
     }
     fail();
-  })())((conceptFileInfos) => bindVT2.bind(traverse3(validateFileExists)(conceptFileInfos))((conceptFileInfos$p) => bindVT2.bind(readAndParseCsvFiles(false)(mapMaybe((x) => x)(conceptFileInfos$p)))((conceptCsvFiles) => bindVT2.bind($$for(conceptCsvFiles)((x) => validateConcepts(x)(monadAff)))((concepts) => {
+  })())((conceptFileInfos) => bindVT2.bind(traverse3(validateFileExists)(conceptFileInfos))((conceptFileInfos$p) => bindVT2.bind(readAndParseCsvFiles(fixFormat)(mapMaybe((x) => x)(conceptFileInfos$p)))((conceptCsvFiles) => bindVT2.bind($$for(conceptCsvFiles)((x) => validateConcepts(x)(monadAff)))((concepts) => {
     const conceptResources = createResources(path2)(conceptCsvFiles);
     return bindVT2.bind((() => {
       const v = lookup7(ENTITIES)(fileMap);
@@ -16915,7 +16974,7 @@ var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(l
         return applicativeVT2.pure(v._1);
       }
       fail();
-    })())((entityFileInfos) => bindVT2.bind(traverse3(validateFileExists)(entityFileInfos))((entityFileInfos$p) => bindVT2.bind(readAndParseCsvFiles(false)(mapMaybe((x) => x)(entityFileInfos$p)))((entityCsvFiles) => bindVT2.bind($$for(entityCsvFiles)((x) => validateEntities(x)(monadAff)))((entities) => {
+    })())((entityFileInfos) => bindVT2.bind(traverse3(validateFileExists)(entityFileInfos))((entityFileInfos$p) => bindVT2.bind(readAndParseCsvFiles(fixFormat)(mapMaybe((x) => x)(entityFileInfos$p)))((entityCsvFiles) => bindVT2.bind($$for(entityCsvFiles)((x) => validateEntities(x)(monadAff)))((entities) => {
       const entityResources = createResources(path2)(entityCsvFiles);
       return bindVT2.bind(validateBaseDataSet(concat(concepts))(concat(entities))(monadAff))((ds) => bindVT2.bind(traverse_3((c) => validateCsvHeaders(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT2.bind(traverse_3((c) => validateCsvHeaders(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT2.bind(getState2)((msgs) => {
         if (hasError(msgs)) {
@@ -16941,7 +17000,7 @@ var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(l
           if ($0.collectionInfo.tag === "DataPoints") {
             const $1 = $0.collectionInfo._1.indicator;
             const $2 = $0.collectionInfo._1.pkeys;
-            return bindVT2.bind(traverse1(validateFileExists)(group3))((group$p) => bindVT2.bind(readAndParseCsvFiles(false)(mapMaybe((x) => x)(group$p)))((dpscsvFiles) => bindVT2.bind(validateDatapointsFileGroup($1)($2)(ds)(dpscsvFiles)(monadAff))(() => applicativeVT2.pure(createResources(path2)(dpscsvFiles)))));
+            return bindVT2.bind(traverse1(validateFileExists)(group3))((group$p) => bindVT2.bind(readAndParseCsvFiles(fixFormat)(mapMaybe((x) => x)(group$p)))((dpscsvFiles) => bindVT2.bind(validateDatapointsFileGroup($1)($2)(ds)(dpscsvFiles)(monadAff))(() => applicativeVT2.pure(createResources(path2)(dpscsvFiles)))));
           }
           fail();
         }))((datapointResources_) => {
@@ -16956,7 +17015,7 @@ var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(l
               return bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating synonym files..."))))(() => applicativeVT2.pure($0));
             }
             fail();
-          })())((synonymFileInfos) => bindVT2.bind(readAndParseCsvFiles(false)(synonymFileInfos))((synonymCsvFiles) => bindVT2.bind(traverse_3((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(synonymCsvFiles))(() => {
+          })())((synonymFileInfos) => bindVT2.bind(readAndParseCsvFiles(fixFormat)(synonymFileInfos))((synonymCsvFiles) => bindVT2.bind(traverse_3((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(synonymCsvFiles))(() => {
             const synonymResources = createResources(path2)(synonymCsvFiles);
             return bindVT2.bind((() => {
               const v = lookup7(TRANSLATIONS)(fileMap);
@@ -16968,7 +17027,7 @@ var validate = (path2) => bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(l
                 return bindVT2.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating translation files..."))))(() => applicativeVT2.pure($0));
               }
               fail();
-            })())((translationFileInfos) => bindVT2.bind(readAndParseCsvFiles(false)(translationFileInfos))((translationCsvFiles) => bindVT2.bind(traverse_3((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(translationCsvFiles))(() => {
+            })())((translationFileInfos) => bindVT2.bind(readAndParseCsvFiles(fixFormat)(translationFileInfos))((translationCsvFiles) => bindVT2.bind(traverse_3((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(translationCsvFiles))(() => {
               const actualResources = [...conceptResources, ...entityResources, ...datapointResources, ...synonymResources];
               return bindVT2.bind((() => {
                 const $0 = compareResources(resources)(actualResources);
@@ -17010,16 +17069,15 @@ var bindVT3 = /* @__PURE__ */ bindExceptT({
   Applicative0: () => applicativeStateT(monadAff),
   Bind1: () => bindStateT(monadAff)
 });
-var liftEffect3 = /* @__PURE__ */ (() => monadEffectExceptT(monadEffectState(monadEffectAff)).liftEffect)();
-var emitErrorsAndContinue3 = /* @__PURE__ */ emitErrorsAndContinue(monadAff);
-var applicativeVT3 = /* @__PURE__ */ applicativeExceptT({
-  Applicative0: () => applicativeStateT(monadAff),
-  Bind1: () => bindStateT(monadAff)
-});
+var liftEffect1 = /* @__PURE__ */ (() => monadEffectExceptT(monadEffectState(monadEffectAff)).liftEffect)();
 var fromArrayBy3 = /* @__PURE__ */ (() => fromArrayPurs(eqCollectionConstant.eq, hashableCollectionConstant.hash))();
 var identity19 = (x) => x;
 var lookup8 = /* @__PURE__ */ lookup4(hashableCollectionConstant);
 var emitErrorsAndStop3 = /* @__PURE__ */ emitErrorsAndStop(monadAff);
+var applicativeVT3 = /* @__PURE__ */ applicativeExceptT({
+  Applicative0: () => applicativeStateT(monadAff),
+  Bind1: () => bindStateT(monadAff)
+});
 var $$for2 = /* @__PURE__ */ (() => {
   const traverse22 = traversableArray.traverse(applicativeVT3);
   return (x) => (f) => traverse22(f)(x);
@@ -17057,24 +17115,6 @@ var forWithIndex = /* @__PURE__ */ (() => {
   return (b) => (a) => $0(a)(b);
 })();
 var emitWarningsAndContinue2 = /* @__PURE__ */ emitWarningsAndContinue(monadAff);
-var readDataPackageResources2 = (path2) => bindVT3.bind(liftEffect3(datapackageExists(path2)))((datapackage) => {
-  if (datapackage.tag === "Left") {
-    return bindVT3.bind(emitErrorsAndContinue3(datapackage._1))(() => applicativeVT3.pure([]));
-  }
-  if (datapackage.tag === "Right") {
-    return bindVT3.bind(monadtransVT.lift(monadAff)(toAff2(readTextFile)(UTF8)(datapackage._1)))((content) => {
-      const $0 = parseDataPackageResources(content);
-      if ($0.tag === "Left") {
-        return bindVT3.bind(emitErrorsAndContinue3($0._1))(() => applicativeVT3.pure([]));
-      }
-      if ($0.tag === "Right") {
-        return applicativeVT3.pure($0._1);
-      }
-      fail();
-    });
-  }
-  fail();
-});
 var readAllFileInfoForValidation2 = (root) => (fs) => (dictMonad) => {
   const applicativeVT1 = applicativeExceptT({
     Applicative0: () => applicativeStateT(dictMonad),
@@ -17104,12 +17144,12 @@ var readAllFileInfoForValidation2 = (root) => (fs) => (dictMonad) => {
     }
   ]))(() => applicativeVT1.pure(ddfFiles));
 };
-var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("reading file list..."))))(() => bindVT3.bind(liftEffect3(progress("reading file list...")))(() => bindVT3.bind(monadtransVT.lift(monadAff)(getFiles(path2)([
+var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("reading file list..."))))(() => bindVT3.bind(liftEffect1(progress("reading file list...")))(() => bindVT3.bind(monadtransVT.lift(monadAff)(getFiles(path2)([
   ".git",
   "etl",
   "assets",
   "langsplit"
-])))((fs) => bindVT3.bind(readAllFileInfoForValidation2(path2)(fs)(monadAff))((ddfFiles) => bindVT3.bind(liftEffect3(progress("validating concepts and entities...")))(() => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
+])))((fs) => bindVT3.bind(readAllFileInfoForValidation2(path2)(fs)(monadAff))((ddfFiles) => bindVT3.bind(liftEffect1(progress("validating concepts and entities...")))(() => bindVT3.bind(monadtransVT.lift(monadAff)(_liftEffect(log2("validating concepts and entities..."))))(() => {
   const fileMap = fromArrayBy3((x) => {
     const $0 = (() => {
       if (0 < x.length) {
@@ -17165,7 +17205,7 @@ var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(mon
           return $0;
         }
         return applicativeVT3.pure();
-      })())(() => bindVT3.bind(liftEffect3(progress("cross-validating concepts and entities...")))(() => bindVT3.bind(validateBaseDataSet(concat(concepts))(concat(entities))(monadAff))((ds) => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(getState3)((msgs1) => {
+      })())(() => bindVT3.bind(liftEffect1(progress("cross-validating concepts and entities...")))(() => bindVT3.bind(validateBaseDataSet(concat(concepts))(concat(entities))(monadAff))((ds) => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(conceptCsvFiles))(() => bindVT3.bind(traverse_4((c) => validateCsvHeaders(ds)(c)(monadAff))(entityCsvFiles))(() => bindVT3.bind(getState3)((msgs1) => {
         if (hasError(msgs1)) {
           return applicativeVT3.pure($Tuple(ds, []));
         }
@@ -17182,7 +17222,7 @@ var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(mon
         })())((datapointFiles) => {
           const datapointFileGroups = groupAllBy((x) => (y) => compare13(x.collectionInfo.tag === "DataPoints" ? $Maybe("Just", $Tuple(x.collectionInfo._1.indicator, x.collectionInfo._1.pkeys)) : Nothing)(y.collectionInfo.tag === "DataPoints" ? $Maybe("Just", $Tuple(y.collectionInfo._1.indicator, y.collectionInfo._1.pkeys)) : Nothing))(datapointFiles);
           const total = datapointFileGroups.length;
-          return bindVT3.bind(forWithIndex(datapointFileGroups)((i) => (group3) => bindVT3.bind(liftEffect3(progress("validating datapoints: " + showIntImpl(i + 1 | 0) + "/" + showIntImpl(total) + " indicator groups")))(() => {
+          return bindVT3.bind(forWithIndex(datapointFileGroups)((i) => (group3) => bindVT3.bind(liftEffect1(progress("validating datapoints: " + showIntImpl(i + 1 | 0) + "/" + showIntImpl(total) + " indicator groups")))(() => {
             const $0 = (() => {
               if (0 < group3.length) {
                 return group3[0];
@@ -17195,7 +17235,7 @@ var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(mon
               return bindVT3.bind(readAndParseCsvFiles(fixFormat)(group3))((dpscsvFiles) => bindVT3.bind(validateDatapointsFileGroup($1)($2)(ds)(dpscsvFiles)(monadAff))(() => applicativeVT3.pure(createResources(path2)(dpscsvFiles))));
             }
             fail();
-          })))((datapointResources_) => bindVT3.bind(liftEffect3(clearProgress))(() => {
+          })))((datapointResources_) => bindVT3.bind(liftEffect1(clearProgress))(() => {
             const datapointResources = concat(datapointResources_);
             return bindVT3.bind((() => {
               const v = lookup8(SYNONYMS)(fileMap);
@@ -17221,7 +17261,7 @@ var validate2 = (path2) => (dpIssueAsWarning) => (fixFormat) => bindVT3.bind(mon
                 fail();
               })())((translationFileInfos) => bindVT3.bind(readAndParseCsvFiles(fixFormat)(translationFileInfos))((translationCsvFiles) => bindVT3.bind(traverse_4((c) => validateCsvFileWithDataSet(ds)(c)(monadAff))(translationCsvFiles))(() => {
                 const actualResources = [...conceptResources, ...entityResources, ...datapointResources, ...synonymResources];
-                return bindVT3.bind(readDataPackageResources2(path2))((expectedResources) => bindVT3.bind((() => {
+                return bindVT3.bind(readDataPackageResources(fixFormat)(path2))((expectedResources) => bindVT3.bind((() => {
                   const $0 = compareResources(expectedResources)(actualResources);
                   if ($0.tag === "Left") {
                     if (dpIssueAsWarning) {
@@ -17606,7 +17646,7 @@ var runMain = (opts2) => {
           return runValidationT(validate2(path2)(gendp)(fixFormat));
         }
         if (mode === "DataPackageBased") {
-          return runValidationT(validate(path2));
+          return runValidationT(validate(path2)(fixFormat));
         }
         fail();
       })())((v) => {

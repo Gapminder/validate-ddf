@@ -36,7 +36,7 @@
     "clean": "rm -rf node_modules output output-es .spago dist/*.js *.lock .cache",
     "build": "spago build",
     "test": "spago test && npm run test:js",
-    "test:js": "node --test test/js-api.test.js",
+    "test:js": "node --test test/*.test.js",
     "bundle": "npm run build && npm run bundle-app && npm run bundle-module",
     "bundle-app": "purs-backend-es bundle-app --platform=node --to dist/app.js",
     "bundle-module": "purs-backend-es bundle-module --platform=node --to dist/lib.js"
@@ -54,5 +54,8 @@
     "esbuild": "^0.24.2",
     "purs-backend-es": "^1.4.2",
     "purs-tidy": "^0.11.1"
+  },
+  "allowScripts": {
+    "esbuild@0.24.2": true
   }
 }

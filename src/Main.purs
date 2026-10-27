@@ -5,8 +5,7 @@ module Main
   , runMain
   , setProgressCallback
   , validate'
-  )
-  where
+  ) where
 
 import Prelude
 
@@ -97,7 +96,7 @@ runMain opts = launchAff_ do
   liftEffect $ log validatorVersion
   (Tuple msgs res) <- case mode of
     FileNameBased -> runValidationT $ VFN.validate path gendp fixFormat
-    DataPackageBased -> runValidationT $ VDP.validate path
+    DataPackageBased -> runValidationT $ VDP.validate path fixFormat
   let
     msgsToShow =
       if noWarning then Arr.filter (\x -> not $ _.isWarning x) msgs

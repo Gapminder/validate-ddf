@@ -76,6 +76,15 @@ type Resource =
   , schema :: FileSchema
   }
 
+-- | Normalize backslash separators in decoded resource paths.
+-- | Requires JSON with valid resources (check parseDataPackageResources first).
+foreign import normalizeResourcePaths
+  :: String
+  -> { backslashes :: Int
+     , affectedPaths :: Int
+     , content :: String
+     }
+
 type FileSchema =
   { fields :: Array FieldSchema
   , primaryKey :: NonEmptyArray NonEmptyString
@@ -126,7 +135,7 @@ createResources root xs = snd $ Arr.foldl go (Tuple HM.empty []) xs
     let
       { headers } = csvContent
       headers' = map unwrap headers
-      fp = PATH.relative root $ FI.filepath fileInfo
+      fp = Str.joinWith "/" $ Str.split (Str.Pattern PATH.sep) $ PATH.relative root $ FI.filepath fileInfo
       basename = Path.basenameWithoutExt fp ".csv"
 
       resCount = case HM.lookup basename seenNames of

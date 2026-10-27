@@ -15,7 +15,7 @@ import Data.Either (Either(..), hush)
 import Data.Function (on)
 import Data.HashMap (HashMap)
 import Data.HashMap as HM
-import Data.JSON.DataPackage (Resource, datapackageExists)
+import Data.JSON.DataPackage (Resource)
 import Data.JSON.DataPackage as DataPackage
 import Data.Maybe (Maybe(..), fromJust, isNothing)
 import Data.Traversable (for, traverse_)
@@ -29,8 +29,6 @@ import Data.Validation.ValidationT (Validation, ValidationT, getState, vError)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Console (log)
-import Node.Encoding as Encoding
-import Node.FS.Aff (readTextFile)
 import Node.Path (FilePath)
 import Partial.Unsafe (unsafePartial)
 import Utils (getFiles)
@@ -53,25 +51,9 @@ readAllFileInfoForValidation root fs = do
 
   pure ddfFiles
 
--- | read datapackage and get all resources
-readDataPackageResources :: FilePath -> ValidationT Messages Aff (Array Resource)
-readDataPackageResources path = do
-  datapackage <- liftEffect $ datapackageExists path
-  case toEither datapackage of
-    Left issues -> do
-      emitErrorsAndContinue issues
-      pure []
-    Right dpath -> do
-      content <- lift $ readTextFile Encoding.UTF8 dpath
-      case toEither $ DataPackage.parseDataPackageResources content of
-        Left issues -> do
-          emitErrorsAndContinue issues
-          pure []
-        Right res -> pure res
-
 -- | main validation process
 -- | dpIssueAsWarning: if true, datapackage errors are reported as warnings instead of errors
--- | fixFormat: if true, auto-fix BOM/CRLF issues in place
+-- | fixFormat: if true, auto-fix BOM/CRLF and datapackage path separators in place
 validate :: FilePath -> Boolean -> Boolean -> ValidationT Messages Aff (Tuple DataSet (Array Resource))
 validate path dpIssueAsWarning fixFormat = do
   lift $ liftEffect $ log "reading file list..."
@@ -215,7 +197,7 @@ validate path dpIssueAsWarning fixFormat = do
     --
     let
       actualResources = conceptResources <> entityResources <> datapointResources <> synonymResources
-    expectedResources <- readDataPackageResources path
+    expectedResources <- readDataPackageResources fixFormat path
     case toEither $ DataPackage.compareResources expectedResources actualResources of
       Left issues ->
         if dpIssueAsWarning then

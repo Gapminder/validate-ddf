@@ -24,7 +24,7 @@ Available options:
   -p,--generate-datapackage
                            whether to generate a datapackage.json after
                            validation. (default false)
-  -f,--fix                 auto-fix format issues (BOM, CRLF) in CSV files
+  -f,--fix                 auto-fix CSV format issues (BOM, CRLF) and datapackage path separators
   -h,--help                Show this help text
 ```
 
@@ -32,6 +32,16 @@ There are 2 modes: filenames and datapackage. In filenames mode, the
 validator will enumerate all files in a given folder and try to find
 all the filenames that match ddf standard. In datapackage mode, the
 validator will read all files in the resources list in datapackage.json.
+
+Resource paths in `datapackage.json` must use forward slashes (`/`), including
+packages created on Windows. The validator reports
+`E_DATAPACKAGE_PATH_SEPARATOR` with counts of backslashes and affected paths.
+Run `validate-ddf --fix` to replace backslashes with `/` in resource paths and
+validate the result. Other metadata is
+preserved. This works in both filenames and datapackage modes.
+
+In JSON source, `"folder\\file.csv"` encodes a Windows-style path with one
+backslash. Malformed JSON must be corrected before automatic path fixing.
 
 # JS usage in another app
 `npm install @gapminder/validate-ddf`

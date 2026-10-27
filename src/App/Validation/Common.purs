@@ -22,6 +22,8 @@ import Data.DDF.Internal (pathAndRow)
 import Data.Either (Either(..))
 import Data.Foldable (for_, traverse_)
 import Data.HashMap as HM
+import Data.JSON.DataPackage (Resource)
+import Data.JSON.DataPackage as DataPackage
 import Data.List.Types (NonEmptyList)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
@@ -37,8 +39,48 @@ import Data.Validation.Semigroup (andThen, toEither)
 import Data.Validation.ValidationT (Validation, ValidationT, vError, vWarning)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
+import Node.Encoding as Encoding
+import Node.FS.Aff (readTextFile, writeTextFile)
 import Node.FS.Sync as PATH
 import Node.Path (FilePath)
+
+-- | Read resources with portable paths in both validation modes. Report invalid
+-- | separators, but use normalized paths to avoid misleading missing-file errors.
+-- | Only write when fixing, and only after the resource structure parses.
+readDataPackageResources :: Boolean -> FilePath -> ValidationT Messages Aff (Array Resource)
+readDataPackageResources fixFormat path = do
+  datapackage <- liftEffect $ DataPackage.datapackageExists path
+  case toEither datapackage of
+    Left issues -> do
+      emitErrorsAndContinue issues
+      pure []
+    Right dpath -> do
+      content <- lift $ readTextFile Encoding.UTF8 dpath
+      case toEither $ DataPackage.parseDataPackageResources content of
+        Left issues -> do
+          emitErrorsAndContinue issues
+          pure []
+        Right resources -> do
+          let
+            normalized = DataPackage.normalizeResourcePaths content
+          if normalized.affectedPaths == 0 then pure resources
+          else do
+            if fixFormat then
+              lift $ writeTextFile Encoding.UTF8 dpath normalized.content
+            else
+              emitErrorsAndContinue
+                [ mkIssue E_DATAPACKAGE_PATH_SEPARATOR
+                    # withFileLocation dpath (-1)
+                    # withMessage
+                        ( "found " <> show normalized.backslashes <> " backslashes in "
+                            <> show normalized.affectedPaths
+                            <> " resource paths; expected Linux/macOS-style paths "
+                            <> "with forward slashes (/); run `validate-ddf --fix` to auto-replace"
+                        )
+                ]
+            case toEither $ DataPackage.parseDataPackageResources normalized.content of
+              Left issues -> emitErrorsAndStop issues
+              Right normalizedResources -> pure normalizedResources
 
 -- | Emit format issues (BOM/CRLF/encoding) detected during CSV parsing.
 -- | The actual fix is handled by parseCsvImpl when fixFormat=true.

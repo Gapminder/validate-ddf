@@ -13,7 +13,7 @@ import Data.Either (Either(..), hush)
 import Data.Function (on)
 import Data.HashMap (HashMap)
 import Data.HashMap as HM
-import Data.JSON.DataPackage (Resource, datapackageExists)
+import Data.JSON.DataPackage (Resource)
 import Data.JSON.DataPackage as DataPackage
 import Data.Maybe (Maybe(..), fromJust, isNothing)
 import Data.String.NonEmpty as NES
@@ -27,8 +27,6 @@ import Data.Validation.ValidationT (Validation, ValidationT, getState, vError)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Console (log)
-import Node.Encoding as Encoding
-import Node.FS.Aff (readTextFile)
 import Node.Path (FilePath)
 import Node.Path as PATH
 import Partial.Unsafe (unsafePartial)
@@ -59,28 +57,12 @@ readAllFileInfoForValidation root rs = do
 
   pure ddfFiles
 
--- | read datapackage and get all resources
-readDataPackageResources :: FilePath -> ValidationT Messages Aff (Array Resource)
-readDataPackageResources path = do
-  datapackage <- liftEffect $ datapackageExists path
-  case toEither datapackage of
-    Left issues -> do
-      emitErrorsAndContinue issues
-      pure []
-    Right dpath -> do
-      content <- lift $ readTextFile Encoding.UTF8 dpath
-      case toEither $ DataPackage.parseDataPackageResources content of
-        Left issues -> do
-          emitErrorsAndContinue issues
-          pure []
-        Right res -> pure res
-
 -- | main validation process
-validate :: FilePath -> ValidationT Messages Aff (Tuple DataSet (Array Resource))
-validate path = do
+validate :: FilePath -> Boolean -> ValidationT Messages Aff (Tuple DataSet (Array Resource))
+validate path fixFormat = do
   lift $ liftEffect $ log "reading file list..."
 
-  resources <- readDataPackageResources path
+  resources <- readDataPackageResources fixFormat path
   ddfFiles <- readAllFileInfoForValidation path resources
 
   lift $ liftEffect $ log "validating concepts and entities..."
@@ -104,7 +86,7 @@ validate path = do
       Just xs -> pure $ NEA.toArray xs
   -- validate csv files, create valid concepts
   conceptFileInfos' <- traverse validateFileExists conceptFileInfos
-  conceptCsvFiles <- readAndParseCsvFiles false $ Arr.catMaybes conceptFileInfos'
+  conceptCsvFiles <- readAndParseCsvFiles fixFormat $ Arr.catMaybes conceptFileInfos'
   concepts <- for conceptCsvFiles (\x -> validateConcepts x)
   -- generate resources for datapackage
   let
@@ -117,7 +99,7 @@ validate path = do
       Just xs -> pure $ NEA.toArray xs
   -- validate csv files, create valid entities
   entityFileInfos' <- traverse validateFileExists entityFileInfos
-  entityCsvFiles <- readAndParseCsvFiles false $ Arr.catMaybes entityFileInfos'
+  entityCsvFiles <- readAndParseCsvFiles fixFormat $ Arr.catMaybes entityFileInfos'
   entities <- for entityCsvFiles (\x -> validateEntities x)
   -- generate resources for datapackage
   let
@@ -171,7 +153,7 @@ validate path = do
 
       -- read all csv files for the group
       group' <- traverse validateFileExists group
-      dpscsvFiles <- readAndParseCsvFiles false $ NEA.catMaybes group'
+      dpscsvFiles <- readAndParseCsvFiles fixFormat $ NEA.catMaybes group'
       validateDatapointsFileGroup indicator pkeys ds dpscsvFiles
       pure $ DataPackage.createResources path dpscsvFiles
     let
@@ -186,7 +168,7 @@ validate path = do
         Just xs -> do
           lift $ liftEffect $ log "validating synonym files..."
           pure $ NEA.toArray xs
-    synonymCsvFiles <- readAndParseCsvFiles false synonymFileInfos
+    synonymCsvFiles <- readAndParseCsvFiles fixFormat synonymFileInfos
     traverse_ (\c -> validateCsvFileWithDataSet ds c) synonymCsvFiles
     -- generate resources for datapackage
     let
@@ -200,7 +182,7 @@ validate path = do
         Just xs -> do
           lift $ liftEffect $ log "validating translation files..."
           pure $ NEA.toArray xs
-    translationCsvFiles <- readAndParseCsvFiles false translationFileInfos
+    translationCsvFiles <- readAndParseCsvFiles fixFormat translationFileInfos
     traverse_ (\c -> validateCsvFileWithDataSet ds c) translationCsvFiles
     -- we don't generate datapackage resources for translations
 

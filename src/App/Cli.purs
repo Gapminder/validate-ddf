@@ -55,7 +55,7 @@ cliOptions = ado
   fixFormat <- switch
     ( long "fix"
         <> short 'f'
-        <> help "auto-fix format issues (BOM, CRLF) in CSV files"
+        <> help "auto-fix CSV format issues (BOM, CRLF) and datapackage path separators"
     )
   in
     { targetPath, noWarning, mode, generateDP, fixFormat }
