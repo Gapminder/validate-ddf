@@ -1568,7 +1568,7 @@ var unsafeCoerce = function(x) {
 };
 
 // output-es/Data.Traversable/foreign.js
-var traverseArrayImpl = /* @__PURE__ */ function() {
+var traverseArrayImpl = /* @__PURE__ */ (function() {
   function array1(a) {
     return [a];
   }
@@ -1615,7 +1615,7 @@ var traverseArrayImpl = /* @__PURE__ */ function() {
       };
     };
   };
-}();
+})();
 
 // output-es/Data.Traversable/index.js
 var identity3 = (x) => x;
@@ -1679,7 +1679,7 @@ var replicatePolyfill = function(count, value2) {
   return result;
 };
 var replicateImpl = typeof Array.prototype.fill === "function" ? replicateFill : replicatePolyfill;
-var fromFoldableImpl = /* @__PURE__ */ function() {
+var fromFoldableImpl = /* @__PURE__ */ (function() {
   function Cons2(head, tail) {
     this.head = head;
     this.tail = tail;
@@ -1703,7 +1703,7 @@ var fromFoldableImpl = /* @__PURE__ */ function() {
   return function(foldr2, xs) {
     return listToArray(foldr2(curryCons)(emptyList)(xs));
   };
-}();
+})();
 var unconsImpl = function(empty4, next, xs) {
   return xs.length === 0 ? empty4({}) : next(xs[0])(xs.slice(1));
 };
@@ -1750,7 +1750,7 @@ var partitionImpl = function(f, xs) {
   }
   return { yes, no };
 };
-var sortByImpl2 = /* @__PURE__ */ function() {
+var sortByImpl2 = /* @__PURE__ */ (function() {
   function mergeFromTo(compare2, fromOrdering, xs1, xs2, from, to) {
     var mid;
     var i;
@@ -1791,7 +1791,7 @@ var sortByImpl2 = /* @__PURE__ */ function() {
     mergeFromTo(compare2, fromOrdering, out, xs.slice(0), 0, xs.length);
     return out;
   };
-}();
+})();
 var sliceImpl = function(s, e, l) {
   return l.slice(s, e);
 };
@@ -6288,7 +6288,7 @@ var opts = {
 };
 
 // output-es/Effect.Aff/foreign.js
-var Aff = function() {
+var Aff = (function() {
   var EMPTY = {};
   var PURE = "Pure";
   var THROW = "Throw";
@@ -6350,7 +6350,7 @@ var Aff = function() {
       return nonCanceler2;
     }
   }
-  var Scheduler = function() {
+  var Scheduler = (function() {
     var limit = 1024;
     var size5 = 0;
     var ix = 0;
@@ -6386,7 +6386,7 @@ var Aff = function() {
         }
       }
     };
-  }();
+  })();
   function Supervisor(util) {
     var fibers = {};
     var fiberId = 0;
@@ -7119,7 +7119,7 @@ var Aff = function() {
   Aff2.Scheduler = Scheduler;
   Aff2.nonCanceler = nonCanceler2;
   return Aff2;
-}();
+})();
 var _pure = Aff.Pure;
 var _throwError = Aff.Throw;
 function _catchError(aff) {
@@ -7834,7 +7834,7 @@ var ResizeableBuffer = class {
   }
   toString(encoding) {
     if (encoding) {
-      return this.buf.slice(0, this.length).toString(encoding);
+      return this.buf.toString(encoding, 0, this.length);
     } else {
       return Uint8Array.prototype.slice.call(this.buf.slice(0, this.length));
     }
@@ -7849,17 +7849,82 @@ var ResizeableBuffer = class {
 var ResizeableBuffer_default = ResizeableBuffer;
 
 // node_modules/csv-parse/lib/api/init_state.js
-var np = 12;
-var cr = 13;
-var nl = 10;
-var space = 32;
-var tab = 9;
 var init_state = function(options) {
+  const timchars = [
+    // Basic Latin
+    32,
+    // [Space](https://www.fileformat.info/info/unicode/char/0020/index.htm)
+    9,
+    // [CHARACTER TABULATION (HT)](https://www.fileformat.info/info/unicode/char/0009/index.htm)
+    10,
+    // [LINE FEED (LF)](https://www.fileformat.info/info/unicode/char/000a/index.htm)
+    13,
+    // [CARRIAGE RETURN (CR)](https://www.fileformat.info/info/unicode/char/000d/index.htm)
+    12,
+    // [FORM FEED (FF)](https://www.fileformat.info/info/unicode/char/000c/index.htm)
+    11,
+    // [LINE TABULATION (VT)](https://www.fileformat.info/info/unicode/char/000b/index.htm)
+    // Latin-1 Supplement
+    160,
+    // [NO-BREAK SPACE (NBSP)](https://www.fileformat.info/info/unicode/char/00a0/index.htm)
+    // Ogham
+    5760,
+    // [OGHAM SPACE MARK](https://www.fileformat.info/info/unicode/char/1680/index.htm)
+    // General Punctuation
+    8192,
+    // [EN QUAD](https://www.fileformat.info/info/unicode/char/2000/index.htm)
+    8193,
+    // [EM QUAD](https://www.fileformat.info/info/unicode/char/2001/index.htm)
+    8194,
+    // [EN SPACE](https://www.fileformat.info/info/unicode/char/2002/index.htm)
+    8195,
+    // [EM SPACE](https://www.fileformat.info/info/unicode/char/2003/index.htm)
+    8196,
+    // [THREE-PER-EM SPACE](https://www.fileformat.info/info/unicode/char/2004/index.htm)
+    8197,
+    // [FOUR-PER-EM SPACE](https://www.fileformat.info/info/unicode/char/2005/index.htm)
+    8198,
+    // [SIX-PER-EM SPACE](https://www.fileformat.info/info/unicode/char/2006/index.htm)
+    8199,
+    // [FIGURE SPACE](https://www.fileformat.info/info/unicode/char/2007/index.htm)
+    8200,
+    // [PUNCTUATION SPACE](https://www.fileformat.info/info/unicode/char/2008/index.htm)
+    8201,
+    // [THIN SPACE](https://www.fileformat.info/info/unicode/char/2009/index.htm)
+    8202,
+    // [HAIR SPACE](https://www.fileformat.info/info/unicode/char/200a/index.htm)
+    8232,
+    // [LINE SEPARATOR](https://www.fileformat.info/info/unicode/char/2028/index.htm)
+    8233,
+    // [PARAGRAPH SEPARATOR](https://www.fileformat.info/info/unicode/char/2029/index.htm)
+    8239,
+    // [NARROW NO-BREAK SPACE (NNBSP)](https://www.fileformat.info/info/unicode/char/202f/index.htm)
+    8287,
+    // [MEDIUM MATHEMATICAL SPACE (MMSP)](https://www.fileformat.info/info/unicode/char/205f/index.htm)
+    12288,
+    // [IDEOGRAPHIC SPACE](https://www.fileformat.info/info/unicode/char/3000/index.htm)
+    65279
+    // [ZERO WIDTH NO-BREAK SPACE (BOM)](https://www.fileformat.info/info/unicode/char/feff/index.htm)
+  ].reduce((acc, codepoint) => {
+    const encoded = Buffer.from(
+      String.fromCharCode(codepoint),
+      options.encoding
+    );
+    if (codepoint !== 63 && encoded.length === 1 && encoded[0] === 63) {
+      return acc;
+    }
+    acc.push(encoded);
+    return acc;
+  }, []);
+  const timcharFirstBytes = new Uint8Array(256);
+  for (const t of timchars) timcharFirstBytes[t[0]] = 1;
   return {
     bomSkipped: false,
     bufBytesStart: 0,
     castField: options.cast_function,
     commenting: false,
+    delimiterBufPrevious: void 0,
+    delimiterDiscovered: false,
     // Current error encountered by a record
     error: void 0,
     enabled: options.from_line === 1,
@@ -7872,9 +7937,12 @@ var init_state = function(options) {
     needMoreDataSize: Math.max(
       // Skip if the remaining buffer smaller than comment
       options.comment !== null ? options.comment.length : 0,
-      ...options.delimiter.map((delimiter2) => delimiter2.length),
+      ...options.delimiter ? options.delimiter.map((delimiter2) => delimiter2.length) : [],
+      // Auto discovery of delimiter is limited to 1 character
+      options.delimiter_auto ? 1 : 0,
       // Skip if the remaining buffer can be escape sequence
-      options.quote !== null ? options.quote.length : 0
+      options.quote !== null ? options.quote.length : 0,
+      ...timchars.map((t) => t.length)
     ),
     previousBuf: void 0,
     quoting: false,
@@ -7890,13 +7958,8 @@ var init_state = function(options) {
     ],
     wasQuoting: false,
     wasRowDelimiter: false,
-    timchars: [
-      Buffer.from(Buffer.from([cr], "utf8").toString(), options.encoding),
-      Buffer.from(Buffer.from([nl], "utf8").toString(), options.encoding),
-      Buffer.from(Buffer.from([np], "utf8").toString(), options.encoding),
-      Buffer.from(Buffer.from([space], "utf8").toString(), options.encoding),
-      Buffer.from(Buffer.from([tab], "utf8").toString(), options.encoding)
-    ]
+    timchars,
+    timcharFirstBytes
   };
 };
 
@@ -8050,24 +8113,83 @@ var normalize_options = function(opts2) {
       options
     );
   }
-  const delimiter_json = JSON.stringify(options.delimiter);
-  if (!Array.isArray(options.delimiter))
-    options.delimiter = [options.delimiter];
-  if (options.delimiter.length === 0) {
+  if (options.delimiter_auto === void 0 || options.delimiter_auto === null || options.delimiter_auto === false) {
+    options.delimiter_auto = false;
+  } else if (options.delimiter_auto === true) {
+    options.delimiter_auto = {};
+  } else if (!is_object(options.delimiter_auto)) {
     throw new CsvError(
-      "CSV_INVALID_OPTION_DELIMITER",
+      "CSV_INVALID_OPTION_DELIMITER_AUTO",
       [
-        "Invalid option delimiter:",
-        "delimiter must be a non empty string or buffer or array of string|buffer,",
-        `got ${delimiter_json}`
+        "Invalid option delimiter_auto:",
+        "delimiter_auto must be a boolean or a configuration object,",
+        `got ${JSON.stringify(options.delimiter_auto)}`
       ],
       options
     );
   }
-  options.delimiter = options.delimiter.map(function(delimiter2) {
-    if (delimiter2 === void 0 || delimiter2 === null || delimiter2 === false) {
-      return Buffer.from(",", options.encoding);
+  if (options.delimiter_auto) {
+    if (options.delimiter_auto.preferred === void 0)
+      options.delimiter_auto.preferred = {
+        [",".charCodeAt(0)]: 1.8,
+        ["	".charCodeAt(0)]: 1.8,
+        [";".charCodeAt(0)]: 1.6,
+        [" ".charCodeAt(0)]: 1.6,
+        [":".charCodeAt(0)]: 1.5,
+        [".".charCodeAt(0)]: 1.4,
+        ["/".charCodeAt(0)]: 1.4
+      };
+    else if (!is_object(options.delimiter_auto.preferred)) {
+      throw new CsvError(
+        "CSV_INVALID_OPTION_DELIMITER_AUTO",
+        [
+          "Invalid option delimiter_auto:",
+          "preferred must be an object,",
+          `got ${JSON.stringify(options.delimiter_auto.preferred)}`
+        ],
+        options
+      );
     }
+    if (options.delimiter_auto.score === void 0)
+      options.delimiter_auto.score = (info2, options2) => {
+        return (info2.total - info2.std) * (options2.preferred[info2.char_code] || 1);
+      };
+    else if (typeof options.delimiter_auto.score !== "function") {
+      throw new CsvError(
+        "CSV_INVALID_OPTION_DELIMITER_AUTO",
+        [
+          "Invalid option delimiter_auto:",
+          "score must be a function,",
+          `got ${JSON.stringify(options.delimiter_auto.score)}`
+        ],
+        options
+      );
+    }
+    if (options.delimiter_auto.size === void 0)
+      options.delimiter_auto.size = 2048;
+    else if (typeof options.delimiter_auto.size !== "number") {
+      throw new CsvError(
+        "CSV_INVALID_OPTION_DELIMITER_AUTO",
+        [
+          "Invalid option delimiter_auto:",
+          "size must be a number,",
+          `got ${JSON.stringify(options.delimiter_auto.size)}`
+        ],
+        options
+      );
+    }
+  }
+  const delimiter_json = JSON.stringify(options.delimiter);
+  if (options.delimiter_auto !== false) {
+    options.delimiter = [];
+  }
+  if (!Array.isArray(options.delimiter)) {
+    if (options.delimiter === void 0 || options.delimiter === null || options.delimiter === false) {
+      options.delimiter = Buffer.from(",", options.encoding);
+    }
+    options.delimiter = [options.delimiter];
+  }
+  options.delimiter = options.delimiter.map(function(delimiter2) {
     if (typeof delimiter2 === "string") {
       delimiter2 = Buffer.from(delimiter2, options.encoding);
     }
@@ -8434,14 +8556,64 @@ var normalize_options = function(opts2) {
   return options;
 };
 
+// node_modules/csv-parse/lib/utils/delimiter_discover.js
+var delimiter_discover = function(records, options) {
+  if (!options) {
+    ({ delimiter_auto: options } = normalize_options({ delimiter_auto: true }));
+  }
+  if (typeof records === "string") {
+    records = Buffer.from(records);
+  }
+  if (Buffer.isBuffer(records)) {
+    records = ((data) => {
+      const records2 = [];
+      const parser = transform({ delimiter: [] });
+      const push2 = (record) => records2.push(record);
+      const close2 = () => {
+      };
+      const error3 = parser.parse(data, true, push2, close2);
+      if (error3 !== void 0) throw error3;
+      return records2;
+    })(records);
+  }
+  const info2 = Array(127).fill().map(() => ({ lines: [] }));
+  records.map(([record], line) => {
+    for (let i = 0, l = record.length; i < l; i++) {
+      const code = record.charCodeAt(i);
+      if (info2[code].lines[line] === void 0) info2[code].lines[line] = 0;
+      info2[code].lines[line]++;
+    }
+  });
+  info2.map((info3, i) => {
+    info3.char_code = i;
+    info3.std = std(info3.lines);
+    info3.total = info3.lines.reduce((acc, val) => acc + val, 0);
+    info3.preferred = !!options.preferred[i];
+    info3.score = options.score(info3, options);
+  });
+  const result = info2.reduce(
+    (acc, info3) => acc.score > info3.score ? acc : info3,
+    {}
+  );
+  return String.fromCharCode(result.char_code);
+};
+var std = function(array) {
+  const n = array.length;
+  if (n === 0) return 0;
+  const mean = array.reduce((a, b) => a + b) / n;
+  return Math.sqrt(
+    array.map((x) => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n
+  );
+};
+
 // node_modules/csv-parse/lib/api/index.js
 var isRecordEmpty = function(record) {
   return record.every(
     (field) => field == null || field.toString && field.toString().trim() === ""
   );
 };
-var cr2 = 13;
-var nl2 = 10;
+var cr = 13;
+var nl = 10;
 var boms = {
   // Note, the following are equals:
   // Buffer.from("\ufeff")
@@ -8495,6 +8667,7 @@ var transform = function(original_options = {}) {
       const {
         bom,
         comment_no_infix,
+        delimiter_auto,
         encoding,
         from_line,
         ltrim,
@@ -8507,7 +8680,38 @@ var transform = function(original_options = {}) {
         to_line
       } = this.options;
       let { comment, escape, quote, record_delimiter } = this.options;
-      const { bomSkipped, previousBuf, rawBuffer, escapeIsQuote } = this.state;
+      const {
+        bomSkipped,
+        delimiterDiscovered,
+        delimiterBufPrevious,
+        rawBuffer,
+        escapeIsQuote
+      } = this.state;
+      if (!delimiterDiscovered && delimiter_auto) {
+        let delimiterBuf;
+        if (delimiterBufPrevious === void 0) {
+          delimiterBuf = nextBuf;
+        } else if (delimiterBufPrevious !== void 0 && nextBuf === void 0) {
+          delimiterBuf = delimiterBufPrevious;
+        } else {
+          delimiterBuf = Buffer.concat([delimiterBufPrevious, nextBuf]);
+        }
+        nextBuf = void 0;
+        if (end || delimiterBuf.length > delimiter_auto.size) {
+          this.options.delimiter = [
+            Buffer.from(
+              delimiter_discover(delimiterBuf, this.options.delimiter_auto)
+            )
+          ];
+          this.state.previousBuf = delimiterBuf;
+          this.state.delimiterBufPrevious = void 0;
+          this.state.delimiterDiscovered = true;
+        } else {
+          this.state.delimiterBufPrevious = delimiterBuf;
+          return;
+        }
+      }
+      const { previousBuf } = this.state;
       let buf;
       if (previousBuf === void 0) {
         if (nextBuf === void 0) {
@@ -8577,7 +8781,7 @@ var transform = function(original_options = {}) {
         if (raw === true) {
           rawBuffer.append(chr);
         }
-        if ((chr === cr2 || chr === nl2) && this.state.wasRowDelimiter === false) {
+        if ((chr === cr || chr === nl) && this.state.wasRowDelimiter === false) {
           this.state.wasRowDelimiter = true;
         }
         if (this.state.escaping === true) {
@@ -8882,14 +9086,19 @@ var transform = function(original_options = {}) {
           const obj = {};
           for (let i = 0, l = record.length; i < l; i++) {
             if (columns[i] === void 0 || columns[i].disabled) continue;
-            if (group_columns_by_name === true && obj[columns[i].name] !== void 0) {
+            if (group_columns_by_name === true && Object.hasOwn(obj, columns[i].name)) {
               if (Array.isArray(obj[columns[i].name])) {
                 obj[columns[i].name] = obj[columns[i].name].concat(record[i]);
               } else {
                 obj[columns[i].name] = [obj[columns[i].name], record[i]];
               }
             } else {
-              obj[columns[i].name] = record[i];
+              Object.defineProperty(obj, columns[i].name, {
+                value: record[i],
+                enumerable: true,
+                writable: true,
+                configurable: true
+              });
             }
           }
           if (raw === true || info3 === true) {
@@ -9043,30 +9252,6 @@ var transform = function(original_options = {}) {
       }
       return [void 0, field];
     },
-    // Helper to test if a character is a space or a line delimiter
-    __isCharTrimable: function(buf, pos) {
-      const isTrim = (buf2, pos2) => {
-        const { timchars } = this.state;
-        loop1: for (let i = 0; i < timchars.length; i++) {
-          const timchar = timchars[i];
-          for (let j = 0; j < timchar.length; j++) {
-            if (timchar[j] !== buf2[pos2 + j]) continue loop1;
-          }
-          return timchar.length;
-        }
-        return 0;
-      };
-      return isTrim(buf, pos);
-    },
-    // Keep it in case we implement the `cast_int` option
-    // __isInt(value){
-    //   // return Number.isInteger(parseInt(value))
-    //   // return !isNaN( parseInt( obj ) );
-    //   return /^(\-|\+)?[1-9][0-9]*$/.test(value)
-    // }
-    __isFloat: function(value2) {
-      return value2 - parseFloat(value2) + 1 >= 0;
-    },
     __compareBytes: function(sourceBuf, targetBuf, targetPos, firstByte) {
       if (sourceBuf[0] !== firstByte) return 0;
       const sourceLength = sourceBuf.length;
@@ -9074,6 +9259,20 @@ var transform = function(original_options = {}) {
         if (sourceBuf[i] !== targetBuf[targetPos + i]) return 0;
       }
       return sourceLength;
+    },
+    // Helper to test if a character is trimable
+    __isCharTrimable: function(buf, pos) {
+      const { timchars, timcharFirstBytes } = this.state;
+      const first = buf[pos];
+      if (first === void 0 || timcharFirstBytes[first] === 0) return 0;
+      loop1: for (let i = 0; i < timchars.length; i++) {
+        const timchar = timchars[i];
+        for (let j = 0; j < timchar.length; j++) {
+          if (timchar[j] !== buf[pos + j]) continue loop1;
+        }
+        return timchar.length;
+      }
+      return 0;
     },
     __isDelimiter: function(buf, pos, chr) {
       const { delimiter: delimiter2, ignore_last_delimiters } = this.options;
@@ -9093,6 +9292,40 @@ var transform = function(original_options = {}) {
       }
       return 0;
     },
+    __isEscape: function(buf, pos, chr) {
+      const { escape } = this.options;
+      if (escape === null) return false;
+      const l = escape.length;
+      if (escape[0] === chr) {
+        for (let i = 0; i < l; i++) {
+          if (escape[i] !== buf[pos + i]) {
+            return false;
+          }
+        }
+        return true;
+      }
+      return false;
+    },
+    __isFloat: function(value2) {
+      return value2 - parseFloat(value2) + 1 >= 0;
+    },
+    // Keep it in case we implement the `cast_int` option
+    // __isInt(value){
+    //   // return Number.isInteger(parseInt(value))
+    //   // return !isNaN( parseInt( obj ) );
+    //   return /^(\-|\+)?[1-9][0-9]*$/.test(value)
+    // }
+    __isQuote: function(buf, pos) {
+      const { quote } = this.options;
+      if (quote === null) return false;
+      const l = quote.length;
+      for (let i = 0; i < l; i++) {
+        if (quote[i] !== buf[pos + i]) {
+          return false;
+        }
+      }
+      return true;
+    },
     __isRecordDelimiter: function(chr, buf, pos) {
       const { record_delimiter } = this.options;
       const recordDelimiterLength = record_delimiter.length;
@@ -9110,31 +9343,6 @@ var transform = function(original_options = {}) {
         return rd.length;
       }
       return 0;
-    },
-    __isEscape: function(buf, pos, chr) {
-      const { escape } = this.options;
-      if (escape === null) return false;
-      const l = escape.length;
-      if (escape[0] === chr) {
-        for (let i = 0; i < l; i++) {
-          if (escape[i] !== buf[pos + i]) {
-            return false;
-          }
-        }
-        return true;
-      }
-      return false;
-    },
-    __isQuote: function(buf, pos) {
-      const { quote } = this.options;
-      if (quote === null) return false;
-      const l = quote.length;
-      for (let i = 0; i < l; i++) {
-        if (quote[i] !== buf[pos + i]) {
-          return false;
-        }
-      }
-      return true;
     },
     __autoDiscoverRecordDelimiter: function(buf, pos) {
       const { encoding } = this.options;
@@ -9213,7 +9421,7 @@ var parse = function(data, opts2 = {}) {
   if (typeof data === "string") {
     data = Buffer.from(data);
   }
-  const records = opts2 && opts2.objname ? {} : [];
+  const records = opts2 && opts2.objname ? /* @__PURE__ */ Object.create(null) : [];
   const parser = transform(opts2);
   const push2 = (record) => {
     if (parser.options.objname === void 0) records.push(record);
@@ -17742,7 +17950,7 @@ var validate$p = (opts2) => fromAff((() => {
         return $1;
       }
       return _pure();
-    })())(() => _pure(write4({ success: !hasError($0), errors: msgsToShow, validatorVersion: "v2.4.3" })));
+    })())(() => _pure(write4({ success: !hasError($0), errors: msgsToShow, validatorVersion: "v2.4.4" })));
   });
 })());
 var setProgressCallback = setProgressHandler;
@@ -17755,7 +17963,7 @@ var runMain = (opts2) => {
     (() => {
       const gendp = opts2.generateDP;
       const fixFormat = opts2.fixFormat;
-      return _bind(_liftEffect(log2("v2.4.3")))(() => _bind((() => {
+      return _bind(_liftEffect(log2("v2.4.4")))(() => _bind((() => {
         if (mode === "FileNameBased") {
           return runValidationT(validate2(path2)(gendp)(fixFormat));
         }
